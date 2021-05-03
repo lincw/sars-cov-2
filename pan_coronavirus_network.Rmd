@@ -1,0 +1,143 @@
+---
+title: pan-coronavirus in HuRI communities enrichment analysis
+author: Lin Chung-wen
+date: 2021.02.03
+output: html_document
+---
+
+## environment setup
+loading packages and human reference interactome data
+
+```{r message = FALSE}
+library(gprofiler2)
+library(dplyr)
+library(rstatix)
+library(igraph)
+library(ComplexHeatmap)
+library(circlize)
+
+load("~/Documents/INET-work/virus_network/statistic_results/HuRI_ocg.RData")
+
+bp_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HuRI_GOBP_EXP.gmt")
+mf_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HuRI_GOMF_EXP.gmt")
+cc_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HuRI_GOCC_EXP.gmt")
+
+funcEnrich <- function(ocg, organism, size, virus) {
+    go <- list()
+    df <- data.frame("name" = names(ocg$clustsizes), "clustsize" = ocg$clustsizes)
+    for (i in df[df$clustsize > size, "name"]) {
+        query_list <- ocg[[4]][ocg[[4]][, 2] == i, "node"]
+        goquery <- gost(query = query_list, organism = organism, correction_method = "bonferroni", evcodes = TRUE)
+        goquery$result$inCommunity <- paste0( goquery$meta$query_metadata$queries$query_1, collapse = ",")
+        goquery$result$annotatedInCommunity <- paste0(goquery$meta$genes_metadata$query$query_1$ensgs, collapse = ",")
+        target <- query_list[query_list %in% virus$human]
+        goquery$result$viralTarget <- paste0(target, collapse = ",")
+        go[[i]] <- goquery$result
+    }
+    return(go)
+}
+
+statCal <- function(ocg, virTarget, totalN, virus) {
+        clust <- ocg$nodeclusters
+        clust2 <- clust %>% select(cluster) %>% group_by(cluster) %>% mutate(count = n()) %>% distinct()
+        df <- ocg$nodeclusters[ocg$nodeclusters$node %in% virus$human, ]
+        df2 <- df %>% select(cluster) %>% group_by(cluster) %>% mutate(count = n()) %>% distinct()
+        merged <- merge(clust2, df2, by = "cluster", all.x = TRUE)
+        merged[is.na(merged)] <- 0
+        merged$notTarget <- merged[, 2] - merged[, 3]
+        merged$cluster <- merged$cluster
+        row.names(merged) <- merged[, 1]
+        merged <- merged[, c(3, 4)]
+        names(merged) <- c("Target", "notTarget")
+        total <- c(virTarget, totalN)
+        names(total) <- c("Target", "notTarget")
+        data <- data.frame()
+        data <- apply(merged, 1, function(x) {
+                tab <- rbind(x, total)
+                fisher_test(tab)
+                })
+        return(data)
+}
+
+goOutput <- function(ocg, ocgbp, virus) {
+        ocg1 <- statCal(ocg, length(virus$human), length(unique(ocg$nodeclusters$node)), virus)
+        ocg1_all <- do.call(rbind.data.frame, ocg1)
+        ocg1_all$cluster <- row.names(ocg1_all)
+        ocg1_graph <- ocg1_all[ocg1_all$p <= 0.05, "cluster"]
+
+        dfa1 <- list()
+        for (i in ocg1_graph$cluster) {
+                if (length(ocgbp[[i]]) != 19) {
+                        next
+                } else {
+                        dfa1[i] <- ocgbp[i]
+                }
+        }
+        ocga1_bp <- do.call(rbind, dfa1)
+}
+```
+
+## Pan coronavirus data
+
+```{r message = FALSE}
+pan <- read.csv("~/Documents/INET-work/virus_network/pan_coronavirus/PPI_list_20210203.csv", header = T)
+pan_node <- read.csv("~/Documents/INET-work/virus_network/pan_coronavirus/PPI_nodes_20210203.csv", header = T)
+
+virus_PPI <- list(
+    "229E" = pan[pan$virus_strain == "229E" & pan$"avg.interaction.strength" >= 2, ],
+    NL63 = pan[pan$virus_strain == "NL63" & pan$"avg.interaction.strength" >= 2, ],
+    HKU1 = pan[pan$virus_strain == "HKU1" & pan$"avg.interaction.strength" >= 2, ],
+    MERS = pan[pan$virus_strain == "MERS" & pan$"avg.interaction.strength" >= 2, ],
+    OC43 = pan[pan$virus_strain == "OC43" & pan$"avg.interaction.strength" >= 2, ],
+    IAV = pan[pan$virus_strain == "IAV" & pan$"avg.interaction.strength" >= 2, ],
+    SARS1 = pan[pan$virus_strain == "SARS1" & pan$"avg.interaction.strength" >= 2, ],
+    SARS2 = pan[pan$virus_strain == "SARS2" & pan$"avg.interaction.strength" >= 2, ]
+)
+
+pan_network <- graph_from_data_frame(pan["avg.interaction.strength" >= 2, ], directed = FALSE)
+V(pan_network)$strains <- pan$"virus_strain"
+```
+
+## GO analysis
+
+```{r message = FALSE}
+for (i in names(virus_PPI)) {
+    huri_ocg_enrich <- do.call(rbind.data.frame, statCal(huri_ocg, length(virus_PPI[[i]]$human), length(unique(huri_ocg$nodeclusters$node)), virus_PPI[[i]]))
+    huri_ocg_enrich$cluster <- row.names(huri_ocg_enrich)
+    write.csv(huri_ocg_enrich[huri_ocg_enrich$p <= 0.05, ], file = paste0("~/Documents/INET-work/virus_network/pan_coronavirus/HuRI_community_", i, ".csv"), row.names = FALSE)
+
+    huri_ocg_gobp <- funcEnrich(huri_ocg, bp_cust, 5, virus_PPI[[i]])
+    huri_ocg_gomf <- funcEnrich(huri_ocg, mf_cust, 5, virus_PPI[[i]])
+    huri_ocg_gocc <- funcEnrich(huri_ocg, cc_cust, 5, virus_PPI[[i]])
+
+    ocgRI_bp <- goOutput(huri_ocg, huri_ocg_gobp, virus_PPI[[i]])
+    ocgRI_mf <- goOutput(huri_ocg, huri_ocg_gomf, virus_PPI[[i]])
+    ocgRI_cc <- goOutput(huri_ocg, huri_ocg_gocc, virus_PPI[[i]])
+
+    write.csv(rbind(ocgRI_bp, ocgRI_mf, ocgRI_cc)[, c(1:13, 15:19)], file = paste0("~/Documents/INET-work/virus_network/pan_coronavirus/HuRI_community_", i, "_GO.csv"), row.names = FALSE)
+}
+```
+
+## Tissue preferentially expression
+```{r}
+huri_tissue <- read.table("~/Documents/INET-work/references/HuRI_binaryPPI/Supplementary_Tables_new/Supplementary Table 22.txt", header = T, sep = "\t")
+
+length <- list("229E" = 20, "HKU1" = 12, "IAV" = 10, "MERS" = 20, "NL63" = 10, "OC43" = 20, "SARS1" = 15, "SARS2" = 15)
+## Pan-coronavirus
+for (i in names(virus_PPI)) {
+    virus <- huri_tissue[huri_tissue$Ensembl_gene_id %in% virus_PPI[[i]]$Ensembl_ID, ]
+    row.names(virus) <- virus_PPI[[i]]$human[match(virus$Ensembl_gene_id, virus_PPI[[i]]$Ensembl_ID)]
+    virus_exp <- virus[, -1]
+    pdf(paste0("~/Documents/INET-work/virus_network/pan_coronavirus/figures/", i, "_TiP.pdf"), width = 12, height = length[[i]])
+    draw(
+        Heatmap(as.matrix(virus_exp),
+        name = "z-score",
+        colorRamp2(c(-5, 0, 5), c("blue", "white", "red")),
+        cluster_columns = FALSE,
+        column_title = paste0(i, " target proteins tissue preferentially expression"),
+        width = unit(9, "inch"), height = unit(length[[i]] - 4, "inch"),
+        row_names_gp = gpar(fontsize = 8))
+        )
+    dev.off()
+}
+```

@@ -1,0 +1,368 @@
+---
+title: "Proportion of observed phosphoregulated proteins in VirHostome"
+author: "Lin Chung-wen"
+date: "1/13/2021, compiled at `r format(Sys.time(), '%d %m %y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# environment
+```{r include = FALSE}
+library(rethinking)
+library(openxlsx)
+source("~/Documents/Programming/R_functions/random_sig.r")
+```
+
+### search space and HuSCI binary interactions
+
+<!-- - hORF: HORFeome_all.tsv -->
+<!-- - fBFG: 20180927_bhORFeome_AD.xlsx -->
+- merged: ORF_searchSpace.xlsx
+
+```{r echo = FALSE}
+# horf <- read.table("~/Documents/INET-work/references/HuRI_binaryPPI/HORFeome_all.tsv", header = T, sep = "\t")
+# horf <- sort(horf$symbol)
+# horf <- horf[!horf == "NULL"]
+
+# fbfg <- read.xlsx("~/Documents/INET-work/references/HuRI_binaryPPI/20180927_bhORFeome_AD.xlsx")
+# fbfg <- fbfg[-1, ]
+# fbfg <- sort(unique(fbfg$X11))
+# fbfg[1:21] <- c("MARCH1", "MARCH2", "MARCH3", "MARCH4", "MARCH5", "MARCH6", "MARCH7", "MARCH8", "MARCH9", "MARCH10", "SEP1", "SEP3", "SEP4", "SEP5", "SEP6", "SEP7", "SEP9", "SEP10", "SEP11", "SEP14", "DEC1")
+# fbfg <- fbfg[!fbfg == "NULL"]
+horf <- read.xlsx("~/Documents/INET-work/references/HuRI_binaryPPI/ORF_searchSpace.xlsx", sheet = 1)
+horf_sym <- unique(horf$ensembl_geneName)
+horf <- unique(horf$orf_id)
+
+fbfg <- read.xlsx("~/Documents/INET-work/references/HuRI_binaryPPI/ORF_searchSpace.xlsx", sheet = 2)
+fbfg_sym <- unique(fbfg$ensembl_geneName)
+fbfg <- unique(fbfg$ORF_id)
+tot_space <- unique(c(horf, fbfg))
+
+total_sym <- unique(c(horf_sym, fbfg_sym))
+
+binary <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/binary_node_1126.csv", header = T)
+binary_human <- binary[binary$group == "human", "node"]
+
+huri <- read.csv("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_Tong_withSymbol.csv", header = T)
+huri_uniq <- unique(c(huri$symbol_a, huri$symbol_b))
+
+# dk <- read.xlsx("~/Google_lincw1111/VirHostome_CW/comparison/data/20201018_DK_VirHostome_Summary.xlsx", sheet = 1, startRow = 3)
+```
+
+## Two screening completeness comparison
+
+```{r echo = FALSE}
+paste0("fBFG-Y2H: ", length(fbfg))
+paste0("classic Y2H (hORF): ", length(horf))
+paste0("common ORF: ", table(horf %in% fbfg)[2])
+paste0("all ORF: ", length(tot_space))
+paste0("fBFG-Y2H viral ORF: ", 28)
+paste0("classic viral ORF: ", 27)
+paste0("fBFG search space: ", 28 * length(fbfg))
+paste0("classic Y2H (hORF) search space, vPrey (AD), hBait (DB): ", 27 * length(horf))
+paste0("classic Y2H (hORF) search space, vPrey (DB), hBait (AD): ", 26 * length(horf))
+paste0("common search space: ", 25 * table(horf %in% fbfg)[2])
+paste0("total search space: ", 30 * length(tot_space))
+paste0("Fraction of total: ", 100 * round((25 * table(horf %in% fbfg)[2])/(30 * length(tot_space)), 4), "%")
+```
+
+## observed phosphoregulated human targets
+udpate with phosphoregulated gene list
+
+```{r echo = FALSE}
+# phos <- read.delim("~/Documents/INET-work/virus_network/references/04_Phosphoproteomics/Phosphoproteomics_Krogan/list.csv", header = T)
+# phos <- phos$phosphoregulated
+phos_bouhaddou <- read.xlsx("~/Documents/INET-work/virus_network/references/04_Phosphoproteomics/Phospho_Krogan.xlsx", sheet = 1)
+phos_stukalov <- read.xlsx("~/Documents/INET-work/virus_network/references/04_Phosphoproteomics/Phospho_Pichlmair.xlsx", sheet = 1)
+phos <- unique(c(phos_stukalov$Gene.symbol, phos_bouhaddou$Gene_Name))
+
+binary_phos <- table(binary_human %in% phos)[2]
+random_phos <- simula(10000, total_sym, binary_human, phos)
+random_phos_huri <- simula(10000, huri_uniq, binary_human, phos)
+
+# binary_phos_id <- binary_human[binary_human %in% phos]
+
+paste("Observed phosphoregulated proteins within VirHostome:", binary_phos)
+sign_phos <- round(1 - (abs(sig(as.numeric(random_phos), as.numeric(binary_phos))) / 10000), 4)
+sign_phos_huri <- round(1 - (abs(sig(as.numeric(random_phos_huri), as.numeric(binary_phos))) / 10000), 4)
+```
+
+### Observed phosphoregulated proteins (VirHostome vs 10000 times random selection from combined ORF list).
+
+```{r echo = FALSE, message = FALSE}
+dens <- hist(random_phos, breaks = 39, plot = FALSE)
+dens_huri <- hist(random_phos_huri, breaks = 39, plot = FALSE)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_phosphoprotein2.pdf", width = 3, height = 3)
+par(ps = 8, mar = c(4, 4, 5, 1))
+# Human OFeome as BG
+plot(dens, xlim = c(0, 50), col = "grey", freq = FALSE, border = NA, las = 1, xlab = "Number of phosphoregulated host proteins", ylab = "Frequency density", main = "HumanOFeome as background", xaxt = "n")
+box(col = "black")
+arrows(binary_phos, 150/10000, binary_phos, 10/10000, col = "red", lwd = 3, length = 0.1)
+axis(side = 1, at = seq(1, 50, 5), labels = seq(1, 49, 5))
+text(binary_phos, 200/10000, label = paste("p =", sign_phos), cex = 0.6)
+# HuRI as BG
+plot(dens_huri, xlim = c(0, 50), col = "grey", freq = FALSE, border = NA, las = 1, xlab = "Number of phosphoregulated host proteins", ylab = "Frequency density", main = "HuRI as background", xaxt = "n")
+box(col = "black")
+arrows(binary_phos, 150/10000, binary_phos, 10/10000, col = "red", lwd = 3, length = 0.1)
+axis(side = 1, at = seq(1, 50, 5), labels = seq(1, 49, 5))
+text(binary_phos, 200/10000, label = paste("p =", sign_phos_huri), cex = 0.6)
+dev.off()
+```
+
+## observed ubiquitination
+**2021.03.24 17:10**-
+incorporate with IntAct binary data for ubiquitination protein assay
+However, no idea how to perform the statistics assay with the data from IntAct.
+
+**2021.03.24 21:11**-
+Trying with HuRI 1st neighbor.
+
+```{r}
+# 1. compare between HuSCI and Ubiquitiome
+ubiquit <- read.csv("~/Documents/INET-work/virus_network/references/PPIs/Stukalov_phosphoproteome_2020/ubituitination.csv", header = T)
+ubiquit <- unique(ubiquit[ubiquit$sig == "Y", "first"])
+
+binary_ubiq <- table(binary_human %in% ubiquit)[2]
+# binary_ubiq_id <- binary_human[binary_human %in% ubiquit]
+random_ubiq <- simula(10000, total_sym, binary_human, ubiquit)
+sign_ubiq <- round(1 - (abs(sig(random_ubiq, binary_ubiq)) / 10000), 4)
+
+paste("Observed ubiquitinated proteins within VirHostome:", binary_ubiq, "; p = ", sign_ubiq)
+
+# 2. compare between HuSCI ubiquitination proteins in IntAct and Ubiquitiome
+intact <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/HuSCI_IntAct_ubiquitination_list.csv", header = T)
+intact_ubiq <- table(intact$name %in% ubiquit)[2]
+# NOT correct here!
+# random_intact_ubiq <- mcreplicate(10000, table(sample(total_sym, length(binary_human)) %in% ubiquit)[2], mc.cores = detectCores())
+
+# 3. doing random rewiring
+## original finding
+### Ubiquitination proteins from HuSCI
+binary_ubiq <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/HuSCI_and_HuRI.csv", header = T)
+binary_ubiq <- unique(binary_ubiq[binary_ubiq$ubiquitin == 1, "name"]) # 30 proteins from HuSCI
+binary_ubiq <- binary_ubiq[!is.na(binary_ubiq)]
+
+### 1st neighbor of Ubiquitination proteins and how many of them are in Ubiquitiome
+library(igraph)
+huri <- read.csv("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_Tong_withSymbol.csv", header = T)
+huri <- huri[, c(5:6)]
+graph <- graph_from_data_frame(huri, directed = FALSE)
+graph <- simplify(graph, remove.loops = FALSE)
+binary_ubiq_subnet <- ego(graph, order = 1, nodes = binary_ubiq[c(1:28, 30)], mode = "all") # "UGGT2" not found in HuRI
+binary_ubiq_1st <- unique(names(unlist(binary_ubiq_subnet))) # 1st neighbors of 30 proteins from HuSCI
+binary_ubiq_check <- as.numeric(table(unique(names(unlist(binary_ubiq_subnet))) %in% ubiquit)[2]) # 1st neighbors of 30 proteins from HuSCI in Ubiquitiome
+
+## network rewiring
+rewire_output <- function(x) {
+    rewired_graph <- simplify(rewire(graph, keeping_degseq(niter = gsize(graph) * 10)), remove.loops = FALSE)
+    binary_rewire_subnet <- ego(rewired_graph, order = 1, nodes = binary_ubiq[c(1:28, 30)], mode = "all") # "UGGT2" not found in HuRI
+    binary_rewire_check <- as.numeric(table(unique(names(unlist(binary_rewire_subnet))) %in% ubiquit)[2])
+    return(binary_rewire_check)
+}
+random_intact_ubiq <- mcreplicate(10000, rewire_output(), mc.cores = detectCores())
+sign_intact_ubiq <- round(1 - (abs(sig(random_intact_ubiq, binary_ubiq_check)) / 10000), 4)
+paste("Observed ubiquitinated proteins within 1st neighbor:", binary_ubiq_check, "; p = ", sign_intact_ubiq)
+```
+
+### Observed ubiquitinated proteins (VirHostome vs 10000 times random selection from combined ORF list).
+**2021.03.25 00:00**-
+have graph for 1st random simulation
+
+```{r echo = FALSE, message = FALSE}
+dens <- hist(random_ubiq, plot = FALSE)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_ubiquitination.pdf", width = 3, height = 3)
+par(ps = 8)
+plot(dens, xlim = c(0, 50), col = "grey", freq = FALSE, border = NA, las = 1, xlab = "Number of ubiquitinated host proteins", ylab = "Frequency density", main = NULL)
+box(col = "black")
+arrows(binary_ubiq, 400/10000, binary_ubiq, 10/10000, col = "red", lwd = 2)
+text(binary_ubiq - 1, 550/10000, label = paste("p =", sign_ubiq), cex = 0.6)
+dev.off()
+
+dens <- hist(random_intact_ubiq, plot = FALSE)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_1stNB_ubiquitination.pdf", width = 3, height = 3)
+par(ps = 8)
+plot(dens, xlim = c(0, 100), col = "grey", freq = FALSE, border = NA, las = 1, xlab = "Number of ubiquitinated human proteins", ylab = "Frequency density", main = NULL)
+box(col = "black")
+arrows(binary_ubiq_check, 100/10000, binary_ubiq_check, 10/10000, col = "red", lwd = 2, length = 0.1)
+text(binary_ubiq_check - 1, 150/10000, label = paste("p =", sign_intact_ubiq), cex = 0.6)
+dev.off()
+```
+
+## observed RNA binding protein (RBP)
+**2021.03.23 12:42**-
+
+```{r}
+RBP8 <- read.xlsx("~/Documents/INET-work/virus_network/references/protein_RNA/media-1.xlsx", sheet = 1)
+RBP24 <- read.xlsx("~/Documents/INET-work/virus_network/references/protein_RNA/media-1.xlsx", sheet = 2)
+RBP8_sig <- RBP8[!is.na(RBP8[RBP8$logFC >= 1 | RBP8$logFC <= -1, "Gene.name"]), "Gene.name"]
+RBP8_sig <- RBP8_sig[!is.na(RBP8_sig)]
+
+RBP24$adj.P.Val[is.na(RBP24$adj.P.Val)] <- 1 # necessary because NA will also be included
+RBP24_sig <- RBP24[RBP24$adj.P.Val < 0.1, "Gene.name"]
+RBP24_sig <- RBP24_sig[c(1:330)]
+
+binary_rbp <- table(binary_human %in% RBP8$Gene.name)[2] # cRIC
+random_rbp <- simula(10000, total_sym, binary_human, RBP8$Gene.name) # cRIC
+random_rbp_huri <- simula(10000, huri_uniq, binary_human, RBP8$Gene.name) # cRIC
+
+# paste("Observed RNA binding proteins within VirHostome:", binary_rbp)
+sign_rbp <- round(1 - (abs(sig(random_rbp, binary_rbp)) / 10000), 4) # cRIC
+sign_rbp_huri <- round(1 - (abs(sig(random_rbp_huri, binary_rbp)) / 10000), 4) # cRIC
+
+# 2021.04.11 **12:00pm**
+# cRIC significant
+binary_rbp24 <- table(binary_human %in% RBP24_sig)[2]
+random_rbp24 <- simula(10000, total_sym, binary_human, RBP24_sig)
+sign_rbp24 <- round(1 - (abs(sig(random_rbp24, binary_rbp24)) / 10000), 4)
+random_rbp24_huri <- simula(10000, huri_uniq, binary_human, RBP24_sig)
+sign_rbp24_huri <- round(1 - (abs(sig(random_rbp24_huri, binary_rbp24)) / 10000), 4)
+
+# 2021.03.23 12:44
+RBP_vRIC <- read.xlsx("~/Documents/INET-work/virus_network/references/protein_RNA/media-5.xlsx", sheet = 1)
+RBP_vRIC <- RBP_vRIC[RBP_vRIC$logFC > 0, ] # all
+RBP_vRIC2 <- RBP_vRIC[RBP_vRIC$Sig.vRNA.Interactors.FDR10 == "Yes", ] # significant
+
+binary_rbpvric <- table(binary_human %in% RBP_vRIC$Gene.name)[2]
+# binary_rbpvric_id <- binary_human[binary_human %in% RBP_vRIC$Gene.name]
+random_rbpvric <- simula(10000, total_sym, binary_human, RBP_vRIC$Gene.name)
+sign_rbpvric <- round(1 - (abs(sig(random_rbpvric, binary_rbpvric)) / 10000), 4)
+random_rbpvric_huri <- simula(10000, huri_uniq, binary_human, RBP_vRIC$Gene.name)
+sign_rbpvric_huri <- round(1 - (abs(sig(random_rbpvric_huri, binary_rbpvric)) / 10000), 4)
+# vRIC significant
+binary_rbpvric2 <- table(binary_human %in% RBP_vRIC2$Gene.name)[2]
+random_rbpvric2 <- simula(10000, total_sym, binary_human, RBP_vRIC2$Gene.name)
+sign_rbpvric2 <- round(1 - (abs(sig(random_rbpvric2, binary_rbpvric2)) / 10000), 4)
+random_rbpvric2_huri <- simula(10000, huri_uniq, binary_human, RBP_vRIC2$Gene.name)
+sign_rbpvric2_huri <- round(1 - (abs(sig(random_rbpvric2_huri, binary_rbpvric2)) / 10000), 4)
+```
+
+### Observed RNA binding proteins (VirHostome vs 10000 times random selection from combined ORF list).
+
+```{r echo = FALSE, message = FALSE}
+# cRIC
+dens <- hist(random_rbp, breaks = 20, plot = FALSE)
+dens_huri <- hist(random_rbp_huri, breaks = 20, plot = FALSE)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_RBPcRIC.pdf", width = 3, height = 3)
+par(mgp = c(2, 0.7, 0), ps = 8)
+plot(dens, xlim = c(0, 20), ylim = c(0, 0.17), col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlab = "Number of identified RBP", ylab = "Frequency density", main = "from cRIC\n(all)", xaxt = "n")
+plot(dens_huri, xlim = c(0, 20), col = rgb(1, 0.65, 0, 1/2), freq = FALSE, border = NA, las = 1, xlab = "Number of identified RBP", ylab = "Frequency density", xaxt = "n", add = T)
+axis(side = 1, at = seq(1, 20, 4) - 0.5, labels = seq(0, 19, 4))
+box(col = "black")
+arrows(binary_rbp + 0.5, 400/10000, binary_rbp + 0.5, 10/10000, col = "red", lwd = 2, length = 0.1)
+text(binary_rbp - 4, 550/10000, paste0("p = ", sign_rbp, "(integrate search space)\np = ", sign_rbp_huri, " (HuRI)"), cex = 0.4, pos = 4)
+legend(9, 0.17, inset = 0.02, legend = c("Integrated search space", "HuRI"), fill = c(rgb(0.75, 0.75, 0.75, 1/2), rgb(1, 0.65, 0, 1/2)), cex = 0.5, bty = "n")
+
+# 2021.04.11 **12:13pm**
+# cRIC significant
+dens <- hist(random_rbp24, breaks = 13, plot = FALSE)
+dens_huri <- hist(random_rbp24_huri, breaks = 13, plot = FALSE)
+plot(dens, xlim = c(0, 15), col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlab = "Number of identified RBP", ylab = "Frequency density", main = "from cRIC\n(adj.p < 0.1)", xaxt = "n")
+plot(dens_huri, xlim = c(0, 15), col = rgb(1, 0.65, 0, 1/2), freq = FALSE, border = NA, las = 1, xaxt = "n", add = T)
+axis(side = 1, at = c(seq(1, 15, 3) - 0.5, 15), labels = seq(0, 15, 3))
+box(col = "black")
+arrows(binary_rbp24 + 0.5, 400/10000, binary_rbp24 + 0.5, 10/10000, col = "red", lwd = 2, length = 0.1)
+text(binary_rbp24, 550/10000, label = paste0("p = ", sign_rbp24, "(integrate search space)\np = ", sign_rbp24_huri, " (HuRI)"), cex = 0.4, pos = 4)
+legend(5, 0.2, inset = 0.02, legend = c("Integrated search space", "HuRI"), fill = c(rgb(0.75, 0.75, 0.75, 1/2), rgb(1, 0.65, 0, 1/2)), cex = 0.5, bty = "n")
+dev.off()
+
+# 2021.03.23 12:44
+# vRIC
+dens <- hist(random_rbpvric, breaks = 12, plot = FALSE)
+dens_huri <- hist(random_rbpvric_huri, breaks = 12, plot = FALSE)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_RBPvRIC.pdf", width = 3, height = 3)
+par(mgp = c(2, 0.7, 0), ps = 8)
+plot(dens, xlim = c(0, 15), col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlab = "Number of identified RBP", ylab = "Frequency density", main = "from vRIC RBP list\n(all, logFC > 0)", xaxt = "n")
+plot(dens_huri, xlim = c(0, 15), col = rgb(1, 0.65, 0, 1/2), freq = FALSE, border = NA, las = 1, xaxt = "n", add = T)
+axis(side = 1, at = c(seq(1, 15, 3) - 0.5, 15), labels = seq(0, 15, 3))
+box(col = "black")
+arrows(binary_rbpvric + 0.5, 400/10000, binary_rbpvric + 0.5, 10/10000, col = "red", lwd = 2, length = 0.1)
+text(binary_rbpvric - 4, 550/10000, label = paste0("p = ", sign_rbpvric, "(integrate search space)\np = ", sign_rbpvric_huri, " (HuRI)"), cex = 0.4, pos = 4)
+legend(5, 0.2, inset = 0.02, legend = c("Integrated search space", "HuRI"), fill = c(rgb(0.75, 0.75, 0.75, 1/2), rgb(1, 0.65, 0, 1/2)), cex = 0.5, bty = "n")
+# sig one
+dens <- hist(random_rbpvric2, breaks = 8, plot = FALSE)
+dens_huri <- hist(random_rbpvric2_huri, breaks = 7, plot = FALSE)
+plot(dens, xlim = c(0, 10), col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlab = "Number of identified RBP", ylab = "Frequency density", main = "from vRIC RBP list\n(adj.p < 0.1, logFC > 0)", xaxt = "n")
+plot(dens_huri, xlim = c(0, 10), col = rgb(1, 0.65, 0, 1/2), freq = FALSE, border = NA, las = 1, xaxt = "n", add = T)
+axis(side = 1, at = c(seq(1, 8, 2) - 0.5, 9), labels = seq(0, 8, 2))
+box(col = "black")
+arrows(binary_rbpvric2 + 0.5, 1000/10000, binary_rbpvric2 + 0.5, 100/10000, col = "red", lwd = 2, length = 0.1)
+text(binary_rbpvric2, 1550/10000, paste0("p = ", sign_rbpvric2, "(integrate search space)\np = ", sign_rbpvric2_huri, " (HuRI)"), cex = 0.4, pos = 4)
+legend(4, 0.5, inset = 0.02, legend = c("Integrated search space", "HuRI"), fill = c(rgb(0.75, 0.75, 0.75, 1/2), rgb(1, 0.65, 0, 1/2)), cex = 0.5, bty = "n")
+dev.off()
+```
+
+## Comparison with previously identified viral targets
+~~NOT NECESSARY NOW~~
+**22.02.2021 09:37**- included in VirHostome paper now
+
+```{r}
+previous <- read.xlsx("~/Documents/INET-work/virus_network/references/Interaction\ Counts\ Per\ Human\ Protein\ wo\ spoke,\ wo\ prot-RNA.xlsx")
+previous <- unique(previous$unique)
+
+binary_pre <- table(binary_human %in% previous)[2]
+
+random_pre <- mcreplicate(10000, table(sample(total_sym, length(binary_human)) %in% previous)[2], mc.cores = detectCores())
+
+paste("Observed in previous identified human target within VirHostome:", binary_pre)
+sign_pre <- round(1 - (abs(sig(as.numeric(random_pre), as.numeric(binary_pre))) / 10000), 4)
+```
+
+### Observed human proteins in previous identified targets (VirHostome vs 10000 times random selection from combined ORF list).
+
+```{r echo = FALSE, message = FALSE}
+dens <- hist(random_pre, breaks = seq(0, 50, by = 2), plot = FALSE)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_preIdentified.pdf", width = 3, height = 3)
+par(ps = 8)
+plot(dens, xlim = c(0, 70), freq = FALSE, col = "grey", border = NA, las = 1, xlab = "Number of previous known viral targets", ylab = "Frequency density", main = NULL)
+box(col = "black")
+arrows(binary_pre, 400/10000, binary_pre, 10/10000, col = "red", lwd = 2)
+text(binary_pre - 1, 550/10000, label = paste("p =", sign_pre), cex = 0.6)
+dev.off()
+```
+
+## Comparison with intra-viral interactome
+
+```{r}
+library(igraph)
+sars2 <- read.xlsx("~/Google_lincw1111/VirHostome_CW/cloning/data/SARS2_seq_supplementary.xlsx")
+sars2$"viral.protein"[c(11, 12)] <- "NSP12"
+sars2 <- toupper(unique(sars2$"viral.protein"))
+
+y2h_intra <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/intraviral_edge.csv", header = T)
+y2h_intra <- data.frame(vAD = toupper(y2h_intra$vAD), vDB = toupper(y2h_intra$vDB))
+y2h_graph <- graph_from_data_frame(y2h_intra)
+y2h_intra <- unique(c(toupper(y2h_intra$vAD), toupper(y2h_intra$vDB)))
+
+intra_viral <- read.csv("~/Documents/INET-work/virus_network/references/PPIs/Li_virus-host/Y2H_list.csv", header = T)
+intra_graph <- graph_from_data_frame(intra_viral)
+intra_viral <- unique(c(intra_viral$FROM, intra_viral$TO))
+
+binary_intra <- gsize(intersection(intra_graph, y2h_graph))
+
+sars2_rep <- function(x) {
+  sars2_sample <- data.frame(from = sample(x, 27, replace = TRUE), to = sample(x, 27, replace = TRUE))
+  sars2_sample_graph <- simplify(graph_from_data_frame(sars2_sample))
+  return(gsize(intersection(intra_graph, sars2_sample_graph)))
+}
+
+random_intra <- mcreplicate(10000, sars2_rep(sars2), mc.cores = detectCores())
+
+paste("Observed in intra_viral identified human target within VirHostome:", binary_intra)
+sign_intra <- round(1 - (abs(sig(as.numeric(random_intra), as.numeric(binary_intra))) / 10000), 4)
+```
+
+### Observed intra-viral interactome (VirHostome vs 10000 times random selection from combined ORF list).
+
+```{r echo = FALSE, message = FALSE}
+dens <- hist(random_intra, breaks = 5, plot = FALSE)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_intraViral.pdf", width = 3, height = 3)
+par(ps = 8)
+plot(dens, xlim = c(0, 6), freq = FALSE, col = "grey", border = NA, las = 1, xlab = "Number of PPI in intraviral interactome", ylab = "Frequency density", main = NULL)
+box(col = "black")
+arrows(binary_intra, 1000/10000, binary_intra, 10/10000, col = "red", lwd = 2)
+text(binary_intra - 1, 550/10000, label = paste("p =", sign_intra), cex = 0.6)
+dev.off()
+```

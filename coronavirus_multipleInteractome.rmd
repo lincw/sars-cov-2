@@ -1,0 +1,123 @@
+---
+title: integrate analysis of mutliple SARS-CoV-2 interactome
+date: "2020.12.06"
+author: Lin Chung-wen
+output: html_document
+---
+# Venn diagram of multiple SARS-CoV-2 interactome, including Gordon AP-MS, Stukalov AP-MS, Li AP-MS and Roth+INET Y2H
+
+## loading environment
+
+### **10.12.2020 16:17** shown intersection
+```{r echo = FALSE, message = FALSE}
+library(VennDiagram)
+library(RColorBrewer)
+myCol <- colorRampPalette(brewer.pal(3, "Dark2"))
+library(UpSetR)
+library(stringi)
+library(gridExtra)
+library(grid)
+```
+
+### **25.02.2021 13:25**
+using Gordon Science data
+
+### **12.01.2021 10:26**
+add [the 4th AP-MS interactome](https://doi.org/10.1101/2020.10.23.342113)
+```{r}
+nabeel <- read.csv("~/Documents/INET-work/virus_network/references/PPIs/Nabeel-Shah_APMS/Nabbel_edge.csv", header = T)
+nabeel <- data.frame(lapply(nabeel[, c(2, 3)], toupper))
+nabeel$ppi <- paste0(nabeel[, 1], "-", nabeel[, 2])
+```
+
+## loading dataset
+```{r}
+gordon <- read.csv("~/Documents/INET-work/virus_network/raw/gordon_science.csv", header = T)
+gordon <- data.frame(lapply(gordon[, c(1:2)], toupper))
+names(gordon) <- c("virus", "human")
+gordon$ppi <- paste0(gordon[, 1], "-", gordon[, 2])
+stukalov <- read.csv("~/Documents/INET-work/virus_network/raw/stukalov_APMS.csv", header = T)
+stukalov <- data.frame(lapply(stukalov[, c(1:2)], toupper))
+names(stukalov) <- c("virus", "human")
+stukalov$ppi <- paste0(stukalov[, 1], "-", stukalov[, 2])
+li <- read.csv("~/Documents/INET-work/virus_network/raw/li_APMS.csv", header = T)
+li <- data.frame(lapply(li[, c(1:2)], toupper))
+names(li) <- c("virus", "human")
+li$ppi <- paste0(li[, 1], "-", li[, 2])
+binary <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/binary_edge_1126.csv", header = T)
+binary <- binary[, c(1:2)]
+binary[, 1][binary[, 1] == "ORF3b1" | binary[, 1] == "ORF3b2"] <- "ORF3B"
+binary <- data.frame(lapply(binary, toupper))
+binary$ppi <- paste0(binary[, 1], "-", binary[, 2])
+```
+
+## visualize overlap
+```{r message = FALSE}
+PPI <- venn.diagram(x = list(binary$ppi, gordon$ppi, stukalov$ppi, li$ppi),
+    category.names = c("Y2H binary", "Gordon", "Stukalov", "Li"),
+    filename = NULL,
+    cex = 1, cat.cex = 1, lwd = 2,
+    fill = myCol(4),
+    main = "SARS-CoV-2-host interactome PPI")
+node <- venn.diagram(x = list(unique(binary$human), unique(gordon$human), unique(stukalov$human), unique(li$human)),
+    category.names = c("Y2H binary", "Gordon", "Stukalov", "Li"),
+    filename = NULL,
+    cex = 1, cat.cex = 1, lwd = 2,
+    fill = myCol(4),
+    main = "SARS-CoV-2-host interactome human target")
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/4interactome.pdf", width = 10, height = 4)
+cowplot::plot_grid(
+    gTree(children = PPI),
+    gTree(children = node),
+    ncol = 2
+    )
+dev.off()
+
+PPI <- venn.diagram(x = list(binary$ppi, gordon$ppi, stukalov$ppi, li$ppi, nabeel$ppi),
+    category.names = c("Y2H binary", "Gordon", "Stukalov", "Li", "Nabeel"),
+    filename = NULL,
+    cex = 1, cat.cex = 1, lwd = 2,
+    fill = myCol(5),
+    main = "SARS-CoV-2-host interactome PPI")
+node <- venn.diagram(x = list(unique(binary$human), unique(gordon$human), unique(stukalov$human), unique(li$human), unique(nabeel$human)),
+    category.names = c("Y2H binary", "Gordon", "Stukalov", "Li", "Nabeel"),
+    filename = NULL,
+    cex = 1, cat.cex = 1, lwd = 2,
+    fill = myCol(5),
+    main = "SARS-CoV-2-host interactome human target")
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/5interactome.pdf", width = 10, height = 4)
+cowplot::plot_grid(
+    gTree(children = PPI),
+    gTree(children = node),
+    ncol = 2
+    )
+dev.off()
+```
+
+## output overlap section
+```{r message = FALSE}
+PPI_list <- list("Y2H binary" = binary$ppi, "Gordon" = gordon$ppi, "Stukalov" = stukalov$ppi, "Li" = li$ppi, "Nabeel" = nabeel$ppi)
+PPI_di <- fromList(PPI_list)
+PPI_di$rowname <- unique(unlist(PPI_list))
+PPI_di <- PPI_di["rowname" != "", ]
+write.table(PPI_di[, c(6, 1:5)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/5interactome_PPIs.csv", sep = ",", row.names = FALSE, quote = FALSE)
+node_list <- list("Y2H binary" = binary$human, "Gordon" = gordon$human, "Stukalov" = stukalov$human, "Li" = li$human, "Nabeel" = nabeel$human)
+node_di <- fromList(node_list)
+node_di$rowname <- unique(unlist(node_list))
+node_di <- node_di["rowname" != "", ]
+write.table(node_di[, c(6, 1:5)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/5interactome_nodes.csv", sep = ",", row.names = FALSE, quote = FALSE)
+
+PPI_overlap <- PPI_di[rowSums(PPI_di[, c(1:5)]) >= 2 & PPI_di$`Y2H binary` == 1, ]
+node_overlap <- node_di[rowSums(node_di[, c(1:5)]) >= 2 & node_di$`Y2H binary` == 1, ]
+```
+
+## using upset to present overlap between 5 dataset
+```{r message = FALSE}
+library(UpSetR)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/5interactome_UpSetR.pdf", width = 14, height = 6)
+upset(PPI_di, sets = c("Y2H binary", "Gordon", "Stukalov", "Li", "Nabeel"), order.by = "degree", nsets = 6, text.scale = 1.5, point.size = 3.5, line.size = 2, sets.x.label = "Candidator", keep.order = FALSE)
+grid.text("Human interaction candidator distribution",x = 0.6, y = 0.95, gp = gpar(fontsize = 14))
+upset(node_di, sets = c("Y2H binary", "Gordon", "Stukalov", "Li", "Nabeel"), order.by = "degree", nsets = 6, text.scale = 1.5, point.size = 3.5, line.size = 2, sets.x.label = "PPI", keep.order = FALSE)
+grid.text("Human interaction distribution",x = 0.6, y = 0.95, gp = gpar(fontsize = 14))
+dev.off()
+```

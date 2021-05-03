@@ -1,0 +1,241 @@
+---
+title: "Output of functional enrichment result from metascape.org"
+date: "2020.10.21"
+output: pdf_document
+    toc: true
+---
+
+## loading environment
+```{r echo = FALSE, message = FALSE}
+# devtools::install_github("hrbrmstr/ggalt")
+library(ggplot2)
+library(stringr)
+
+library(ggalt)
+
+theme_set(theme_classic())
+meta_plot <- function(x, main) {
+    names(x) <- c("term", "log10p", "observeRatio")
+    x$term <- factor(x$term, levels = x$term[rev(order(x$log10p))])
+    ggplot(x, aes(x = term, y = -log10p)) +
+        geom_point(aes(, size = observeRatio * 100), stat = "identity") +
+        geom_segment(aes(y = 0, x = term, yend = -log10p, xend = term), color = "black") +
+        scale_x_discrete(labels = function(x) str_wrap(x, width = 60)) +
+        labs(x = "", y = "-Log10(p)", size = "Observed ratio (%)", title = main) +
+        theme(axis.text = element_text(color = "black", size = 12, hjust = 0,),
+            axis.title = element_text(size = 12, face = "bold")) +
+        coord_flip()
+}
+meta_plot_dumbbel <- function(x, main) {
+    names(x) <- c("term", "log10p", "Enrichment", "Background")
+    x$term <- factor(x$term, levels = x$term[order(x$Enrichment)])
+    ggplot(x, aes(x = Background * 100, xend = Enrichment * 100, y = term, group = term)) +
+        geom_dumbbell(color = "#e3e2e1", colour_x = "red", colour_xend = "blue", size = 2, dot_guide = TRUE, dot_guide_size = 0.25) +
+        # geom_dumbbell(aes(size = -log10p), color = "#e3e2e1", colour_x = "red", colour_xend = "blue", dot_guide = TRUE, dot_guide_size = 0.25) + # used to present different P-value
+        labs(y = "Functional category\n(p < 0.05)", x = "Proportion", title = main) +
+        theme_bw() +
+        theme(axis.text = element_text(color = "black", size = 10, hjust = 0,),
+            axis.title = element_text(size = 10, face = "bold")) +
+        theme(plot.margin = unit(c(1, 1, 1, 1), "cm")) +
+        scale_color_manual(name = "", values = c("red", "blue"))
+}
+library(ggpubr)
+library(egg) # for equal plot area
+```
+
+## 21.10.2020 Frist result
+```{r eval = FALSE, echo = FALSE}
+meta_inet_nonspecific <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/meta_enrichment/INET_nonspecific/metascape_summary.csv", header = T)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/inet_non_specific_meta.pdf", width = 10, height = 8)
+meta_plot(meta_inet_nonspecific, "INET common targets")
+dev.off()
+
+meta_inet_specific <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/meta_enrichment/INET_specific/metascape_summary.csv", header = T)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/inet_specific_meta.pdf", width = 10, height = 8)
+meta_plot(meta_inet_specific, "INET unique targets")
+dev.off()
+
+meta_y2h_nonspecific <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/meta_enrichment/Y2H_binary_common/metascape_summary.csv", header = T)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/Y2Hbinary_common_meta.pdf", width = 10, height = 8)
+meta_plot(meta_y2h_nonspecific, "Y2H binary common targets")
+dev.off()
+
+meta_y2h_specific <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/meta_enrichment/Y2H_binary_unique/metascape_summary.csv", header = T)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/Y2Hbinary_unique_meta.pdf", width = 10, height = 8)
+meta_plot(meta_y2h_specific, "Y2H binary unique targets")
+dev.off()
+```
+
+## 25.10.2020 Second result
+According to Fritz and Pascal, it makes less sense to separate unique and common proteins for functional enrichment assay.
+***
+The DisGeNET is used as another functional enrichment term for query.
+> the DisGeNET terms with duplicated geneID were removed.
+
+```{r eval = FALSE, echo = FALSE}
+meta_inet_124 <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/meta_enrichment/INET_all124_GO_reactome_KEGG/metascape_summary.csv", header = T)
+disgenet_inet_124 <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/meta_enrichment/INET_all124_GO_reactome_KEGG/Enrichment_QC/GO_DisGeNET_summary.csv", header = T)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/INET_all124_GO_reactome_KEGG_meta.pdf", width = 10, height = 9)
+meta_plot(meta_inet_124, "Viral targeted human interactors (INET, n = 124)")
+meta_plot_dumbbel(meta_inet_124, "INET")
+meta_plot(disgenet_inet_124, "Gene-disease enrichment (INET, n = 124)")
+dev.off()
+
+meta_roth_229 <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/meta_enrichment/Roth_all228_GO_reactome_KEGG/metascape_summary.csv", header = T)
+disgenet_roth_229 <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/meta_enrichment/Roth_all228_GO_reactome_KEGG/Enrichment_QC/GO_DisGeNET_summary.csv", header = T)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/Roth_all228_GO_reactome_KEGG_meta.pdf", width = 10, height = 8)
+meta_plot(meta_roth_229, "Viral targeted human interactors (Roth, n = 229)")
+meta_plot_dumbbel(meta_roth_229, "Roth")
+meta_plot(disgenet_roth_229, "Gene-disease enrichment (Roth, n = 229)")
+dev.off()
+
+meta_y2h_346 <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/meta_enrichment/2_Y2H_all346_GO_reactome_KEGG/metascape_summary.csv", header = T)
+disgenet_y2h_346 <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/meta_enrichment/2_Y2H_all346_GO_reactome_KEGG/Enrichment_QC/GO_DisGeNET_summary.csv", header = T)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/2_Y2H_all346_GO_reactome_KEGG_meta.pdf", width = 10, height = 9)
+meta_plot(meta_y2h_346, "Viral targeted human interactors (binary, n = 346)")
+meta_plot_dumbbel(meta_y2h_346, "Binary")
+meta_plot(disgenet_y2h_346, "Gene-disease enrichment (binary, n = 346)")
+dev.off()
+```
+
+## 09.11.2020 New INET interactome
+```{r eval = FALSE, echo = FALSE}
+binary_1107 <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/binary/metascape_summary.csv", header = T)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/binary_GO_reactome_KEGG_meta.pdf", width = 15, height = 9)
+# meta_plot(binary_1107, "Viral targeted human interactors (binary, n = 346)")
+meta_plot_dumbbel(binary_1107, "Binary")
+dev.off()
+```
+
+## 30.11.2020 Final integrate VirHostome
+
+**2021.02.10** - update background list with HuRI_9.1 + fBFGORFeome
+
+**2021.01.06** - update background list with hORFeome + fBFGORFeome
+
+**2020.12.08** have figure with GO only
+
+```{r}
+# binary <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/binary/metascape_summary.csv", header = T)
+# binary <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/binary_GO_18232/metascape_summary.csv", header = T)
+binary <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/binary_GO_mergeORF/metascape_summary_20210212.csv", header = T)
+names(binary) <- c("term", "-Log10(p)", "proportion", "background", "category", "enrichment")
+binary$term <- factor(binary$term, levels = binary$term[order(binary$enrichment)])
+# pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/binary_GO_reactome_KEGG_meta.pdf", width = 14, height = 9)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/binary_GO_merged2.pdf", width = 7, height = 5)
+# meta_plot_dumbbel(binary, "VirHostome")
+ggplot(binary, aes(x = term, y = enrichment)) +
+    geom_bar(stat = "identity", fill = rgb(128, 41, 227, maxColorValue = 255)) +
+    coord_flip() +
+    labs(y = "Effect size", x = "Functional Category (p < 0.05)") +
+    theme_bw() +
+    theme(axis.text = element_text(color = "black", size = 8, hjust = 0),
+        axis.title = element_text(size = 8, color = "black", face = "bold"))
+dev.off()
+```
+
+## 05.12.2020 Functional enrichment analysis
+**21.02.2021 21:18**- update Gordon data with the one from Science
+
+1. Gordon AP-MS
+```{r}
+gordon <- read.csv("~/Documents/INET-work/virus_network/statistic_results/metascape/Gordon_Science_GO_customBG/metascape_summary.csv", header = T)
+gordon$term <- factor(gordon$term, levels = gordon$term[order(gordon$enrichment)])
+# pdf("~/Documents/INET-work/virus_network/figure_results/Gordon_GO_meta.pdf", width = 11, height = 9)
+gordon_p <-
+    ggplot(gordon, aes(x = term, y = enrichment)) +
+    geom_bar(stat = "identity", fill = "black") +
+    coord_flip() +
+    labs(y = "Effect size", x = "Functional Category (p < 0.05)") +
+    theme_bw() +
+    theme(axis.text = element_text(color = "black", size = 8, hjust = 0),
+        axis.title = element_text(size = 8, color = "black", face = "bold")) +
+    theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
+# dev.off()
+```
+
+2. Stukalov AP-MS
+```{r}
+Stukalov <- read.csv("~/Documents/INET-work/virus_network/statistic_results/metascape/Stukalov_GO_customBG/metascape_summary.csv", header = T)
+Stukalov$term <- factor(Stukalov$term, levels = Stukalov$term[order(Stukalov$enrichment)])
+# pdf("~/Documents/INET-work/virus_network/figure_results/Stukalov_GO_meta.pdf", width = 11, height = 9)
+stukalov_p <-
+    ggplot(Stukalov, aes(x = term, y = enrichment)) +
+    geom_bar(stat = "identity", fill = "black") +
+    coord_flip() +
+    labs(y = "Effect size", x = "Functional Category (p < 0.05)") +
+    theme_bw() +
+    theme(axis.text = element_text(color = "black", size = 8, hjust = 0),
+        axis.title = element_text(size = 8, color = "black", face = "bold")) +
+    theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
+# dev.off()
+```
+
+3. Li AP-MS
+```{r}
+Li <- read.csv("~/Documents/INET-work/virus_network/statistic_results/metascape/Li_GO_customBG/metascape_summary.csv", header = T)
+Li$term <- factor(Li$term, levels = Li$term[order(Li$enrichment)])
+# pdf("~/Documents/INET-work/virus_network/figure_results/Li_GO_meta.pdf", width = 11, height = 9)
+li_p <-
+    ggplot(Li, aes(x = term, y = enrichment)) +
+    geom_bar(stat = "identity", fill = "black") +
+    coord_flip() +
+    labs(y = "Effect size", x = "Functional Category (p < 0.05)") +
+    theme_bw() +
+    theme(axis.text = element_text(color = "black", size = 8, hjust = 0),
+        axis.title = element_text(size = 8, color = "black", face = "bold")) +
+    theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
+# dev.off()
+```
+
+4. Nabeel AP-MS
+```{r}
+Nabeel <- read.csv("~/Documents/INET-work/virus_network/statistic_results/metascape/Nabeel_GO_customBG/metascape_summary.csv", header = T)
+Nabeel$term <- factor(Nabeel$term, levels = Nabeel$term[order(Nabeel$enrichment)])
+# pdf("~/Documents/INET-work/virus_network/figure_results/Nabeel_GO_meta.pdf", width = 11, height = 9)
+nabeel_p <-
+    ggplot(Nabeel, aes(x = term, y = enrichment)) +
+    geom_bar(stat = "identity", fill = "black") +
+    coord_flip() +
+    labs(y = "Effect size", x = "Functional Category (p < 0.05)") +
+    theme_bw() +
+    theme(axis.text = element_text(color = "black", size = 8, hjust = 0),
+        axis.title = element_text(size = 8, color = "black", face = "bold")) +
+    theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
+# dev.off()
+```
+
+5. Merge 4 graphs into a single graphs
+```{r}
+pdf("~/Documents/INET-work/virus_network/figure_results/4interactom_GO_meta5.pdf", width = 10, height = 10)
+ggarrange(gordon_p, stukalov_p, li_p, nabeel_p, ncol = 2, nrow = 2, labels = c("A", "B", "C", "D"))
+dev.off()
+```
+
+## 16.12.2020 KEGG enrichment analysis for binary Y2H interactome
+```{r}
+kegg <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/binary_KEGG/metascape_summary.csv", header = T)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/binary_KEGG_meta.pdf", width = 8, height = 4)
+binary_kegg_p <- meta_plot_dumbbel(kegg, "Binary Y2H interactome")
+binary_kegg_p
+dev.off()
+```
+
+## 18.01.2021 viral protein, respectively
+```{r}
+N <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/binary_viralProtein/N/metascape_summary.csv", header = T)
+NSP6 <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/binary_viralProtein/NSP6/metascape_summary.csv", header = T)
+NSP9 <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/binary_viralProtein/NSP9/metascape_summary.csv", header = T)
+NSP12 <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/binary_viralProtein/NSP12/metascape_summary.csv", header = T)
+NSP14 <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/binary_viralProtein/NSP14/metascape_summary.csv", header = T)
+NSP16 <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/binary_viralProtein/NSP16/metascape_summary.csv", header = T)
+ORF6 <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/binary_viralProtein/ORF6/metascape_summary.csv", header = T)
+ORF7b <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/binary_viralProtein/ORF7b/metascape_summary.csv", header = T)
+ORF9c <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/binary_viralProtein/ORF9c/metascape_summary.csv", header = T)
+viral <- list(N = N, NSP6 = NSP6, NSP9 = NSP9, NSP12 = NSP12, NSP14 = NSP14, NSP16 = NSP16, ORF6 = ORF6, ORF7b = ORF7b, ORF9c = ORF9c)
+
+for (i in 1:length(viral)) {
+    graph <- meta_plot_dumbbel(viral[[i]], names(viral[i]))
+    ggsave(paste0("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/binary_", names(viral[i]), "_Protein.pdf"), width = 10, height = 5)
+}
+```

@@ -1,0 +1,76 @@
+---
+title: "profile of SARS-CoV-2 viral-host network"
+author: "Lin Chung-wen"
+date: "2020.12.01, compiled 01.12.2020"
+output: html_document
+---
+
+# node degree
+## load environment
+```{r echo = FALSE}
+library(ggplot2)
+library(gridExtra)
+library(tidyverse)
+node_p <- function(x, filter, col) {
+    nodes %>%
+        filter(group == x) %>%
+        filter(Degree > filter) %>%
+        ggplot(aes(x = name, y = Degree)) +
+            geom_bar(stat = "identity", fill = col) +
+            geom_text(aes(label = Degree), size = 3, vjust = -0.5, position = "stack") +
+            labs(x = "", y = "degree", title = paste0(x, "  protein degree distribution")) +
+            theme_bw() +
+            theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 12, color = "black"),
+                  axis.text.y = element_text(color = "black", size = 10))
+    }
+```
+
+## show SARS-CoV-2 network degree profile
+```{r}
+nodes <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/viral-host_nodeProfile.csv", header = T)
+row.names(nodes) <- nodes$name
+nodes$name <- factor(nodes$name, levels = nodes$name[rev(order(nodes$Degree))])
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/viral_degree.pdf", height = 3, width = 5)
+node_p("virus", 1, "orangered")
+dev.off()
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/human_target_degree.pdf", height = 3, width = 5)
+node_p("human", 1, "royalblue1")
+dev.off()
+```
+
+## show HuRI and sub-network degree profile
+```{r}
+huri_node <- read.csv("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_nodeProfile.csv", header = T)
+row.names(huri_node) <- huri_node$name
+tab <- round(as.data.frame(as.matrix(summary(huri_node$Degree))), 0)
+names(tab) <- c("degree")
+pdf("~/Documents/INET-work/virus_network/statistic_results/HuRI_degree.pdf", height = 5, width = 5)
+huri_node %>%
+    group_by(Degree) %>%
+    count %>%
+    ggplot(aes(x = Degree, y = n)) +
+        geom_bar(stat = "identity", fill = "lightcoral") +
+        annotation_custom(tableGrob(tab), xmin = 300, xmax = 500, ymin = 500, ymax = 1000) +
+        labs(x = "degree", y = "count(n)", title = "The degree distribution of HuRI") +
+        theme_bw() +
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, color = "black", size = 12),
+              axis.text.y = element_text(size = 10, color = "black"))
+dev.off()
+
+binary_sub <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/host-host_nodeProfile.csv", header = T)
+row.names(binary_sub) <- binary_sub$name
+binary_sub$name <- factor(binary_sub$name, levels = binary_sub$name[rev(order(binary_sub$Degree))])
+tab_sub <- round(as.data.frame(as.matrix(summary(binary_sub$Degree))), 0)
+names(tab_sub) <- c("degree")
+
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/host-host_degree.pdf", height = 5, width = 5)
+binary_sub %>% filter(Degree > 2) %>%
+    ggplot(aes(x = name, y = Degree)) +
+    geom_bar(stat = "identity", fill = "tan1") +
+    annotation_custom(tableGrob(tab_sub), xmin = 40, xmax = 40, ymin = 6, ymax = 10) +
+    labs(x = "node", y = "degree", title = "The degree distribution of SARS2 virhostome \nwithin HuRI") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, color = "black", size = 6),
+          axis.text.y = element_text(size = 10, color = "black"))
+dev.off()
+```

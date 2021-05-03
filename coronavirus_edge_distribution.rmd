@@ -1,0 +1,550 @@
+---
+title: "Random network rewiring of SARS-CoV-2 targeted human proteins in HuRI network"
+output: pdf_document
+  toc: TRUE
+  theme: united
+date: "2020.10.21"
+---
+
+## The following script author: Patrick Schwehn.
+### version 1, using VertexSoft package
+**2020.10.21** Slower
+```{r eval = FALSE, echo = FALSE}
+library( igraph )
+library( VertexSort )
+
+huri    =   as.matrix( read.csv( "huri.csv" ) )
+graph   =   graph_from_data_frame( huri, directed = FALSE )
+#rewired =   dpr( graph, 1000, TRUE, 16 )
+rewired =   readRDS( "rewired.RDS"  )
+
+inet    =   as.matrix( read.csv( "inet.csv", header = FALSE ) )
+kim     =   as.matrix( read.csv( "kim.csv",  header = FALSE ) )
+both    =   as.matrix( read.csv( "both.csv", header = FALSE ) )
+
+inet    =   inet[ inet %in% names( V( graph ) ) ]
+kim     =   kim [ kim  %in% names( V( graph ) ) ]
+both    =   both[ both %in% names( V( graph ) ) ]
+
+result  =   ( 1:500 )
+
+for ( subset in list( inet, kim, both ) ){
+
+  total   =   integer( 500 )
+
+  for ( i in 1:1000 ){
+
+    new_graph   =   induced_subgraph( rewired[[ i ]], subset )
+    sz          =   gsize( new_graph )
+    total[ sz ] =   total[ sz ] + 1
+
+  }
+
+  result = cbind( result, total )
+
+}
+
+write.csv( result, "dpr_pick.csv" )
+
+result  =   ( 1:500 )
+
+for ( subset in list( 124, 205, 364 ) ){
+
+  total   =   integer( 500 )
+
+  for ( i in 1:1000 ){
+
+    new_graph     =   induced_subgraph( graph, V( graph )[ sample( 1:vcount( graph ), subset ) ] )
+    sz            =   gsize( new_graph )
+    total[ sz ]   =   total[ sz ] + 1
+
+  }
+
+  result = cbind( result, total )
+
+}
+
+write.csv( result, "random_pick.csv" )
+```
+
+### version 2, using igraph package
+**2020.10.26** faster
+```{r eval = FALSE, echo = FALSE}
+setwd("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/random_rewiring_Patrick")
+library( igraph )
+
+huri    =   as.matrix( read.csv( "huri.csv" ) )
+graph   =   graph_from_data_frame( huri, directed = FALSE )
+
+inet    =   as.matrix( read.csv( "inet.csv", header = FALSE ) )
+kim     =   as.matrix( read.csv( "kim.csv",  header = FALSE ) )
+both    =   as.matrix( read.csv( "both.csv", header = FALSE ) )
+
+inet    =   inet[ inet %in% names( V( graph ) ) ]
+kim     =   kim [ kim  %in% names( V( graph ) ) ]
+both    =   both[ both %in% names( V( graph ) ) ]
+
+result  =   ( 1:500 )
+
+for ( subset in list( inet, kim, both ) ){
+
+  total   =   integer( 500 )
+
+  for ( i in 1:1000 ){
+
+    rewired     =   rewire( graph, keeping_degseq( niter = gsize( graph ) * 10  ) )
+    new_graph   =   induced_subgraph( rewired, subset )
+    sz          =   gsize( new_graph )
+    total[ sz ] =   total[ sz ] + 1
+
+  }
+
+  result = cbind( result, total )
+
+}
+
+write.csv( result, "dpr_pick.csv" )
+```
+
+### load environment
+In order to have uniform plot, I used the following script to plot.
+```{r echo = FALSE, message = FALSE}
+library(igraph)
+library(rethinking)
+
+gsize_count <- function(query, background) {
+  graph_tmp <- rewire(background, keeping_degseq(niter = gsize(background) * 10))
+  net_tmp <- induced_subgraph(graph_tmp, query)
+  return(gsize(net_tmp))
+}
+
+cent_betw <- function(number, background) {
+    g_tmp <- rewire(background, keeping_degseq(niter = gsize(background) * 10))
+    n_tmp <- induced_subgraph(g_tmp, sample(names(V(background)), number))
+	cent <- centr_betw(n_tmp, directed = FALSE)
+    return(cent$centralization)
+}
+
+cent_deg <- function(number, background) {
+    g_tmp <- rewire(background, keeping_degseq(niter = gsize(background) * 10))
+    n_tmp <- induced_subgraph(g_tmp, sample(names(V(background)), number))
+    cent <- centr_degree(n_tmp, mode = "all")
+    return(cent$centralization)
+}
+
+cent_clo <- function(number, background) {
+    g_tmp <- rewire(background, keeping_degseq(niter = gsize(background) * 10))
+    n_tmp <- induced_subgraph(g_tmp, sample(names(V(background)), number))
+	  cent <- centr_clo(n_tmp, mode = "all")
+    return(cent$centralization)
+}
+
+cent_eigen <- function(number, background) {
+    g_tmp <- rewire(background, keeping_degseq(niter = gsize(background) * 10))
+    n_tmp <- induced_subgraph(g_tmp, sample(names(V(background)), number))
+    cent <- centr_eigen(n_tmp)
+    return(cent$centralization)
+}
+mean_dis <- function(query, background) {
+  graph_tmp <- rewire(background, keeping_degseq(niter = gsize(background) * 10))
+  net_tmp <- mean_distance(induced_subgraph(graph_tmp, query), directed = FALSE)
+  return(net_tmp)
+}
+sig <- function(obs, result) {
+  if(obs >= median(result)) {
+    freq <- 1 - (sum(result <= obs))/length(result)
+    return(round(freq, digits = 3))
+  } else {
+    freq <- 1 - (sum(result >= obs))/length(result)
+    return(round(freq, digits = 3))
+  }
+}
+
+plot_rewire <- function(query, arrow, title, p) {
+	dens <- hist(query, plot = FALSE)
+	plot(dens$mids, dens$counts, type = "p",
+		if (min(query) > arrow) {
+			xlim = c(arrow, max(query))
+		} else if (max(query) < arrow) {
+			xlim = c(min(query), arrow)
+		} else {
+			xlim = c(min(query), max(query))
+		}, xlab = "", ylab = "", col = ifelse(dens$counts == 0, "white", "red"), las = 1, cex.axis = 2)
+	lines(dens$mids, dens$counts, col = "black", lwd = 3)
+	arrows(arrow, 40, arrow, 10, col = "red", lwd = 2)
+  points(arrow, 1, col = "blue", lwd = 2)
+  text(arrow * 1.01, 45, label = paste0("Obs,\np = ", p), col = "red")
+	title(xlab = "number of interconnection", ylab = "Frequency", cex.lab = 2, mgp = c(4, 1, 0))
+  title(main = title, line = 1, cex.main = 2)
+}
+
+ggPlot <- function(avg, rand, class, title) {
+    df1 <- list(binary = avg, random = rand)
+    df1_melt <- melt(df1)
+
+    ggplot(df1_melt, aes(x = L1, y = value)) +
+        geom_point(shape = 21, position = position_jitter()) +
+	    geom_signif(comparisons = list(c("binary", "random")), map_signif_level = TRUE) +
+	    theme_bw() +
+		theme(axis.text = element_text(color = "black", size = 6)) +
+		theme(axis.text.y = element_text(color = "black", size = 6)) +
+		theme(plot.title = element_text(size = 8)) +
+	    labs(x = "", y = paste(class, "centrality"), title = paste(class, "centrality based on", title))
+}
+
+library(openxlsx)
+library(ggplot2)
+library(reshape2)
+library(ggsignif)
+```
+
+### doing simulation with basic for loop function, which is not good in R
+```{r eval = FALSE, echo = FALSE}
+result <- as.data.frame(result)
+names(result) <- c("times", "INET_count", "Roth_count", "Binary_count")
+count_inet_observed <- 145
+count_inet <- c()
+for (i in 1:500) {
+  count_inet <- c(rep(result$times[i], result$INET_count[i]), count_inet)
+}
+count_roth_observed <- 73
+count_roth <- c()
+for (i in 1:500) {
+  count_roth <- c(rep(result$times[i], result$Roth_count[i]), count_roth)
+}
+count_binary_observed <- 307
+count_binary <- c()
+for (i in 1:500) {
+  count_binary <- c(rep(result$times[i], result$Binary_count[i]), count_binary)
+}
+```
+
+```{r eval = FALSE, echo = FALSE}
+# pdf("/tmp/rewire.pdf", width = 12, height = 5)
+par(mar = c(6, 8, 6, 3))
+# par(mfrow = c(1, 3))
+plot_rewire(count_inet, count_inet_observed, "INET")
+plot_rewire(count_roth, count_roth_observed, "Roth")
+plot_rewire(count_binary, count_binary_observed, "Binary")
+# dev.off()
+````
+***
+## It's because the result from DK looks different from Patrick, I have to write my own code.
+
+  > According to Dah-Kyum (DK), the self interactions were removed before rewiring assay
+
+```{r eval = FALSE, echo = FALSE}
+huri <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/random_rewiring_Patrick/huri.csv", header = TRUE)
+huri <- as.matrix(read.table( "~/INET/rand_source_networks/HI-III_rand_network_0.txt", sep = "\t", header = T))
+graph <- graph_from_data_frame(huri, directed = FALSE)
+graph <- simplify(graph)
+inet <- as.matrix(read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/random_rewiring_Patrick/inet.csv", header = FALSE))
+roth <- as.matrix(read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/random_rewiring_Patrick/kim.csv", header = FALSE))
+binary <- as.matrix(read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/random_rewiring_Patrick/both.csv", header = FALSE))
+
+inet <- inet[inet %in% names(V(graph))]
+roth <- roth[roth %in% names(V(graph))]
+binary <- binary[binary %in% names(V(graph))]
+```
+
+## Using gene symbol instead of Ensembl ID for network establishment
+```{r echo = FALSE}
+huri <- read.csv("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_Tong_withSymbol.csv", header = T)
+huri <- huri[, c(5:6)]
+hi <- read.table("~/Documents/INET-work/references/HuRI_binaryPPI/HI-union.txt", sep = "\t", header = F)
+# inet <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/node_20200924.csv", header = T)
+# inet <- inet[c(1:124), 1]
+# roth <- read.csv("~/Documents/INET-work/virus_network/references/Roth_fBFG/node.csv", header = T)
+# roth <- roth[c(27:255), 1]
+binary <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/binary_node_1126.csv", header = T)
+binary <- unique(binary[, 1])
+
+graph <- graph_from_data_frame(huri, directed = FALSE)
+graph <- simplify(graph) # remove homodimer
+hi_graph <- graph_from_data_frame(hi, directed = FALSE)
+hi_graph <- simplify(hi_graph)
+# inet <- inet[inet %in% names(V(graph))]
+# roth <- roth[roth %in% names(V(graph))]
+binary <- binary[binary %in% names(V(graph))]
+binary_hi <- binary[binary %in% names(V(hi_graph))]
+
+# inet_graph <- induced_subgraph(graph, inet)
+# roth_graph <- induced_subgraph(graph, roth)
+binary_graph <- induced_subgraph(graph, binary)
+count_binary_observed <- gsize(binary_graph)
+
+binary_graph_hi <- induced_subgraph(hi_graph, binary_hi)
+count_bi_hi_obs <- gsize(binary_graph_hi)
+```
+
+## using *function* in R to increase calculate speed
+```{r}
+rep_time <- 5000
+
+# inet_rewire <- c()
+# inet_rewire <- c(inet_rewire, mcreplicate(rep_time, gsize_count(inet, graph), mc.cores = detectCores()))
+# inet_rewire_p <- sig(count_inet_observed, inet_rewire)
+
+# roth_rewire <- c()
+# roth_rewire <- c(roth_rewire, mcreplicate(rep_time, gsize_count(roth, graph), mc.cores = detectCores()))
+# roth_rewire_p <- sig(count_roth_observed, roth_rewire)
+
+binary_rewire <- c()
+binary_rewire <- c(binary_rewire, mcreplicate(rep_time, gsize_count(binary, graph), mc.cores = detectCores()))
+binary_rewire_p <- sig(count_binary_observed, binary_rewire)
+
+binary_rewire_hi <- c()
+binary_rewire_hi <- c(binary_rewire_hi, mcreplicate(rep_time, gsize_count(binary, graph), mc.cores = detectCores()))
+binary_rewire_hi_p <- sig(count_binary_observed, binary_rewire_hi)
+
+binary_distance_obs <- mean_distance(induced_subgraph(graph, binary), directed = FALSE)
+binary_distance <- c()
+binary_distance <- c(binary_distance, mcreplicate(rep_time, mean_dis(binary, graph), mc.cores = detectCores()))
+binary_distance_p <- sig(binary_distance_obs, binary_distance)
+
+pdf(paste0("/tmp/rewire_tong_", rep_time, ".pdf"), width = 10, height = 6)
+par(mar = c(6, 8, 10, 3))
+plot_rewire(binary_rewire, count_binary_observed, "Binary", binary_rewire_p)
+mtext(paste0("random simulate ", rep_time, " times, with gene symbol"), side = 3, line = -5, cex = 2, outer = TRUE)
+plot_rewire(binary_rewire_hi, count_binary_observed, "Binary", binary_rewire_hi_p)
+mtext(paste0("random simulate ", rep_time, " times, with gene symbol, HI"), side = 3, line = -5, cex = 2, outer = TRUE)
+plot_rewire(binary_distance, binary_distance_obs, "Binary", binary_distance_p)
+mtext(paste0("random simulate ", rep_time, " times, with gene symbol, HI"), side = 3, line = -5, cex = 2, outer = TRUE)
+dev.off()
+```
+
+## Degree distribution
+```{r eval = FALSE, echo = FALSE}
+# ggplot2 not really used
+library(ggplot2)
+library(grid)
+library(gridExtra)
+library(gtable)
+gg_degree <- function(degree_tb, main) {
+  ggplot(data = tibble(degree = degree_tb), aes(x = degree)) +
+    geom_histogram() +
+    labs(x = "degree", y = "count", title = main) +
+    # stat_bin(binwidth = 1, geom = "text", color = "black", aes(label = ifelse(..count.. > 0, ..count.., ""))) +
+    theme_bw(base_size = 20) +
+    theme(axis.text.x = element_text(color = "black", hjust = 1, vjust = .5),
+        axis.text.y = element_text(color = "black")) +
+    theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
+}
+
+# use tranditional plot
+bar <- function(degree_matrix, main, color) {
+  p <- table(degree_matrix)
+  sum_p <- sum(p)
+  bp <- barplot(p, las = 1, col = color, main = paste0(main, "\n(n = ", sum_p, ")"), xlab = "degree", ylab = "count")
+  bp_label <- round(p/sum_p, 2)
+  text(x = bp, y = p / 2, label = ifelse(bp_label > 0.1, bp_label, ""), cex = 0.5)
+}
+```
+
+```{r}
+inet_deg <- degree(inet_graph, mode = "all")
+roth_deg <- degree(roth_graph, mode = "all")
+binary_deg <- degree(binary_graph, mode = "all")
+
+par(mfrow = c(1, 3), cex = 2)
+bar(inet_deg, "INET", "orange")
+bar(roth_deg, "Roth", "darkgreen")
+bar(binary_deg, "Binary", "darkblue")
+# gg_inet <- gg_degree(inet_deg, "INET")
+# gg_roth <- gg_degree(roth_deg, "Roth")
+# gg_binary <- gg_degree(binary_deg, "Binary")
+# grid.arrange(gg_inet, gg_roth, gg_binary, nrow = 1, ncol = 3)
+```
+
+## devide HuRI based on different assay
+**2020.11.23 21:15** -
+```{r}
+huri_assay1 <- read.xlsx("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_individual_assay.xlsx", sheet = 1)
+huri_assay2 <- read.xlsx("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_individual_assay.xlsx", sheet = 2)
+huri_assay3 <- read.xlsx("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_individual_assay.xlsx", sheet = 3)
+inet <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/INET_edge_1118.csv")
+inet <- inet[, 2]
+
+huri <- list()
+huri[[1]] <- simplify(graph_from_data_frame(huri_assay1[, c(3, 4)]))
+huri[[2]] <- simplify(graph_from_data_frame(huri_assay2[, c(3, 4)]))
+huri[[3]] <- simplify(graph_from_data_frame(huri_assay3[, c(3, 4)]))
+
+pdf(paste0("/tmp/rewire_tong_", rep_time, ".pdf"), width = 12, height = 5)
+par(mar = c(6, 8, 10, 3))
+par(mfrow = c(1, 3))
+for (rewire in huri) {
+  rep_time <- 1000
+
+  inet <- inet[inet %in% names(V(rewire))]
+  count_inet_observed <- length(E(induced_subgraph(rewire, inet)))
+  inet_rewire <- c()
+  inet_rewire <- c(inet_rewire, mcreplicate(rep_time, gsize_count(inet, rewire), mc.cores = detectCores()))
+  inet_rewire_p <- sig(count_inet_observed, inet_rewire)
+  plot_rewire(inet_rewire, count_inet_observed, "INET", inet_rewire_p)
+}
+mtext(paste0("random simulate ", rep_time, " times, with gene symbol"), side = 3, line = -5, cex = 2, outer = TRUE)
+dev.off()
+```
+
+## Doing rewiring check of Gordon's SARS-CoV-2 interactome
+Based on BioPlex 3.0
+```{r eval = FALSE, echo = FALSE}
+apms <- read.table("~/Documents/INET-work/references/HumanInteractome_APMS/BioPlex.3.0_edge.tsv", sep = "\t", header = T)
+gordon <- read.csv("~/Documents/INET-work/virus_network/references/PPIs/Gordon_APMS/edge.csv", header = T)
+apms_graph <- simplify(graph_from_data_frame(apms[, c(5, 6)], directed = FALSE))
+gordon <- gordon$human[gordon$human %in% names(V(apms_graph))]
+gordon_graph <- induced_subgraph(apms_graph, gordon)
+
+count_gordon_observed <- length(V(gordon_graph))
+
+rep_time <- 5000
+gordon_rewire <- c()
+gordon_rewire <- c(gordon_rewire, mcreplicate(rep_time, gsize_count(gordon, apms_graph), mc.cores = detectCores()))
+gordon_rewire_p <- sig(count_gordon_observed, gordon_rewire)
+pdf(paste0("/tmp/rewire_GordonAPMS_", rep_time, ".pdf"), width = 10, height = 6)
+par(mar = c(6, 8, 10, 3))
+plot_rewire(gordon_rewire, count_gordon_observed, "Gordon_APMS", gordon_rewire_p)
+mtext(paste0("random simulate ", rep_time, " times, BioPlex3 as background"), side = 3, line = -5, cex = 2, outer = TRUE)
+dev.off()
+```
+
+## Network centrality assasy
+### HuRI degree centrality
+```{r}
+rep_time <- 1000
+binary_deg_centr <- centr_degree(binary_graph, mode = "all")
+# binary_avg_degree <- sum(degree(binary_graph, mode = "all")) / length(V(binary_graph))
+huri_deg_centr <- centr_degree(graph, mode = "all")
+# huri_avg_degree <- sum(degree(graph, mode = "all")) / length(V(graph))
+binary_rand_degree <- c()
+binary_rand_degree <- c(binary_rand_degree, mcreplicate(rep_time, cent_deg(length(V(binary_graph)), graph), mc.cores = detectCores()))
+table(binary_rand_degree > binary_deg_centr$centralization)
+```
+
+#### plotting
+```{r fig.width = 3, fig.height = 4}
+p_huri_deg <- ggPlot(binary_deg_centr$centralization, binary_rand_degree, "degree", "HuRI")
+```
+
+### HI-degree
+```{r message = FALSE}
+bi_hi_cent_deg <- centr_degree(binary_graph_hi, mode = "all")
+hi_deg_centr <- centr_degree(hi_graph, mode = "all")
+bi_hi_rand_deg <- c()
+bi_hi_rand_deg <- c(bi_hi_rand_deg, mcreplicate(rep_time, cent_deg(length(V(binary_graph_hi)), hi_graph), mc.cores = detectCores()))
+table(bi_hi_rand_deg > bi_hi_cent_deg$centralization)
+```
+
+#### plotting
+```{r fig.width = 3, fig.height = 4}
+p_hi_deg <- ggPlot(bi_hi_cent_deg$centralization, bi_hi_rand_deg, "degree", "HI-union")
+```
+
+### HuRI betweenness
+```{r message = FALSE}
+binary_betw_centr <- centr_betw(binary_graph, directed = FALSE)
+huri_betw_centr <- centr_betw(graph, directed = FALSE)
+# binary_avg_betw <- sum(betweenness(binary_graph, directed = FALSE)) / length(V(binary_graph))
+# huri_avg_betw <- sum(betweenness(graph, directed = FALSE)) / length(V(graph))
+binary_rand_betw <- c()
+binary_rand_betw <- c(binary_rand_betw, mcreplicate(rep_time, cent_betw(length(V(binary_graph)), graph), mc.cores = detectCores()))
+table(binary_rand_betw > binary_betw_centr$centralization)
+```
+
+#### plotting
+```{r fig.width = 3, fig.height = 4}
+p_huri_betw <- ggPlot(binary_betw_centr$centralization, binary_rand_betw, "betweenness", "HuRI")
+```
+
+### HI betweenness
+```{r message = FALSE}
+bi_hiCent_betw <- centr_betw(binary_graph_hi, directed = FALSE)
+hiCent_betw <- centr_betw(hi_graph, directed = FALSE)
+# bi_hiavg_betw <- sum(betweenness(binary_graph_hi, directed = FALSE)) / length(V(binary_graph_hi))
+# hi_avg_betw <- sum(betweenness(hi_graph, directed = FALSE)) / length(V(hi_graph))
+
+bi_hi_rand_betw <- c()
+bi_hi_rand_betw <- c(bi_hi_rand_betw, mcreplicate(rep_time, cent_betw(length(V(binary_graph_hi)), hi_graph), mc.cores = detectCores()))
+table(bi_hi_rand_betw > bi_hiCent_betw$centralization)
+```
+
+#### plotting
+```{r fig.width = 3, fig.height = 4}
+p_hi_betw <- ggPlot(bi_hiCent_betw$centralization, bi_hi_rand_betw, "betweenness", "HI-union")
+```
+
+### HuRI closeness
+```{r message = FALSE}
+binary_clo_cent <- centr_clo(binary_graph, mode = "all")
+huri_clo_cent <- centr_clo(graph, mode = "all")
+# binary_avg_clo <- sum(closeness(binary_graph, mode = "all")) / length(V(binary_graph))
+# huri_avg_clo <- sum(closeness(graph, mode = "all")) / length(V(graph))
+binary_rand_clo <- c()
+binary_rand_clo <- c(binary_rand_clo, mcreplicate(rep_time, cent_clo(length(V(binary_graph)), graph), mc.cores = detectCores()))
+table(binary_rand_clo > binary_clo_cent$centralization)
+```
+
+#### plotting
+```{r fig.width = 3, fig.height = 4}
+p_huri_clo <- ggPlot(binary_clo_cent$centralization, binary_rand_clo, "closeness", "HuRI")
+```
+
+### HI closeness
+```{r message = FALSE}
+bi_hiCent_clo <- centr_clo(binary_graph_hi, mode = "all")
+hiCent_clo <- centr_clo(hi_graph, mode = "all")
+# bi_hiavg_clo <- sum(closeness(binary_graph_hi, mode = "all")) / length(V(binary_graph_hi))
+# hi_avg_clo <- sum(closeness(hi_graph, mode = "all")) / length(V(hi_graph))
+
+bi_hi_rand_clo <- c()
+bi_hi_rand_clo <- c(bi_hi_rand_clo, mcreplicate(rep_time, cent_clo(length(V(binary_graph_hi)), hi_graph), mc.cores = detectCores()))
+table(bi_hi_rand_clo > bi_hiCent_clo$centralization)
+```
+
+#### plotting
+```{r fig.width = 3, fig.height = 4}
+p_hi_clo <- ggPlot(bi_hiCent_clo$centralization, bi_hi_rand_clo, "closeness", "HI-union")
+```
+
+### HuRI eigenvector
+```{r}
+binary_eig_centr <- centr_eigen(binary_graph)
+huri_eig_centr <- centr_eigen(graph)
+binary_rand_eigen <- c()
+binary_rand_eigen <- c(binary_rand_eigen, mcreplicate(rep_time, cent_eigen(length(V(binary_graph)), graph), mc.cores = detectCores()))
+table(binary_rand_eigen > binary_eig_centr$centralization)
+```
+
+#### plotting
+```{r fig.width = 3, fig.height = 4}
+p_huri_eig <- ggPlot(binary_eig_centr$centralization, binary_rand_eigen, "eigenvector", "HuRI")
+```
+
+### HI-union eigenvector
+```{r}
+bi_hiCent_eig <- centr_eigen(binary_graph_hi)
+hiCent_eig <- centr_eigen(hi_graph)
+bi_hi_rand_eig <- c()
+bi_hi_rand_eig <- c(bi_hi_rand_eig, mcreplicate(rep_time, cent_eigen(length(V(binary_graph_hi)), hi_graph), mc.cores = detectCores()))
+table(bi_hi_rand_eig > bi_hiCent_eig$centralization)
+```
+
+#### plotting
+```{r fig.width = 3, fig.height = 4}
+p_hi_eig <- ggPlot(bi_hiCent_eig$centralization, bi_hi_rand_eig, "eigenvector", "HI-union")
+```
+
+### merge plots
+```{r}
+pdf("~/Documents/INET-work/virus_network/figure_results/network_centrality_binary.pdf", width = 3, height = 4)
+p_huri_deg
+p_hi_deg
+p_huri_betw
+p_hi_betw
+p_huri_clo
+p_hi_clo
+p_huri_eig
+p_hi_eig
+dev.off()
+```

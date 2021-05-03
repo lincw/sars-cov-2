@@ -1,0 +1,535 @@
+---
+title: "extract VirHostome subnetwork from HuRI network"
+date: "2020.11.02, last compiled on `r format(Sys.time(), "%d %b, %Y")`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+---
+## history
+**2021.01.28 15:25** - have new network graph with categorized term
+
+**2020.11.26 23:50**
+
+Have the SARS-CoV-2 interaction pairs from DK.
+
+**2020.11.19**
+
+The SARS-CoV-2-human interactome from INET was updated, not yet from Roth.
+
+**2020.11.07**
+
+Applying the updated INET viral-host interaction network infomation.
+It is because both directors agree to combine two Y2H networks, the following assay is majorly based on the binary version.
+
+**2020.11.06**
+
+According to Dan-Kyun (DK) and Pascal, the HuRI contains 3 different assays, each of them was using different clone construction.
+Current INET VirHostome is using the same clone strategy as HuRI assay 1 and 2, Roth VirHostome is using the strategy as assay 3.
+
+**2020.11.02**
+
+Proteins in biology used to work together for specific purpose. The community network presents the possible interacted proteins.
+
+  > However, the list from Tong seems slightly different from the supplementary file of HuRI published on Nature! Waiting for response.
+
+## working environment
+```{r echo = FALSE, message = FALSE2}
+# knitr::opts_knit$set(root.dir = normalizePath("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/"))
+library(RColorBrewer)
+library(reshape2)
+library(igraph)
+network_plot <- function(subnetwork, main) {
+    plot(subnetwork, layout = layout_in_circle, vertex.size = 4, vertex.label = NA, edge.arrow.size = 0.5)
+    text(1, 1.2, paste0(main, " human-human \ninteraction subnetwork"), pos = 4)
+    text(1.1, 0.9, paste0("Node: ", length(V(subnetwork)), "\n", "Edge: ", length(E(subnetwork))), col = "darkblue", pos = 4)
+}
+
+library(linkcomm) # using edge similarity to reveal community
+
+library(RCy3) # interact with cytoscape, for better visualization
+
+library(gridExtra) # display table information into a bar plot
+library(grid)
+```
+
+## loading data
+```{r}
+huri <- read.csv("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_Tong_withSymbol.csv", header = T)
+huri <- huri[, c(5:6)]
+binary_ori <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/binary_node_1126.csv", header = T)
+binary_edge <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/binary_edge_1126.csv", header = T)
+
+hi <- read.table("~/Documents/INET-work/references/HuRI_binaryPPI/HI-union.txt", header = F, sep = "\t")
+```
+
+## create binary network
+```{r}
+# viral-host network
+binary_graph <- graph_from_data_frame(binary_edge, directed = FALSE)
+V(binary_graph)$group <- binary_ori[match(names(V(binary_graph)), binary_ori$node), "group"]
+
+# subnetwork from HuRI
+graph <- graph_from_data_frame(huri, directed = FALSE)
+graph <- simplify(graph, remove.loops = FALSE)
+binary <- unique(binary_ori[binary_ori$node %in% names(V(graph)), "node"])
+
+binary_sub_graph <- induced_subgraph(graph, binary)
+binary_sub_graph <- simplify(binary_sub_graph, remove.loops = FALSE)
+# merge viral-host network and HuRI subnetwork
+binary_merge <- union(binary_graph, binary_sub_graph)
+
+# HI-union
+hi_graph <- simplify(graph_from_data_frame(hi, directed = FALSE), remove.loops = FALSE)
+
+# subnetwork from HI
+binary_hi <- unique(binary_ori[binary_ori$node %in% names(V(hi_graph)), "node"])
+binary_hi_sub_graph <- induced_subgraph(hi_graph, binary_hi)
+binary_hi_sub_graph <- simplify(binary_hi_sub_graph, remove.loops = FALSE)
+# merge viral-host network and HI subnetwork
+binary_hi_merge <- union(binary_graph, binary_hi_sub_graph)
+```
+
+## output human-human subnetwork
+```{r eval = FALSE, echo = FALSE}
+# NOT RUN FOR FINAL
+write.table(as_data_frame(inet_sub_graph), file = "inet_huri_sub_edge.csv", sep = ",", row.names = FALSE, quote = FALSE)
+write.table(as_data_frame(roth_sub_graph), file = "roth_huri_sub_edge.csv", sep = ",", row.names = FALSE, quote = FALSE)
+write.table(as_data_frame(binary_sub_graph), file = "binary_huri_sub_edge.csv", sep = ",", row.names = FALSE, quote = FALSE)
+```
+
+## ploting the network in circle layout
+```{r eval = FALSE, echo = FALSE}
+# INET
+network_plot(inet_sub_graph, "INET")
+text(-1.7, 1.2, "INET SARS-CoV-2 \nVirHostome", pos = 4)
+text(-1, 0.9, paste0("Node: ", length(V(inet_graph)), "\n", "Edge: ", length(E(inet_graph))), col = "darkblue", pos = 2)
+network_plot(inet_merge, "Union INET")
+
+# Roth
+network_plot(roth_sub_graph, "Roth")
+text(-1.7, 1.2, "Roth SARS-CoV-2 \nVirHostome", pos = 4)
+text(-1, 0.9, paste0("Node: ", length(V(roth_graph)), "\n", "Edge: ", length(E(roth_graph))), col = "darkblue", pos = 2)
+network_plot(roth_merge, "Union Roth")
+
+# INET + Roth
+network_plot(binary_sub_graph, "Binary")
+text(-1.7, 1.2, "Binary SARS-CoV-2 \nVirHostome", pos = 4)
+text(-1, 0.9, paste0("Node: ", length(V(binary_graph)), "\n", "Edge: ", length(E(binary_graph))), col = "darkblue", pos = 2)
+network_plot(binary_merge, "Union Binary")
+```
+
+### color and layout information
+```{r message = FALSE}
+pal <- brewer.pal(length(unique(V(binary_graph)$group)), "Dark2")
+red_blue <- c("#56BCF9", "#EA3323")
+col11 <- c('#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000')
+l <- layout.fruchterman.reingold(binary_merge, niter = 10000, area = vcount(binary_merge)^4*10)
+# l <- layout_nicely(binary_merge)
+```
+## plot the network in auto layout
+### binary viral-host interactome
+```{r eval = FALSE, echo = FALSE, message = FALSE}
+l <- layout_with_dh
+## plot with different vertex annotation
+pdf("/tmp/binary_virhostome.pdf", width = 8, height = 5)
+par(mar = c(0, 0, 0, 0) + 3)
+plot(binary_graph, vertex.color = red_blue[as.numeric(as.factor(vertex_attr(binary_graph, "group")))], vertex.size = 2, vertex.label.cex = .5, vertex.label.dist  = 0.9, vertex.label.color = "black", asp = 0.5, margin = 0, layout = l)
+legend(x = -1, y = -1, c("Binary target", "viral-protein"), pch = 21, col = "#777777", pt.bg = red_blue, pt.cex = 1, cex = .5, bty = "n", ncol = 1)
+text(x = -1, y = 1, labels = paste0("node: ", length(V(binary_graph))), col = "black", cex = .5, adj = NULL, pos = NULL)
+text(x = -0.9, y = 0.9, labels = paste0("- viral protein: ", sum(V(binary_graph)$group == "virus")), col = "black", cex = .5, adj = NULL, pos = NULL)
+text(x = -0.88, y = 0.8, labels = paste0("- human target: ", sum(V(binary_graph)$group == "human")), col = "black", cex = .5, adj = NULL, pos = NULL)
+
+text(x = -1, y = 0.7, labels = paste0("edge: ", length(E(binary_graph))), col = "black", cex = .5, adj = NULL, pos = NULL)
+dev.off()
+```
+
+### binary viral-host-host interactome
+```{r eval = FALSE, echo = FALSE}
+pdf("/tmp/binary_virhostome_mitHuRI.pdf", width = 8, height = 5)
+plot(binary_merge, vertex.color = pal[as.numeric(as.factor(vertex_attr(binary_graph, "group")))], vertex.size = 3, vertex.label.cex = .3, vertex.label.color = "black", vertex.label = NA, asp = 0, margin = 0)
+legend(x = -1, y = -1, c("Binary target", "INET target", "Roth target", "viral-protein"), pch = 21, col = "#777777", pt.bg = pal, pt.cex = 1, cex = .5, bty = "n", ncol = 1)
+dev.off()
+```
+
+## output merged network
+```{r eval = FALSE, echo = FALSE}
+# NOT RUN FOR FINAL
+write.table(as_data_frame(inet_merge), file = "inet_merged_edge.csv", sep = ",", row.names = FALSE, quote = FALSE)
+write.table(as_data_frame(roth_merge), file = "roth_merged_edge.csv", sep = ",", row.names = FALSE, quote = FALSE)
+write.table(as_data_frame(binary_merge), file = "binary_merged_edge.csv", sep = ",", row.names = FALSE, quote = FALSE)
+write.table(as_data_frame(binary_graph), file = "binary_edge.csv", sep = ",", row.names = FALSE, quote = FALSE)
+write.table(as_data_frame(binary_graph, what = "vertices"), file = "binary_node.csv", sep = ",", row.names = FALSE, quote = FALSE)
+```
+
+## doing community calculation
+based on merged binary interaction network
+```{r eval = FALSE, echo = FALSE}
+# Community structure detection based on edge betweenness
+ceb <- cluster_edge_betweenness(binary_merge, directed = FALSE)
+
+# Community strucure via short random walks
+cw <- cluster_walktrap(binary_merge)
+
+# Community structure via greedy optimization of modularity
+cfg <- cluster_fast_greedy(simplify(binary_merge))
+
+# propagating labels
+clp <- cluster_label_prop(binary_merge)
+
+# Community structure detecting based on the leading eigenvector of the community matrix
+cle <- cluster_leading_eigen(binary_merge)
+
+# Finding community structure by multi-level optimization of modularity
+cl <- cluster_louvain(binary_merge)
+
+par(mfrow = c(2, 3))
+barplot(sizes(ceb), main = "ceb", xlab = "community", ylab = "size", las = 1)
+barplot(sizes(cw), main = "cw", xlab = "community", ylab = "size", las = 1)
+barplot(sizes(cfg), main = "cfg", xlab = "community", ylab = "size", las = 1)
+barplot(sizes(clp), main = "clp", xlab = "community", ylab = "size", las = 1)
+barplot(sizes(cle), main = "cle", xlab = "community", ylab = "size", las = 1)
+barplot(sizes(cl), main = "cl", xlab = "community", ylab = "size", las = 1)
+```
+```{r eval = FALSe, echo = FALSE}
+coords <- l[match(ceb[[1]], names(V(binary_merge))), ]
+g1 <- induced_subgraph(binary_merge, V(binary_merge)[ceb[[1]]])
+barcolor <- colorRampPalette(brewer.pal(11, "Spectral"))
+pdf("/tmp/binary_virhostome_mitHuRI_community_bar.pdf", width = 8, height = 5)
+par(mar = c(5, 5, 2, 2))
+barplot(sizes(ceb), xlab = "community", ylab = "size", las = 1, col = barcolor(length(ceb)))
+dev.off()
+pdf("/tmp/binary_virhostome_mitHuRI_community_original.pdf", width = 8, height = 5)
+par(mar = c(-1, 0, -3, 1) + 3)
+plot(binary_merge, layout = l, vertex.color = pal[as.numeric(as.factor(vertex_attr(binary_graph, "group")))], vertex.size = 3, vertex.label.cex = .3, vertex.label.color = "black", vertex.label = NA, asp = 0, margin = 0)
+legend(x = -1, y = -1, c("Binary target", "INET target", "Roth target", "viral-protein"), pch = 21, col = "#777777", pt.bg = pal, pt.cex = 1, cex = .5, bty = "n", ncol = 1)
+dev.off()
+pdf("/tmp/binary_virhostome_mitHuRI_community.pdf", width = 8, height = 5)
+par(mar = c(-1, 0, -3, 1) + 3)
+plot(ceb, binary_merge, layout = l, vertex.color = pal[as.numeric(as.factor(vertex_attr(binary_graph, "group")))], vertex.size = 3, vertex.label.cex = .3, vertex.label.color = "black", vertex.label = NA, asp = 0, margin = 0)
+dev.off()
+```
+
+### have individual clusters and output community established according to edge-betweenness
+```{r eval = FALSE, echo = FALSE}
+ceb_tb <- membership(ceb)
+ceb_df <- as.data.frame(matrix(ceb_tb))
+names(ceb_df) <- "community"
+ceb_df$gene <- names(ceb_tb)
+ceb_df$group <- ifelse(ceb_df$gene %in% names(V(inet_graph)), ifelse(ceb_df$gene %in% names(V(roth_graph)), "binary", "inet"), "roth")
+ceb_df$group <- ifelse(ceb_df$gene %in% virus, "viral", ceb_df$group)
+ceb_df <- ceb_df[order(ceb_df$community, ceb_df$group), ]
+write.table(ceb_df, file = "/tmp/ceb_df.csv", sep = ",", row.names = FALSE)
+
+ceb_c2 <- induced_subgraph(binary_merge, names(ceb_tb[ceb_tb == 2]))
+ceb_c5 <- induced_subgraph(binary_merge, names(ceb_tb[ceb_tb == 5]))
+pdf("/tmp/binary_virhostome_mitHuRI_cluster2.pdf", width = 5, height = 4)
+plot(ceb_c2, vertex.color = pal[as.numeric(as.factor(vertex_attr(binary_graph, "group")))], vertex.size = 3, vertex.label.cex = .3, vertex.label.color = "black", vertex.label = NA, asp = 0, margin = 0)
+title("Community 2, NSP16")
+legend(x = -1, y = -1, c("Binary target", "INET target", "Roth target", "viral-protein"), pch = 21, col = "#777777", pt.bg = pal, pt.cex = 1, cex = .5, bty = "n", ncol = 1)
+dev.off()
+pdf("/tmp/binary_virhostome_mitHuRI_cluster5.pdf", width = 5, height = 4)
+plot(ceb_c5, vertex.color = pal[as.numeric(as.factor(vertex_attr(binary_graph, "group")))], vertex.size = 3, vertex.label.cex = .3, vertex.label.color = "black", vertex.label = NA, asp = 0, margin = 0)
+title("Community 5, NSP14")
+legend(x = -1, y = -1, c("Binary target", "INET target", "Roth target", "viral-protein"), pch = 21, col = "#777777", pt.bg = pal, pt.cex = 1, cex = .5, bty = "n", ncol = 1)
+dev.off()
+```
+
+## doing network community assay, based on edge similarity (link community)
+```{r eval = FALSE, echo = FALSE}
+# based on edge similarity, only analyze viral-host-host network
+binary_df <- unique(as_data_frame(binary_merge))
+lc <- getLinkCommunities(binary_df)
+lc_clusters <- lengths(lc$clusters)
+lc_df_edges <- as.data.frame(lc$edges)
+lc_df_edges$sharename <- paste0(lc_df_edges$node1, " (interacts with) ", lc_df_edges$node2)
+lc_df_edgelist <- as.data.frame(lc$edgelist)
+lc_df_edgelist$sharename <- paste0(lc_df_edgelist$V1, " (interacts with) ", lc_df_edgelist$V2)
+lc_df_edgelist$cluster <- lc_df_edges[match(lc_df_edgelist$sharename, lc_df_edges$sharename), "cluster"]
+names(lc_clusters) <- c(1:length(lc_clusters))
+pdf("/tmp/binary_virhostome_mitHuRI_linkcomm_members.pdf", width = 8, height = 5)
+barplot(lc_clusters, xlab = "community", ylab = "size", las = 1, col = barcolor(length(lc_clusters)))
+dev.off()
+pdf("/tmp/binary_virhostome_mitHuRI_linkcomm.pdf", width = 5, height = 5)
+par(mar = c(0, 0, 0, 0))
+plot(lc, type = "graph", layout = layout.kamada.kawai, shownodesin = 20)
+dev.off()
+pdf("/tmp/binary_virhostome_mitHuRI_linkcomm_clusters.pdf", width = 8, height = 5)
+plot(lc, type = "graph", vsize = 5, vlabel = F, clusterids = c(9, 26, 34, 45, 50, 61))
+# title("Edge similarity community 9/26/34/45/50/61")
+dev.off()
+
+## output edge similarity community
+write.table(lc_df_edgelist, file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/binary_linkcomm_edge_community.csv", sep = ",", row.names = FALSE)
+```
+
+## 2020.11.11 check community in HuRI
+**16:00** - not finished yet
+```{r}
+graph_ceb <- cluster_edge_betweenness(graph, directed = FALSE)
+
+```
+
+## 2020.11.12 merge functional category into binary viral-host-host network
+It is always better able to corperate with a visualization tool, therefore the *RCy3* package is used here.
+
+**2020.11.27 00:17** - using metascape summary from binary interactome dataset.
+```{bash eval = FALSE, echo = FALSE}
+perl $HOME/Documents/INET-work/INETscripts/print_meta.pl GO_proteinList.txt > metascape_GOnetwork.tsv
+```
+
+**Create co-occurence-matrix** -
+  > https://stackoverflow.com/questions/13281303/creating-co-occurrence-matrix
+
+### 2021.01.28 14:53 - update network graph with merged functional category
+
+**11.13 14:31** - having gene-disease information from GWAS catelog and GWAS database
+```{r}
+# enriched functional categories of binary network
+fb_edge <- read.table("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/binary_GO_mergeORF/metascape_mergeTermNetwork_20210212.csv", sep = ",", header = T)
+fb_node_ori <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/binary_GO_mergeORF/metascape_mergeTermNode_20210212.csv", sep = ",", header = T)
+fb_node <- fb_node_ori
+fb_graph <- simplify(graph_from_data_frame(fb_edge, directed = FALSE), remove.loops = FALSE) 
+V(fb_graph)$f_group <- fb_node[, "group"] 
+
+fb_melt <- melt(unique(fb_edge))
+fb_melt_w <- dcast(fb_melt, to ~ from)
+fb_melt_x <- as.matrix(fb_melt_w[, -1])
+fb_melt_x[is.na(fb_melt_x)] <- 0
+fb_melt_x <- as.data.frame(apply(fb_melt_x, 2, function(x) as.numeric(x > 0)))
+row.names(fb_melt_x) <- fb_melt_w[, 1]
+row.names(fb_node) <- fb_node[, 1]
+fb_node <- merge(fb_node, fb_melt_x, by = 0, all = TRUE)
+row.names(fb_node) <- fb_node[, "Row.names"]
+fb_node <- fb_node[, c(4:6)]
+
+fb_fun <- data.frame(V1 = fb_node_ori[c(1:3), 1]) 
+fb_fun_x <- as.matrix(dcast(fb_fun, V1 ~ V1))
+fb_fun_x[is.na(fb_fun_x)] <- 0
+fb_fun_x <- as.data.frame(apply(fb_fun_x, 2, function(x) as.numeric(x > 0)))
+row.names(fb_fun_x) <- colnames(fb_fun_x[, c(2:4)]) 
+fb_fun_x <- fb_fun_x[, c(2:4)]
+fb_node <- rbind(fb_melt_x, fb_fun_x)
+fb_node <- fb_node[c(1:98), ] 
+
+# associated diseases of binary network (without statistical result)
+gd_edge <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/binary/Enrichment_QC/GO_DisGeNET_edge.csv", header = T)
+gd_node <- read.table("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/binary/Enrichment_QC/GO_DisGeNET_node.txt", sep = "\t", header = T)
+gd_graph <- graph_from_data_frame(gd_edge, directed = FALSE)
+V(gd_graph)$d_group <- gd_node[, 2]
+
+# union of viral-host-host-function network
+viral_host_func <- union(binary_merge, fb_graph)
+
+# create network in cytoscape
+# createNetworkFromIgraph(graph, title = "HuRI", collection = "HuRI") # not very efficiency with RCy3 with big network
+createNetworkFromIgraph(binary_merge, title = "viral-host-host network2", collection = "Binary network", )
+createNetworkFromIgraph(binary_sub_graph, title = "host-host network", collection = "Y2H networks", )
+
+createNetworkFromIgraph(binary_graph, title = "viral-host network", collection = "Binary network")
+# deleteNetwork(network = "Functional Category")
+createNetworkFromIgraph(fb_graph, title = "Functional Category", collection = "Functional analysis")
+# deleteNetwork(network = "viral-host-host-function")
+createNetworkFromIgraph(viral_host_func, title = "viral-host-host-function", collection = "viral-host-host-function")
+# createNetworkFromIgraph(gd_graph, title = "Disease Category", collection = "Functional analysis")
+loadTableData(fb_node)
+# loadTableData(gd_node)
+# mergeNetworks(sources = c("viral-host-host network", "Functional Category"), title = "merged_all", operation = "union") # only two at once is do able
+
+# deleteVisualStyle("VirHostome")
+nodecolor <- colorRampPalette(brewer.pal(3, "RdYlBu"))
+fb_nodecolor <- nodecolor(3) # try custom summary
+
+style.name <- "VirHostome"
+defaults <- list(NODE_SHAPE = "ellipse",
+                 NODE_SIZE = 30,
+                 EDGE_TRANSPARENCY = 120,
+                 NODE_LABEL_POSITION = "W, E, c, 0.00, 0.00",
+                 NODE_FILL_COLOR = "#00bfff",
+                 NODE_Border_Width = 0)
+nodeLabels <- mapVisualProperty(visual.prop = "node label",
+                table.column = "name",
+                mapping.type = "p")
+nodeFills <- mapVisualProperty(visual.prop = "node fill color",
+             table.column = "group",
+             mapping.type = "d",
+             table.column.values = "virus",
+             visual.prop.values = "#ff0000")
+# deleteVisualStyle(style.name)
+createVisualStyle(style.name, defaults, list(nodeLabels, nodeFills))
+
+style.name_f <- "VirHostome_f_m"
+f_nodeFills <- mapVisualProperty(visual.prop = "node fill color",
+             table.column = "name",
+             mapping.type = "d",
+             table.column.values = names(fb_node),
+             visual.prop.values = fb_nodecolor)
+# deleteVisualStyle(style.name_f)
+createVisualStyle(style.name_f, defaults, list(nodeLabels, f_nodeFills))
+
+setVisualStyle(style.name, "viral-host-host network")
+setVisualStyle(style.name_f, "Functional Category")
+setVisualStyle(style.name_f, "viral-host-host-function")
+
+setNodeCustomPieChart(names(fb_node), colors = fb_nodecolor, style.name = "VirHostome_f_m", slot = 9)
+setNodeBorderOpacityDefault(0, style.name = style.name_f)
+```
+
+### show human target associated functional categories into viral protein node
+```{r}
+binary_function <- binary_graph %u% fb_graph
+viral_f <- data.frame(matrix(ncol = 8, nrow = 19))
+names(viral_f) <- names(fb_node)
+row.names(viral_f) <- sort(unique(binary_edge$virus))
+for (i in row.names(viral_f)) {
+  viral_f[i, ] <- names(fb_node) %in% sort(unique(names(fb_node)[match(names(unlist(ego(binary_function, order = 2, node = i))), names(fb_node))], na.rm = TRUE))
+}
+viral_f <- viral_f * 1 # Cool answer from https://stackoverflow.com/questions/33930188/convert-dataframe-column-to-1-or-0-for-true-false-values-and-assign-to-dataf
+fb_node <- rbind(fb_node, viral_f)
+loadTableData(fb_node)
+setNodeCustomPieChart(names(fb_node), colors = fb_nodecolor, style.name = style.name_f, slot = 9)
+```
+
+### play the visualization of VirHostome network
+```{r}
+# addCyNodes(c("viral protein", "human protein")) # don't know how to put legend into the network.
+fitContent()
+exportImage(filename = '/Users/chung-wen.lin/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/viral-host-host.pdf', type = "PDF", network = "viral-host-host-function")
+# the exportImage function is not that good, node labels are ignored
+
+selectNodes(by.col = "group", nodes = "virus")
+```
+
+## have level 1 and 2 neighborhood
+### for HuRI
+```{r message = FALSE}
+for (i in 1:length(binary)) {
+  neighbor_plot <- make_ego_graph(graph, order = 1, nodes = binary[i], mode = "all")
+  V(neighbor_plot[[1]])$group <- ifelse(names(V(neighbor_plot[[1]])) %in% binary, "virus", "")
+  createNetworkFromIgraph(simplify(neighbor_plot[[1]], remove.loops = FALSE), title = paste0("L2_from_", binary[i]), collection = "HuRI")
+  setVisualStyle(style.name, paste0("L1_from_", binary[i]))
+  layoutNetwork("force-directed")
+
+    neighbor_plot <- make_ego_graph(graph, order = 2, nodes = binary[i], mode = "all")
+  V(neighbor_plot[[1]])$group <- ifelse(names(V(neighbor_plot[[1]])) %in% binary, "virus", "")
+  createNetworkFromIgraph(simplify(neighbor_plot[[1]], remove.loops = FALSE), title = paste0("L2_from_", binary[i]), collection = "HuRI")
+  setVisualStyle(style.name, paste0("L2_from_", binary[i]))
+  layoutNetwork("force-directed")
+}
+```
+
+### for HI-union
+```{r}
+for (i in 78:length(binary)) {
+  neighbor_plot <- make_ego_graph(hi_graph, order = 1, nodes = binary[i], mode = "all")
+  V(neighbor_plot[[1]])$group <- ifelse(names(V(neighbor_plot[[1]])) %in% binary, "virus", "")
+  createNetworkFromIgraph(simplify(neighbor_plot[[1]], remove.loops = FALSE), title = paste0("L1_from_", binary[i]), collection = "Hi-union")
+#  setVisualStyle(style.name, paste0("L1_from_", binary[i]))
+#  layoutNetwork("force-directed")
+    Sys.sleep(5)
+
+    neighbor_plot <- make_ego_graph(hi_graph, order = 2, nodes = binary[i], mode = "all")
+  V(neighbor_plot[[1]])$group <- ifelse(names(V(neighbor_plot[[1]])) %in% binary, "virus", "")
+  createNetworkFromIgraph(simplify(neighbor_plot[[1]], remove.loops = FALSE), title = paste0("L2_from_", binary[i]), collection = "Hi-union")
+#  setVisualStyle(style.name, paste0("L2_from_", binary[i]))
+#  layoutNetwork("force-directed")
+  Sys.sleep(10)
+}
+
+```
+
+
+## doing community calculation
+based on entire HuRI network
+```{r}
+# Community structure detection based on edge betweenness
+## very time consuming
+## **18 Nov, 2020**, done on scm server
+###################################
+# by edge_betweenness, on scm server
+
+# library(igraph)
+# huri <- read.csv("HuRI_Tong_withSymbol.csv", header = T)
+# huri <- huri[, c(5:6)]
+# huri_graph <- graph_from_data_frame(huri, directed = FALSE)
+# huri_eb <- cluster_edge_betweenness(huri_graph, directed = FALSE)
+# save.image(file = "HuRI_edgebetweenness.RData")
+#####
+# the above HuRI_edgebetweenness.RData was merged with linkCommunity.RData into HuRI_communities.RData
+#####
+###################################
+load("~/Documents/INET-work/virus_network/statistic_results/HuRI_communities.RData")
+ceb_tb <- membership(huri_eb)
+ceb_df <- as.data.frame(matrix(ceb_tb))
+names(ceb_df) <- "EdgeBetweennessCommunity"
+ceb_df$gene <- names(ceb_tb)
+ceb_df <- ceb_df[order(ceb_df$community, ceb_df$group), ]
+write.table(ceb_df[, c(2, 1, 3)], file = "~/Documents/INET-work/virus_network/statistic_results/HuRI_eb_df.csv", sep = ",", row.names = FALSE)
+
+# Community strucure via short random walks
+cw <- cluster_walktrap(graph)
+
+# Community structure via greedy optimization of modularity
+cfg <- cluster_fast_greedy(simplify(graph))
+
+# propagating labels
+clp <- cluster_label_prop(graph)
+
+# Community structure detecting based on the leading eigenvector of the community matrix
+cle <- cluster_leading_eigen(graph)
+
+# Finding community structure by multi-level optimization of modularity
+cl <- cluster_louvain(graph)
+
+# based on Generate Overlapping Cluster Generator (OCG) Communities
+lc_ocg <- getOCG.clusters(huri)
+
+# based on edge similarity, only analyze viral-host-host network
+# graph_df <- unique(as_data_frame(graph))
+# lc <- getLinkCommunities(graph_df, use.all.edges = TRUE, edglim = 10^6)
+lc_clusters <- lengths(lc$clusters)
+lc_df_edges <- as.data.frame(lc$edges)
+lc_df_edges$sharename <- paste0(lc_df_edges$node1, " (interacts with) ", lc_df_edges$node2)
+lc_df_edgelist <- as.data.frame(lc$edgelist)
+lc_df_edgelist$sharename <- paste0(lc_df_edgelist$V1, " (interacts with) ", lc_df_edgelist$V2)
+lc_df_edgelist$cluster <- lc_df_edges[match(lc_df_edgelist$sharename, lc_df_edges$sharename), "cluster"]
+names(lc_clusters) <- c(1:length(lc_clusters))
+
+barplot(lc_clusters, xlab = "community", ylab = "size", las = 1, col = barcolor(length(lc_clusters)))
+write.table(lc_df_edgelist, file = "~/Documents/INET-work/virus_network/statistic_results/HuRI_linkcomm_edge_community.csv", sep = ",", row.names = FALSE)
+
+par(mfrow = c(2, 3))
+barplot(sizes(ceb), main = "ceb", xlab = "community", ylab = "size", las = 1)
+barplot(log(sizes(cw), 10), main = "cw", xlab = "community", ylab = "size (log10)", las = 1)
+barplot(log(sizes(cfg), 10), main = "cfg", xlab = "community", ylab = "size (log10)", las = 1)
+barplot(log(sizes(clp), 10), main = "clp", xlab = "community", ylab = "size (log10)", las = 1)
+barplot(log(sizes(cle), 10), main = "cle", xlab = "community", ylab = "size (log10)", las = 1)
+barplot(log(sizes(cl), 10), main = "cl", xlab = "community", ylab = "size (log10)", las = 1)
+
+# visualization of individual community from link community
+pdf("/tmp/huri_lc.pdf")
+for (i in seq(1, 1532, by = 4)) {
+  plot(lc, type = "graph", vsize = 5, vlabel = TRUE, clusterids = c(i, i+1, i+2, i+3))
+  title(main = paste0(i, " to ", i + 3))
+}
+dev.off()
+```
+
+## output statitics of community based on link community and edge-betweenness
+**2020.11.22**
+```{r}
+lc_table <- sort(table(lc_df_edgelist$cluster))
+lc_count <- round(as.matrix(summary(as.vector(table(lc_df_edgelist$cluster)))), 0)
+# eb <- read.csv("~/Documents/INET-work/virus_network/statistic_results/HuRI_eb_df.csv", header = T)
+eb_table <- sort(table(eb$community))
+eb_count <- round(as.matrix(summary(as.vector(table(eb$community)))), 0)
+
+pdf("/tmp/HuRI_community.pdf", width = 5, height = 5)
+barplot(lc_table, las = 2, xlab = "community", ylab = "count", main = "Community via LinkComm")
+grid.table(lc_count)
+text(770, 500, "Statistic of community (n = 1532) count", cex = .7)
+barplot(eb_table, las = 2, xlab = "community", ylab = "count", main = "Community via edgeBetweenness")
+grid.table(eb_count)
+text(220, 700, "Statistic of community (n = 412) count", cex = .7)
+dev.off()
+```

@@ -1,0 +1,71 @@
+---
+title: Get subgraph of binary SARS-CoV-2 interactome from HuRI
+output: pdf_document
+always_allow_html: true
+---
+
+```{r setup, include = FALSE, echo = FALSE}
+library(igraph)
+library(dplyr)
+library(visNetwork)
+# reference for visNetwork https://datastorm-open.github.io/visNetwork/
+```
+
+## Loading INET and Roth SARS-CoV-2 interactome datasets
+```{r}
+options(width = 60)
+
+node_inet <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/node_20200924.csv",
+    header = T, as.is = T)
+edge_inet <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20200923_verified/edge_20200924.csv",
+    header = T, as.is = T)
+
+node_roth <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/source_data/dk_node.csv",
+    header = T, as.is = T)
+edge_roth <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/source_data/dk_BFG.csv",
+    header = T, as.is = T)
+
+node_inet <- node_inet[, c(1, 5)]
+node <- unique(rbind(node_inet, node_roth))
+names(node) <- c("id", "group")
+names(edge_inet) <- c("human", "virus")
+edge_roth <- edge_roth[, c(1, 2)]
+names(edge_roth) <- c("virus", "human")
+edge <- rbind(edge_inet, edge_roth)
+names(edge) <- c("from", "to")
+net <- graph_from_data_frame(d = edge, vertices = node, directed = FALSE)
+```
+
+## Loading Human reference interactome (HuRI)
+```{r include = FALSE}
+options(width = 60)
+
+huri_edge <- read.csv("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_Tong_withSymbol.csv", header = T, as.is = T)
+huri_edge <- huri_edge[, c("symbol_a", "symbol_b")]
+huri_node <- as.data.frame(unique(c(huri_edge$symbol_a, huri_edge$symbol_b)))
+huri_net <- graph_from_data_frame(huri_edge, directed = FALSE)
+```
+
+## extract interactions of viral-proteins from HuRI
+```{r include = TRUE, echo = FALSE}
+library(plyr)
+
+# sars2_huri <- ego(huri_net, order = 1, nodes = node$id, mode = "all") # ego is used to have specific vertex and its neighbors.
+# inet_huri <- make_ego_graph(huri_net, order = 1, node = unique(mat1_list), mode = "all")
+# inet_huri_df <- unique(ldply(lapply(inet_huri, get.edgelist), data.frame))
+# inet_huri_net <- graph_from_data_frame(inet_huri_df, directed = FALSE)
+
+# lapply(mget(ls(pattern = "^g\\d")), plot) # another function to plot multiple graphs as the same time
+inet_huri_vertex <- names(V(huri_net))[names(V(huri_net)) %in% node_inet$symbol]
+inet_huri_net <- induced_subgraph(huri_net, inet_huri_vertex, impl = "copy_and_delete")
+```
+
+```{r}
+options(width = 60)
+
+visNetwork(node, edge, width = "210mm", height = "297mm") %>%
+    visIgraphLayout() %>%
+    visNodes(shape = "circle") %>%
+    # visSave(file = "binary.html")
+    visOptions(highlightNearest = list(enabled = T, hover = T), nodesIdSelection =T)
+```

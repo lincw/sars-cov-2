@@ -1,0 +1,317 @@
+---
+title: enrichment analysis
+author: Lin Chung-wen
+date: 2020.12.07
+output: html_document
+---
+## loading enviroment set and data
+```{r}
+library(gprofiler2)
+library(dplyr)
+library(rstatix)
+library(igraph)
+library(stringr)
+library(linkcomm)
+library(RCy3)
+
+load("~/Documents/INET-work/virus_network/statistic_results/HuRI_ocg_assays.RData")
+load("~/Documents/INET-work/virus_network/statistic_results/HuRI_ocg.RData")
+load("~/Documents/INET-work/virus_network/statistic_results/HI_union_ocg.RData")
+
+bp_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HuRI_GOBP_EXP.gmt")
+mf_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HuRI_GOMF_EXP.gmt")
+cc_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HuRI_GOCC_EXP.gmt")
+
+# hi_bp_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HI_GOBP.gmt")
+# hi_mf_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HI_GOMF.gmt")
+# hi_cc_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HI_GOCC.gmt")
+#
+# a1_bp_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_a1_GOBP.gmt")
+# a1_mf_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_a1_GOMF.gmt")
+# a1_cc_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_a1_GOCC.gmt")
+#
+# a2_bp_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_a2_GOBP.gmt")
+# a2_mf_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_a2_GOMF.gmt")
+# a2_cc_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_a2_GOCC.gmt")
+#
+# a3_bp_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_a3_GOBP.gmt")
+# a3_mf_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_a3_GOMF.gmt")
+# a3_cc_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_a3_GOCC.gmt")
+#
+# hpo <- upload_GMT_file(gmtfile = "~/workplace/database/human_phenotype_pho.gmt")
+# binary_ori <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/binary_node_1126.csv", header = T)
+#
+# hpa <- upload_GMT_file(gmtfile = "~/workplace/database/HPA/normal_tissue_only.gmt")
+
+# hpa_protein <- upload_GMT_file(gmtfile = "~/workplace/database/HPA/HPA_protein.gmt") # error 400
+
+# hpa_bp <- upload_GMT_file(gmtfile = "~/workplace/database/HPA/HPA_bp.gmt")
+
+funcEnrich <- function(ocg, organism, size) {
+    go <- list()
+    df <- data.frame("name" = names(ocg$clustsizes), "clustsize" = ocg$clustsizes)
+    for (i in df[df$clustsize > size, "name"]) {
+        query_list <- ocg[[4]][ocg[[4]][, 2] == i, "node"]
+        goquery <- gost(query = query_list, organism = organism, correction_method = "bonferroni", evcodes = TRUE)
+        goquery$result$inCommunity <- paste0( goquery$meta$query_metadata$queries$query_1, collapse = ",")
+        goquery$result$annotatedInCommunity <- paste0(goquery$meta$genes_metadata$query$query_1$ensgs, collapse = ",")
+        target <- query_list[query_list %in% binary$node]
+        goquery$result$viralTarget <- paste0(target, collapse = ",")
+        go[[i]] <- goquery$result
+    }
+    return(go)
+}
+
+statCal <- function(ocg, virTarget, totalN) {
+        clust <- ocg$nodeclusters
+        clust2 <- clust %>% select(cluster) %>% group_by(cluster) %>% mutate(count = n()) %>% distinct()
+        df <- ocg$nodeclusters[ocg$nodeclusters$node %in% binary_node, ]
+        df2 <- df %>% select(cluster) %>% group_by(cluster) %>% mutate(count = n()) %>% distinct()
+        merged <- merge(clust2, df2, by = "cluster", all.x = TRUE)
+        merged[is.na(merged)] <- 0
+        merged$notTarget <- merged[, 2] - merged[, 3]
+        merged$cluster <- merged$cluster
+        row.names(merged) <- merged[, 1]
+        merged <- merged[, c(3, 4)]
+        names(merged) <- c("Target", "notTarget")
+        total <- c(virTarget, totalN - virTarget)
+        names(total) <- c("Target", "notTarget")
+        data <- data.frame()
+        data <- apply(merged, 1, function(x) {
+                tab <- rbind(x, total)
+                fisher_test(tab)
+                })
+        return(data)
+}
+
+goOutput <- function(ocg, ocgbp) {
+        ocg1 <- statCal(ocg, length(binary_node), length(unique(ocg$nodeclusters$node)))
+        ocg1_all <- do.call(rbind.data.frame, ocg1)
+        ocg1_all$cluster <- row.names(ocg1_all)
+        ocg1_graph <- ocg1_all[ocg1_all$p <= 0.05, "cluster"]
+
+        dfa1 <- list()
+        for (i in ocg1_graph$cluster) {
+                if (length(ocgbp[[i]]) != 19) {
+                        next
+                } else {
+                        dfa1[i] <- ocgbp[i]
+                }
+        }
+        ocga1_bp <- do.call(rbind, dfa1)
+}
+
+toCyto <- function(selected, assayOCG, assayC, networkName) {
+        for (i in selected) {
+                setCurrentNetwork(network = assayC)
+                clearSelection()
+                sel <- getNodesIn(assayOCG, clusterids = i)
+                selectNodes(sel, by.col = "name", network = assayC)
+                createSubnetwork(subnetwork.name = paste0(networkName, "_community_", i))
+                setVisualStyle(style.name, paste0(networkName, "_community_", i))
+                layoutNetwork("force-directed")
+        }
+}
+```
+
+## running GO functional enrichment analysis
+```{r}
+binary <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/binary_node_1126_simple.csv", header = T)
+binary_node <- binary[binary$category == "human", "node"]
+
+# subDir <- "ocg1"
+# dir.create(file.path(subDir), showWarnings = FALSE)
+# setwd(file.path(subDir))
+
+huri_ocg_gobp <- funcEnrich(huri_ocg, bp_cust, 5)
+huri_ocg_gomf <- funcEnrich(huri_ocg, mf_cust, 5)
+huri_ocg_gocc <- funcEnrich(huri_ocg, cc_cust, 5)
+
+# huri_ocg1_gobp <- funcEnrich(huri_ocg1, a1_bp_cust, 5)
+# huri_ocg1_gomf <- funcEnrich(huri_ocg1, a1_mf_cust, 5)
+# huri_ocg1_gocc <- funcEnrich(huri_ocg1, a1_cc_cust, 5)
+#
+# huri_ocg2_gobp <- funcEnrich(huri_ocg2, a2_bp_cust, 5)
+# huri_ocg2_gomf <- funcEnrich(huri_ocg2, a2_mf_cust, 5)
+# huri_ocg2_gocc <- funcEnrich(huri_ocg2, a2_cc_cust, 5)
+#
+# huri_ocg3_gobp <- funcEnrich(huri_ocg3, a3_bp_cust, 5)
+# huri_ocg3_gomf <- funcEnrich(huri_ocg3, a3_mf_cust, 5)
+# huri_ocg3_gocc <- funcEnrich(huri_ocg3, a3_cc_cust, 5)
+#
+# hi_ocg_gobp <- funcEnrich(hi_ocg, hi_bp_cust, 5)
+# hi_ocg_gomf <- funcEnrich(hi_ocg, hi_mf_cust, 5)
+# hi_ocg_gocc <- funcEnrich(hi_ocg, hi_cc_cust, 5)
+
+# not doable here
+# library(EnrichmentBrowser)
+# getGenesets(org = "hsa", db = "go", onto = "BP", mode = "GO.db", gs = huri_ocg1[[4]][huri_ocg1[[4]][, 2] == i, "node"])
+# pwys <- downloadPathways("hsa")
+# not doable here
+
+# using GOA dataset
+# url: http://current.geneontology.org/products/pages/downloads.html
+# http://geneontology.org/gene-associations/goa_human.gaf.gz
+```
+
+## Cytoscape style setup
+```{r}
+style.name <- "VirHostome"
+defaults <- list(NODE_SHAPE = "ellipse",
+                 NODE_SIZE = 30,
+                 EDGE_TRANSPARENCY = 120,
+                 NODE_LABEL_POSITION = "W, E, c, 0.00, 0.00",
+                 NODE_FILL_COLOR = "#00bfff",
+                 NODE_Border_Width = 0)
+nodeLabels <- mapVisualProperty(visual.prop = "node label",
+                table.column = "name",
+                mapping.type = "p")
+nodeFills <- mapVisualProperty(visual.prop = "node fill color",
+             table.column = "viralTarget",
+             mapping.type = "d",
+             table.column.values = "yes",
+             visual.prop.values = "#ff0000")
+createVisualStyle(style.name, defaults, list(nodeLabels, nodeFills))
+```
+
+## Community and viral-host integration
+load interaction pair information and have network visualization in Cytoscape
+```{r}
+huri <- read.table("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_edges.txt", header = F, sep = "\t")
+huri_node <- unique(c(huri$V1, huri$V2))
+binary <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/binary_node_1126_simple.csv", header = T)
+binary_node <- binary[binary$category == "human", "node"]
+df <- data.frame("name" = huri_node, "viralTarget" = ifelse(huri_node %in% binary[binary$category == "human", "node"], "yes", "no"))
+
+huri_graph <- graph_from_data_frame(huri, directed = FALSE)
+createNetworkFromIgraph(huri_graph, title = "HuRI", collection = "HuRI", )
+row.names(df) <- df$name
+loadTableData(df)
+createColumnFilter(filter.name = "viral", column = "viralTarget", "yes", predicate = "IS", network = "HuRI")
+createSubnetwork(subnetwork.name = "viralTargets")
+
+huri_a1 <- read.table("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_assay1_edges.txt", header = F, sep = "\t")
+huri_a2 <- read.table("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_assay2_edges.txt", header = F, sep = "\t")
+huri_a3 <- read.table("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_assay3_edges.txt", header = F, sep = "\t")
+huri_a1_graph <- graph_from_data_frame(huri_a1, directed = FALSE)
+createNetworkFromIgraph(huri_a1_graph, title = "HuRI_a1", collection = "HuRI", )
+huri_a2_graph <- graph_from_data_frame(huri_a2, directed = FALSE)
+createNetworkFromIgraph(huri_a2_graph, title = "HuRI_a2", collection = "HuRI", )
+huri_a3_graph <- graph_from_data_frame(huri_a3, directed = FALSE)
+createNetworkFromIgraph(huri_a3_graph, title = "HuRI_a3", collection = "HuRI", )
+```
+
+### HuRI
+```{r}
+huri_ocg_enrich <- do.call(rbind.data.frame, statCal(huri_ocg, length(binary_node), length(unique(huri_ocg$nodeclusters$node))))
+huri_ocg_enrich$cluster <- row.names(huri_ocg_enrich)
+write.csv(huri_ocg_enrich[huri_ocg_enrich$"p.signif" < 0.05, ], file = "~/Documents/INET-work/virus_network/statistic_results/HuRI_signif_community.csv", row.names = F)
+
+ocgRI_bp <- goOutput(huri_ocg, huri_ocg_gobp)
+ocgRI_mf <- goOutput(huri_ocg, huri_ocg_gomf)
+ocgRI_cc <- goOutput(huri_ocg, huri_ocg_gocc)
+toPlot <- unique(c(str_extract(row.names(ocgRI_bp), pattern = "^[0-9]+"),
+                str_extract(row.names(ocgRI_mf), pattern = "^[0-9]+"),
+                str_extract(row.names(ocgRI_cc), pattern = "^[0-9]+")))
+#toCyto(toPlot, huri_ocg, "HuRI", "HuRI")
+write.csv(rbind(ocgRI_bp, ocgRI_mf, ocgRI_cc)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/statistic_results/HuRI_GO.csv")
+```
+
+### HuRI assay1
+```{r}
+huri_ocg1_enrich <- do.call(rbind.data.frame, statCal(huri_ocg1, length(binary_node), length(unique(huri_ocg1$nodeclusters$node))))
+huri_ocg1_enrich$cluster <- row.names(huri_ocg1_enrich)
+write.table(huri_ocg1_enrich[huri_ocg1_enrich$"p.signif" < 0.05, ], file = "~/Documents/INET-work/virus_network/statistic_results/HuRIassay1_signif_community.csv", sep = ",")
+
+ocga1_bp <- goOutput(huri_ocg1, huri_ocg1_gobp)
+ocga1_mf <- goOutput(huri_ocg1, huri_ocg1_gomf)
+ocga1_cc <- goOutput(huri_ocg1, huri_ocg1_gocc)
+toPlot <- unique(c(str_extract(row.names(ocga1_bp), pattern = "^[0-9]+"),
+                str_extract(row.names(ocga1_mf), pattern = "^[0-9]+"),
+                str_extract(row.names(ocga1_cc), pattern = "^[0-9]+")))
+# toCyto(toPlot, huri_ocg1, "HuRI_a1", "assay1")
+write.table(rbind(ocga1_bp, ocga1_mf, ocga1_cc)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/statistic_results/HuRI_a1_GO.csv", sep = ",")
+```
+
+### HuRI assay2
+```{r}
+huri_ocg2_enrich <- do.call(rbind.data.frame, statCal(huri_ocg2, length(binary_node), length(unique(huri_ocg2$nodeclusters$node))))
+huri_ocg2_enrich$cluster <- row.names(huri_ocg2_enrich)
+write.table(huri_ocg2_enrich[huri_ocg2_enrich$"p.signif" < 0.05, ], file = "~/Documents/INET-work/virus_network/statistic_results/HuRIassay2_signif_community.csv", sep = ",")
+
+ocga2_bp <- goOutput(huri_ocg2, huri_ocg2_gobp)
+ocga2_mf <- goOutput(huri_ocg2, huri_ocg2_gomf)
+ocga2_cc <- goOutput(huri_ocg2, huri_ocg2_gocc)
+toPlot <- unique(c(str_extract(row.names(ocga2_bp), pattern = "^[0-9]+"),
+                str_extract(row.names(ocga2_mf), pattern = "^[0-9]+"),
+                str_extract(row.names(ocga2_cc), pattern = "^[0-9]+")))
+# toCyto(toPlot, huri_ocg2, "HuRI_a2", "assay2")
+write.table(rbind(ocga2_bp, ocga2_mf, ocga2_cc)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/statistic_results/HuRI_a2_GO.csv", sep = ",")
+```
+
+### HuRI assay3
+```{r}
+huri_ocg3_enrich <- do.call(rbind.data.frame, statCal(huri_ocg3, length(binary_node), length(unique(huri_ocg3$nodeclusters$node))))
+huri_ocg3_enrich$cluster <- row.names(huri_ocg3_enrich)
+write.table(huri_ocg3_enrich[huri_ocg3_enrich$"p.signif" < 0.05, ], file = "~/Documents/INET-work/virus_network/statistic_results/HuRIassay3_signif_community.csv", sep = ",")
+
+ocga3_bp <- goOutput(huri_ocg3, huri_ocg3_gobp)
+ocga3_mf <- goOutput(huri_ocg3, huri_ocg3_gomf)
+ocga3_cc <- goOutput(huri_ocg3, huri_ocg3_gocc)
+toPlot <- unique(c(str_extract(row.names(ocga3_bp), pattern = "^[0-9]+"),
+                str_extract(row.names(ocga3_mf), pattern = "^[0-9]+"),
+                str_extract(row.names(ocga3_cc), pattern = "^[0-9]+")))
+# toCyto(toPlot, huri_ocg3, "HuRI_a3", "assay3")
+write.table(rbind(ocga3_bp, ocga3_mf, ocga3_cc)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/statistic_results/HuRI_a3_GO.csv", sep = ",")
+```
+
+### HI-union
+**Different background for functional enrichment analysis**
+```{r}
+hi_ocg_enrich <- do.call(rbind.data.frame, statCal(hi_ocg, length(binary_node), length(unique(hi_ocg$nodeclusters$node))))
+hi_ocg_enrich$cluster <- row.names(hi_ocg_enrich)
+write.table(hi_ocg_enrich[hi_ocg_enrich$"p.signif" < 0.05, ], file = "~/Documents/INET-work/virus_network/statistic_results/HI_signif_community.csv", sep = ",")
+
+ocgHI_bp <- goOutput(hi_ocg, hi_ocg_gobp)
+ocgHI_mf <- goOutput(hi_ocg, hi_ocg_gomf)
+ocgHI_cc <- goOutput(hi_ocg, hi_ocg_gocc)
+toPlot <- unique(c(str_extract(row.names(ocgHI_bp), pattern = "^[0-9]+"),
+                str_extract(row.names(ocgHI_mf), pattern = "^[0-9]+"),
+                str_extract(row.names(ocgHI_cc), pattern = "^[0-9]+")))
+# toCyto(toPlot, hi_ocg, "HI-union", "HI")
+write.table(rbind(ocgHI_bp, ocgHI_mf, ocgHI_cc)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/statistic_results/HuRI_HI_GO.csv", sep = ",")
+```
+
+## running HPO functional enrichment analysis
+whole binary interactome and individual community
+```{r}
+binary_hpo <- gost(binary_ori$node, organism = hpo, correction_method = "bonferroni", evcodes = TRUE) # no significant
+huri_hpo_ocg <- funcEnrich(huri_ocg, hpo, 5)
+# huri_hpo_ocg1 <- funcEnrich(huri_ocg1, hpo, 5)
+# huri_hpo_ocg2 <- funcEnrich(huri_ocg3, hpo, 5)
+# huri_hpo_ocg3 <- funcEnrich(huri_ocg2, hpo, 5)
+hi_hpo_ocg <- funcEnrich(hi_ocg, hpo, 5)
+
+ocg_huri_hpo <- goOutput(huri_ocg, huri_hpo_ocg)
+# ocg1_hpo <- goOutput(huri_ocg1, huri_hpo_ocg1)
+# ocg2_hpo <- goOutput(huri_ocg2, huri_hpo_oc2)
+# ocg3_hpo <- goOutput(huri_ocg2, huri_hpo_oc3)
+ocg_hi_hpo <- goOutput(hi_ocg, hi_hpo_ocg)
+
+write.table(rbind(ocg_huri_hpo)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/statistic_results/HuRI_hpo.csv", sep = ",")
+write.table(rbind(ocg_hi_hpo)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/statistic_results/HI_hpo.csv", sep = ",")
+```
+
+## running HPA normal tissue enrichment analysis
+whole binary interactome and individual community
+```{r}
+binary_hpa <- gost(binary_ori$node, organism = hpa, correction_method = "bonferroni", evcodes = TRUE) # no significant
+huri_hpa_ocg <- funcEnrich(huri_ocg, hpa, 5)
+hi_hpa_ocg <- funcEnrich(hi_ocg, hpa, 5)
+
+ocg_huri_hpa <- goOutput(huri_ocg, huri_hpa_ocg)
+ocg_hi_hpa <- goOutput(hi_ocg, hi_hpa_ocg)
+
+write.table(rbind(ocg_huri_hpa)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/statistic_results/HuRI_hpa.csv", sep = ",")
+write.table(rbind(ocg_hi_hpa)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/statistic_results/HI_hpa.csv", sep = ",")
+```

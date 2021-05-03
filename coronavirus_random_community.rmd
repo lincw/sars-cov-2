@@ -1,0 +1,273 @@
+---
+title: random HuRI community detection with degree preservation network rewiring
+author: Lin Chung-wen
+date: "2021.02.01"
+output: html_document
+---
+
+## R environment setup
+
+### load pre-detected HuRI communities
+```{r echo = FALSE, eval = FALSE, message = FALSE}
+load("~/Documents/INET-work/virus_network/statistic_results/HuRI_ocg.RData")
+rm(list = c("funcEnrich", "goOutput", "statCal"))
+```
+
+```{r message = FALSE}
+library(linkcomm)
+library(igraph)
+library(gprofiler2)
+library(dplyr)
+library(rstatix)
+library(stringr)
+
+funcEnrich <- function(ocg, organism, size) {
+    go <- list()
+    df <- data.frame("name" = names(ocg$clustsizes), "clustsize" = ocg$clustsizes)
+    for (i in df[df$clustsize > size, "name"]) {
+        query_list <- ocg[[4]][ocg[[4]][, 2] == i, "node"]
+        goquery <- gost(query = query_list, organism = organism, correction_method = "bonferroni", evcodes = TRUE)
+        goquery$result$inCommunity <- paste0( goquery$meta$query_metadata$queries$query_1, collapse = ",")
+        goquery$result$annotatedInCommunity <- paste0(goquery$meta$genes_metadata$query$query_1$ensgs, collapse = ",")
+        target <- query_list[query_list %in% binary$node]
+        goquery$result$viralTarget <- paste0(target, collapse = ",")
+        go[[i]] <- goquery$result
+    }
+    return(go)
+}
+
+statCal <- function(ocg, virTarget, totalN) {
+        clust <- ocg$nodeclusters
+        clust2 <- clust %>% select(cluster) %>% group_by(cluster) %>% mutate(count = n()) %>% distinct()
+        df <- ocg$nodeclusters[ocg$nodeclusters$node %in% binary_node, ]
+        df2 <- df %>% select(cluster) %>% group_by(cluster) %>% mutate(count = n()) %>% distinct()
+        merged <- merge(clust2, df2, by = "cluster", all.x = TRUE)
+        merged[is.na(merged)] <- 0
+        merged$notTarget <- merged[, 2] - merged[, 3]
+        merged$cluster <- merged$cluster
+        row.names(merged) <- merged[, 1]
+        merged <- merged[, c(3, 4)]
+        names(merged) <- c("Target", "notTarget")
+        total <- c(virTarget, totalN - virTarget)
+        names(total) <- c("Target", "notTarget")
+        data <- data.frame()
+        data <- apply(merged, 1, function(x) {
+                tab <- rbind(x, total)
+                fisher_test(tab)
+                })
+        return(data)
+}
+
+goOutput <- function(ocg, ocgbp) {
+        ocg1 <- statCal(ocg, length(binary_node), length(unique(ocg$nodeclusters$node)))
+        ocg1_all <- do.call(rbind.data.frame, ocg1)
+        ocg1_all$cluster <- row.names(ocg1_all)
+        ocg1_graph <- ocg1_all[ocg1_all$p <= 0.05, "cluster"]
+
+        dfa1 <- list()
+        for (i in ocg1_graph$cluster) {
+                if (length(ocgbp[[i]]) != 19) {
+                        next
+                } else {
+                        dfa1[i] <- ocgbp[i]
+                }
+        }
+        ocga1_bp <- do.call(rbind, dfa1)
+}
+
+sig <- function(obs, result) {
+  if(obs >= median(result)) {
+    freq <- 1 - (sum(result <= obs))/length(result)
+    return(round(freq, digits = 3))
+  } else {
+    freq <- 1 - (sum(result >= obs))/length(result)
+    return(round(freq, digits = 3))
+  }
+}
+```
+
+## Custom GO for HuRI loading
+
+```{r  message = FALSE}
+bp_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HuRI_GOBP_EXP.gmt")
+mf_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HuRI_GOMF_EXP.gmt")
+cc_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HuRI_GOCC_EXP.gmt")
+```
+
+## VirHostome interaction pairs
+
+```{r}
+binary <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/binary_node_1126_simple.csv", header = T)
+binary_node <- binary[binary$category == "human", "node"]
+```
+
+## HuRI functional enrichmane assay
+```{r eval = FALSE}
+huri_ocg_gobp <- funcEnrich(huri_ocg, bp_cust, 5)
+huri_ocg_gomf <- funcEnrich(huri_ocg, mf_cust, 5)
+huri_ocg_gocc <- funcEnrich(huri_ocg, cc_cust, 5)
+
+ocgRI_bp <- goOutput(huri_ocg, huri_ocg_gobp)
+ocgRI_mf <- goOutput(huri_ocg, huri_ocg_gomf)
+ocgRI_cc <- goOutput(huri_ocg, huri_ocg_gocc)
+
+ocgRI_bp_viralT <- ocgRI_bp[ocgRI_bp$viralTarget != "", ]
+ocgRI_mf_viralT <- ocgRI_mf[ocgRI_mf$viralTarget != "", ]
+ocgRI_cc_viralT <- ocgRI_cc[ocgRI_cc$viralTarget != "", ]
+
+write.csv(rbind(ocgRI_bp_viralT, ocgRI_mf_viralT, ocgRI_cc_viralT)[, c(1:13, 15:19)], file = paste0("HuRI_GO_EXP.csv"))
+
+huri_ocg_enrich <- do.call(rbind.data.frame, statCal(huri_ocg, length(binary_node), length(unique(huri_ocg$nodeclusters$node))))
+huri_ocg_enrich$cluster <- row.names(huri_ocg_enrich)
+```
+
+## HuRI community summary
+```{r message = FALSE, eval = FALSE}
+ocgBP_count <- c()
+ocgMF_count <- c()
+ocgCC_count <- c()
+nameBP <- strsplit(row.names(ocgRI_bp), "\\.")
+nameMF <- strsplit(row.names(ocgRI_mf), "\\.")
+nameCC <- strsplit(row.names(ocgRI_cc), "\\.")
+for (j in 1:length(nameBP)) {
+    ocgBP_count <- c(ocgBP_count, unique(nameBP[[j]][1]))
+}
+for (j in 1:length(nameMF)) {
+    ocgMF_count <- c(ocgMF_count, unique(nameMF[[j]][1]))
+}
+for (j in 1:length(nameCC)) {
+    ocgCC_count <- c(ocgCC_count, unique(nameCC[[j]][1]))
+}
+
+community_sum <- data.frame(total = huri_ocg$numbers[3],
+                            bp = length(unique(ocgBP_count)),
+                            mf = length(unique(ocgMF_count)),
+                            cc = length(unique(ocgCC_count)),
+                            vir_specific = as.numeric(table(huri_ocg_enrich$p.signif != "ns")[2]),
+                            go_bp = as.numeric(table(unlist(lapply(huri_ocg_gobp, length)))[2]),
+                            go_mf = as.numeric(table(unlist(lapply(huri_ocg_gomf, length)))[2]),
+                            go_cc = as.numeric(table(unlist(lapply(huri_ocg_gocc, length)))[2]))
+```
+
+```{r eval = FALSE, echo = FALSE}
+print(paste0("HuRI community: ", community_sum[1, 1]))
+print(paste0("HuRI community with at least one GO-BP: ", community_sum[1, 6]))
+print(paste0("HuRI community with at least one GO-MF: ", community_sum[1, 7]))
+print(paste0("HuRI community with at least one GO-CC: ", community_sum[1, 8]))
+print(paste0("HuRI significant community with human targets: ", community_sum[1, 5]))
+print(paste0("HuRI significant community with at least one GO-BP: ", community_sum[1, 2]))
+print(paste0("HuRI significant community with at least one GO-MF: ", community_sum[1, 3]))
+print(paste0("HuRI significant community with at least one GO-CC: ", community_sum[1, 4]))
+```
+
+## HuRI interaction loading and only the biggest connection was used here
+```{r}
+huri <- read.csv("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_Tong_withSymbol.csv", header = T)
+huri <- huri[, c(5:6)]
+huri_graph <- graph_from_data_frame(huri, directed = FALSE)
+huri_lc <- components(huri_graph)
+huri_sub <- induced_subgraph(huri_graph, names(huri_lc[1]$membership))
+
+huri_sub_random <- rewire(huri_sub, keeping_degseq(niter = gsize(huri_sub) * 10))
+```
+
+## repeat 100 times community detection and GO enrichment analysis
+
+```{r}
+for (i in 1:100) {
+    huri_ocg <- getOCG.clusters(igraph::as_data_frame(huri_sub_random))
+    huri_ocg_enrich <- do.call(rbind.data.frame, statCal(huri_ocg, length(binary_node), length(unique(huri_ocg$nodeclusters$node))))
+    huri_ocg_enrich$cluster <- row.names(huri_ocg_enrich)
+    write.csv(huri_ocg_enrich, file = paste0("random_", i, "_community.csv"))
+
+    huri_ocg_gobp <- funcEnrich(huri_ocg, bp_cust, 5)
+    huri_ocg_gomf <- funcEnrich(huri_ocg, mf_cust, 5)
+    huri_ocg_gocc <- funcEnrich(huri_ocg, cc_cust, 5)
+
+    ocgRI_bp <- goOutput(huri_ocg, huri_ocg_gobp)
+    ocgRI_mf <- goOutput(huri_ocg, huri_ocg_gomf)
+    ocgRI_cc <- goOutput(huri_ocg, huri_ocg_gocc)
+
+    ocgRI_bp_viralT <- ocgRI_bp[ocgRI_bp$viralTarget != "", ]
+    ocgRI_mf_viralT <- ocgRI_mf[ocgRI_mf$viralTarget != "", ]
+    ocgRI_cc_viralT <- ocgRI_cc[ocgRI_cc$viralTarget != "", ]
+
+    huri_ocg_enrich <- do.call(rbind.data.frame, statCal(huri_ocg, length(binary_node), length(unique(huri_ocg$nodeclusters$node))))
+    huri_ocg_enrich$cluster <- row.names(huri_ocg_enrich)
+
+    ocgBP_count <- c()
+    ocgMF_count <- c()
+    ocgCC_count <- c()
+    nameBP <- strsplit(row.names(ocgRI_bp), "\\.")
+    nameMF <- strsplit(row.names(ocgRI_mf), "\\.")
+    nameCC <- strsplit(row.names(ocgRI_cc), "\\.")
+    for (j in 1:length(nameBP)) {
+        ocgBP_count <- c(ocgBP_count, unique(nameBP[[j]][1]))
+    }
+    for (j in 1:length(nameMF)) {
+        ocgMF_count <- c(ocgMF_count, unique(nameMF[[j]][1]))
+    }
+    for (j in 1:length(nameCC)) {
+        ocgCC_count <- c(ocgCC_count, unique(nameCC[[j]][1]))
+    }
+
+    community_sum <- data.frame(total = huri_ocg$numbers[3],
+                                bp = length(unique(ocgBP_count)),
+                                mf = length(unique(ocgMF_count)),
+                                cc = length(unique(ocgCC_count)),
+                                vir_specific = as.numeric(table(huri_ocg_enrich$p.signif != "ns")[2]),
+                                go_bp = as.numeric(table(unlist(lapply(huri_ocg_gobp, length)))[2]),
+                                go_mf = as.numeric(table(unlist(lapply(huri_ocg_gomf, length)))[2]),
+                                go_cc = as.numeric(table(unlist(lapply(huri_ocg_gocc, length)))[2]))
+
+    save(huri_ocg, file = paste0("HuRI_ocg_", i, ".RData"))
+    write.csv(rbind(ocgRI_bp_viralT, ocgRI_mf_viralT, ocgRI_cc_viralT)[, c(1:13, 15:19)], file = paste0("HuRI_GO_EXP_", i, ".csv"))
+    write.csv(community_sum, file = paste0("HuRI_GO_sum_", i, ".csv"))
+}
+```
+
+## summary plot
+```{r eval = FALSE}
+c_random <- Sys.glob("~/Documents/INET-work/virus_network/community_tmp/random*.csv")
+c_go <- Sys.glob("~/Documents/INET-work/virus_network/community_tmp/HuRI_GO*.csv")
+c_random_table <- lapply(c_random, read.csv)
+c_go_table <- lapply(c_go, read.csv)
+c_random_perc <- c()
+c_go_perc <- c()
+for (i in 1:length(c_random_table)) {
+    df_row <- nrow(c_random_table[[i]]) # total community count
+    df_sig <- as.numeric(table(c_random_table[[i]]$p < 0.05)[2]) # community with significant human targets
+    c_random_perc <- c(c_random_perc, df_sig/df_row)
+    name <- strsplit(row.names(c_go_table[[i]]), "\\.")
+    name_tmp <- c()
+    for (j in 1:length(name)) {
+        name_tmp <- c(name_tmp, unique(name[[j]][1]))
+    }
+    c_go_perc <- c(c_go_perc, length(unique(name_tmp))/df_sig)
+}
+
+c_random_dens <- hist(c_random_perc, plot = FALSE)
+c_go_dens <- hist(c_go_perc, plot = FALSE)
+
+pdf("~/Documents/INET-work/virus_network/figure_results/random_network_communities.pdf")
+plot(c_random_dens$mids, c_random_dens$counts, type = "p", xlim = c(0.07, 0.13), xlab = "% communities with human targets", ylab = "Frequency", col = ifelse(c_random_dens$counts == 0, "white", "red"), las = 1, cex.axis = 1)
+lines(c_random_dens$mids, c_random_dens$counts, col = "black", lwd = 3)
+arrows(313/4399, 40, 313/4399, 10, col = "red", lwd = 2)
+points(313/4399, 1, col = "blue", lwd = 2, pch = 3)
+text(313/4399 + 0.005, 45, label = "p < 0.002", cex = 1)
+title("Proportion of enriched human target\n communities from random network")
+
+plot(c_go_dens$mids, c_go_dens$counts, type = "p", xlab = "% communities with human targets", ylab = "Frequency", col = ifelse(c_go_dens$counts == 0, "white", "red"), las = 1, cex.axis = 1)
+lines(c_go_dens$mids, c_go_dens$counts, col = "black", lwd = 3)
+arrows(47/313, 40, 47/313, 10, col = "red", lwd = 2)
+points(47/313, 1, col = "blue", lwd = 2, pch = 2)
+text(47/313 + 0.01, 45, label = paste0("p = ", round(47/313, 2)), cex = 1)
+title("Proportion of GO enriched \ncommunities from random network")
+dev.off()
+```
+
+Here we randomized HuRI 500 times using degree-preserving edge shuffling.
+The OCG algorithm was applied to each of the resulting 500 random networks to establish communities.
+Only communities containing more than 5 nodes and with significant enriched viral protein-human targets (p < 0.05, fisher-test) were tested for functional enrichment.
+In HuRI network, we identified 313 communities enriched with viral protein-human targets, 47 out of 313 were enriched in at least one GO term.
+Whereas the randomized network contained a higher ratio of communities with human targets, of which the proportion of GO-enriched communities were higher than the proportion identified from HuRI.

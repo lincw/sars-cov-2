@@ -1,0 +1,59 @@
+---
+title: "Display the overlap ratio between 3 HuRI assays"
+date: "2020.11.25"
+author: "Lin Chung-wen"
+output: html_document
+---
+# HuRI assays
+## load environment
+```{r echo = FALSE}
+library(VennDiagram)
+library(openxlsx)
+library(gridExtra)
+library(RColorBrewer)
+```
+## load dataset
+Divided HuRI into 3 individual assays
+```{r}
+huri_assay <- file.path("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_individual_assay.xlsx")
+huri_assay_name <- getSheetNames(huri_assay)
+huri_assay_df <- lapply(huri_assay_name, function(x) read.xlsx(huri_assay, sheet = x))
+```
+
+## data visualization
+
+    > https://stackoverflow.com/questions/54325859/cowplot-clips-labels-when-plotted-with-y-1-on-multiple-plots
+    a reference for multiple plot in the same page
+```{r}
+myCol <- brewer.pal(3, "Pastel2")
+
+huri_nodes <- list()
+huri_nodes[[1]] <- unique(c(huri_assay_df[[1]]$symbol_a, huri_assay_df[[1]]$symbol_b))
+huri_nodes[[2]] <- unique(c(huri_assay_df[[2]]$symbol_a, huri_assay_df[[2]]$symbol_b))
+huri_nodes[[3]] <- unique(c(huri_assay_df[[3]]$symbol_a, huri_assay_df[[3]]$symbol_b))
+
+huri_node_venn <- venn.diagram(
+    x = huri_nodes,
+    category.names = c("assay 1", "assay 2", "assay 3"),
+    filename = NULL,
+    cex = 1, cat.cex = 1, lwd = 2,
+    fill = myCol,
+    main = paste0("HuRI nodes (n = ", length(unique(unlist(huri_nodes))), ")")
+)
+huri_ppi_venn <- venn.diagram(
+    list(huri_assay_df[[1]]$ab, huri_assay_df[[2]]$ab, huri_assay_df[[3]]$ab),
+    category.names = c("assay 1", "assay 2", "assay 3"),
+    filename = NULL,
+    cex = 1, cat.cex = 1, lwd = 2,
+    fill = myCol,
+    main = paste0("HuRI interaction pairs (n = ", length(unique(c(huri_assay_df[[1]]$ab, huri_assay_df[[2]]$ab, huri_assay_df[[3]]$ab))), ")")
+)
+
+# pdf("/tmp/venn.pdf", width = 10, height = 5)
+cowplot::plot_grid(
+    gTree(children = huri_node_venn),
+    gTree(children = huri_ppi_venn),
+    ncol = 2
+    )
+# dev.off()
+```
