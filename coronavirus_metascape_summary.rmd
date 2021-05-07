@@ -239,3 +239,32 @@ for (i in 1:length(viral)) {
     ggsave(paste0("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/binary_", names(viral[i]), "_Protein.pdf"), width = 10, height = 5)
 }
 ```
+
+## 04.05.2021 KEGG v2 and Reactome
+```{r}
+kegg_v2 <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/HuSCI_KEGG/metascape_summary.csv", header = T)
+kegg_v2$term <- factor(kegg_v2$term, levels = kegg_v2$term[order(kegg_v2$enrichment)])
+binary_kegg_p <-
+    ggplot(kegg_v2, aes(x = term, y = enrichment)) +
+    geom_bar(stat = "identity") +
+    coord_flip() +
+    labs(y = "Enrichment over background", x = "Functional Category (p < 0.05)") +
+    theme_bw() +
+    theme(axis.text = element_text(color = "black", size = 8, hjust = 0),
+        axis.title = element_text(size = 8, color = "black", face = "bold")) +
+    theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
+ggsave(binary_kegg_p, file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/HuSCI_KEGG_20210504.pdf", width = 6, height = 2)
+
+reactome <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/metascape/HuSCI_reactome/metascape_summary.csv", header = T)
+reactome$term <- factor(reactome$term, levels = reactome$term[order(reactome$enrichment)])
+binary_reactome_p <-
+    ggplot(reactome, aes(x = term, y = enrichment)) +
+    geom_bar(stat = "identity") +
+    coord_flip() +
+    labs(y = "Enrichment over background", x = "Functional Category (p < 0.05)") +
+    theme_bw() +
+    theme(axis.text = element_text(color = "black", size = 8, hjust = 0),
+        axis.title = element_text(size = 8, color = "black", face = "bold")) +
+    theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
+ggsave(binary_reactome_p, file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/HuSCI_reactome_20210504.pdf", width = 6, height = 3)
+```

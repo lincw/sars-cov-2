@@ -29,6 +29,7 @@ library(dplyr)
 library(pastecs) # https://stats.idre.ucla.edu/r/faq/how-can-i-get-a-table-of-basic-descriptive-statistics-for-my-variables/
 library(ggsignif)
 # https://stackoverflow.com/questions/52214071/how-to-order-data-by-value-within-ggplot-facets
+library(purrr)
 reorder_within <- function(x, by, within, fun = mean, sep = "___", ...) {
   new_x <- paste(x, within, sep = sep)
   stats::reorder(new_x, by, FUN = fun)
@@ -42,7 +43,9 @@ scale_x_reordered <- function(..., sep = "___") {
 
 ## 1. loading HPA, HuSCI, Gordon, Li, Stukalov, Nabeel and HuRI data
 ```{r eval = FALSE}
-source("~/Documents/INET-work/INETscripts/cov_4apms.r", local = knitr::knit_global())
+source("~/Documents/INET-work/virus_network/src/cov_4apms.r", local = knitr::knit_global())
+huri <- read.csv("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_Tong_withSymbol.csv", header = T)
+huri_uniq <- unique(c(huri$ensembl_gene_id_a, huri$ensembl_gene_id_b))
 ```
 
 ```{r}
@@ -84,11 +87,12 @@ write.csv(gordon_rna, file = "~/Documents/INET-work/virus_network/statistic_resu
 write.csv(stukalov_rna, file = "~/Documents/INET-work/virus_network/statistic_results/stukalov_tissue_rna.csv", row.names = F)
 write.csv(li_rna, file = "~/Documents/INET-work/virus_network/statistic_results/li_tissue_rna.csv", row.names = F)
 write.csv(nabeel_rna, file = "~/Documents/INET-work/virus_network/statistic_results/nabeel_tissue_rna.csv", row.names = F)
+write.csv(bioid_rna, file = "~/Documents/INET-work/virus_network/statistic_results/bioid_tissue_rna.csv", row.names = F)
 ```
 
 ### count ratio of gene-tissue specificity
 ```{r message = FALSE}
-table_all_s <- prop.table(table(has_all$RNA_tissue_specificity))
+table_all_s <- prop.table(table(has_all$RNA.tissue.specificity))
 table_all_d <- prop.table(table(has_all$RNA.tissue.distribution))
 
 table_husci_s <- prop.table(table(husci_rna$RNA_tissue_specificity))
@@ -116,20 +120,29 @@ table_nabeel_d <- prop.table(table(nabeel_rna$RNA_tissue_distribution))
 table_nabeel_d["Detected in single"] <- 0
 table_nabeel_d["Not detected"] <- 0
 
-table_d_order <- c(1, 2, 4, 3, 5)
-table_specificity <- rbind(HumanGenome = table_all_s, HuSCI = table_husci_s, Gordon = table_gordon_s[c(1, 2, 5, 3, 4)], Stukalov = table_stukalov_s[c(1, 2, 5, 3, 4)], Li = table_li_s[c(1, 2, 5, 3, 4)], Nabeel = table_nabeel_s[c(1, 2, 5, 3, 4)])
-table_distribution <- rbind(HumanGenome = table_all_d[table_d_order], HuSCI = table_husci_d[table_d_order], Gordon = table_gordon_d, Stukalov = table_stukalov_d[table_d_order], Li = table_li_d[table_d_order], Nabeel = table_nabeel_d)
+table_bioid_s <- prop.table(table(bioid_rna$RNA_tissue_specificity))
+table_bioid_s["Not detected"] <- 0
+table_bioid_d <- prop.table(table(bioid_rna$RNA_tissue_distribution))
+table_bioid_d["Not detected"] <- 0
 
-pdf("~/documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/tissue_specificity.pdf", width = 10, height = 5)
+table_d_order <- c(1, 2, 4, 3, 5)
+table_specificity <- rbind(HPA = table_all_s, HuSCI = table_husci_s, Gordon = table_gordon_s[c(1, 2, 5, 3, 4)], Stukalov = table_stukalov_s[c(1, 2, 5, 3, 4)], Li = table_li_s[c(1, 2, 5, 3, 4)], Nabeel = table_nabeel_s[c(1, 2, 5, 3, 4)], BioID = table_bioid_s[c(1, 2, 5, 3, 4)])
+table_distribution <- rbind(HPA = table_all_d[table_d_order], HuSCI = table_husci_d[table_d_order], Gordon = table_gordon_d, Stukalov = table_stukalov_d[table_d_order], Li = table_li_d[table_d_order], Nabeel = table_nabeel_d, BioID = table_bioid_d[table_d_order])
+
+pdf("~/documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/tissue_specificity_withBioID.pdf", width = 10, height = 5)
 par(mar = c(10, 6, 4, 2), mfrow = c(1, 2))
-barplot(table_specificity[, c(2, 5, 4, 1, 3)] * 100, beside = T, las = 2, legend.text = TRUE,
+barplot(table_specificity[c(2:7, 1), c(2, 5, 4, 1)] * 100, beside = T, las = 2,
     ylab = "% of genes",
     main = "Specificity",
-    ylim = c(0, 100), col = brewer.pal(n = 6, name = "RdBu"))
-barplot(table_distribution * 100, beside = T, las = 2, legend.text = TRUE,
+    ylim = c(0, 100), col = c("#F8766D", "#B79F00", "#00BA38", "#00BFC4", "#619CFF", "brown", "grey"))
+legend("topright", legend = c("HuSCI", "Gordon", "Stukalov", "Li", "Nabeel", "BioID", "HPA"),
+    fill = c("#F8766D", "#B79F00", "#00BA38", "#00BFC4", "#619CFF", "brown", "grey"), ncol = 1, cex = .75, bty = "n")
+barplot(table_distribution[c(2:7, 1), c(1:4)] * 100, beside = T, las = 2,
     ylab = "% of genes",
     main = "Distribution",
-    ylim = c(0, 100), col = brewer.pal(n = 6, name = "RdBu"))
+    ylim = c(0, 100), col = c("#F8766D", "#B79F00", "#00BA38", "#00BFC4", "#619CFF", "brown", "grey"))
+legend("topright", legend = c("HuSCI", "Gordon", "Stukalov", "Li", "Nabeel", "BioID", "HPA"),
+    fill = c("#F8766D", "#B79F00", "#00BA38", "#00BFC4", "#619CFF", "brown", "grey"), ncol = 1, cex = .75, bty = "n")
 dev.off()
 ```
 
@@ -241,7 +254,6 @@ ggplot(mt, aes(x = tissue, y = value, fill = variable)) +
 dev.off()
 ```
 
-
 ## 7. "tissue" level for specific data
 ```{r message = FALSE}
 meltToMatrix <- function(input) {
@@ -273,6 +285,8 @@ stukalov_r_merge <- merge(stukalov_rna, stukalov_r_melt, by.x = "ensemblID", by.
 
 nabeel_r_melt <- meltToMatrix(nabeel_r)
 nabeel_r_merge <- merge(nabeel_rna, nabeel_r_melt, by.x = "ensemblID", by.y = "ensemblID")
+
+bioid_r_melt <- meltToMatrix((bioid_r))
 ```
 
 ```{r eval = FALSE}
@@ -345,61 +359,74 @@ stukalov_dorwie <- as.data.frame(table(has_dorwie[has_dorwie$from %in% stukalov_
 nabeel_dorwie <- as.data.frame(table(has_dorwie[has_dorwie$from %in% nabeel_r$from, "dorwie"]))
 huri_dorwie <- as.data.frame(table(has_dorwie[has_dorwie$from %in% huri_tissue$Ensembl_gene_id, "dorwie"]))
 bioplex_dorwie <- as.data.frame(table(has_dorwie[has_dorwie$from %in% bioplex3_id$Ensembl, "dorwie"]))
+bioid_dorwie <- as.data.frame(table(has_dorwie[has_dorwie$from %in% bioid1$ensemblID, "dorwie"]))
 
-dorward <- list(husci_dorwie, gordon_dorwie, stukalov_dorwie, li_dorwie, nabeel_dorwie, huri_dorwie, bioplex_dorwie, as.data.frame(table(has_dorwie$dorwie))) %>% reduce(full_join, by = "Var1")
-names(dorward) <- c("tissue", "HuSCI", "Gordon", "Stukalov", "Li", "Nabeel", "HuRI", "BioPlex3", "HPA")
+dorward <- list(HuSCI = husci_dorwie,
+    Gordon = gordon_dorwie,
+    Stukalov = stukalov_dorwie, 
+    Li = li_dorwie, 
+    Nabeel = nabeel_dorwie, 
+    BioID = bioid_dorwie, 
+    HuRI = huri_dorwie, 
+    BioPlex3 = bioplex_dorwie,
+    HPA = as.data.frame(table(has_dorwie$dorwie))) %>% reduce(full_join, by = "Var1")
+colnames(dorward) <- c("tissue", "HuSCI", "Gordon", "Stukalov", "Li", "Nabeel", "BioID", "HuRI", "BioPlex3", "HPA")
 rownames(dorward) <- dorward$tissue
-
+dorward <- dorward[c(1:6, 9, 7, 8), ]
+dorward[is.na(dorward)] <- 0
 # manual save data in "7interactome_statistics.xlsx, worksheet: inDorward"
-dorward <- t(dorward[, c(2:9)]) # worksheet 4
-dorward/c(171, 384, 875, 285, 277, 8275, 13689, 19670) # worksheet 5
+dorward <- t(dorward[, c(2:10)]) # worksheet 4
+total <- c(length(unique(husci$Ensembl_ID)), length(unique(gordon_science$Ensembl_uniprotIDmapping)), length(unique(stukalov$ensemblID)), length(unique(li$ensemblID)), length(unique(nabeel$Prey_ensembl)), length(unique(bioid1$ensemblID)), length(unique(c(huri$ensembl_gene_id_a, huri$ensembl_gene_id_b))), length(unique(bioplex3_id$Ensembl)), length(unique(has_all$Ensembl)))
+dorward_per <- dorward/total # worksheet 5
 
-t_count <- read.xlsx("~/Documents/INET-work/virus_network/statistic_results/7interactome_statistics.xlsx", sheet = 4)
-df1 <- as.data.frame(t(t_count[, c(2:10)]))
-names(df1) <- c("HuSCI", "Gordon", "Stukalov", "Li", "Nabeel", "HuRI", "BioPlex3", "Human")
-df1 <- df1[, c(1:5)]
-df1$tissue <- row.names(df1)
-for (i in c(2:5)) {
-    ttest <- t.test(df1[, 1], df1[, i])
-    print(paste0("HuSCI vs ", i, " : p = ", ttest$p.value))
-}
-df1_melt <- melt(df1)
-df1_melt$tissue <- factor(df1_melt$tissue, levels = dorwie)
+df1_melt <- melt(dorward[c(1:5, 9), ])
+names(df1_melt) <- c("dataset", "tissue", "value")
+df1_melt$tissue <- factor(tolower(df1_melt$tissue), levels = tolower(dorwie))
 
 gp_style <- theme_bw() +
     theme(axis.title = element_text(color = "black", size = 14, face = "bold"),
         axis.text = element_text(color = "black", size = 14),
         axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
-ggplot(df1_melt, aes(x = variable, y = value)) +
+gp <- ggplot(df1_melt, aes(x = dataset, y = value)) +
     geom_bar(aes(fill = tissue), stat = "identity", position = "fill") +
     scale_y_continuous(labels = scales::percent) +
-    scale_fill_manual(values = colorRampPalette(brewer.pal(11,"RdBu"))(9)) +
+    scale_fill_manual(name = "Organ", labels = c("Airway", "Brain", "Gastrointestinal tract", "Heart", "Kidney", "Liver", "Lung", "Muscle", "Pancreas"), values = colorRampPalette(brewer.pal(11,"RdBu"))(9)) +
     labs(x = "", y = "% of gene") +
     gp_style
-ggsave(file = "~/Documents/INET-work/virus_network/figure_results/5PPI_dorwie_percent_noMis.pdf", width = 5, height = 5)
+ggsave(gp, file = "~/Documents/INET-work/virus_network/figure_results/5PPI_dorwie_percent.pdf", width = 5, height = 5)
 # tissue specific gene in count
-t_per <- read.xlsx("~/Documents/INET-work/virus_network/statistic_results/7interactome_statistics.xlsx", sheet = 5)
-df2 <- as.data.frame(t(t_per[, c(2:10)]))
-names(df2) <- c("HuSCI", "Gordon", "Stukalov", "Li", "Nabeel", "HuRI", "BioPlex3", "HPA")
-df2 <- df2[, c(1:5, 8)]
+df2 <- as.data.frame(t(dorward_per[c(1:6, 9), ]))
 df2$tissue <- row.names(df2)
-for (i in c(2:5)) {
-    ttest <- t.test(df2[, 1], df2[, i])
-    print(paste0("HuSCI vs ", i, " : p = ", ttest$p.value))
-}
 df2_melt <- melt(df2)
-df2_melt$tissue <- factor(df2_melt$tissue, levels = dorwie)
+df2_melt$tissue <- factor(tolower(df2_melt$tissue), levels = tolower(dorwie))
 
-library(ggpattern)
+# library(ggpattern)
 #remotes::install_github("coolbutuseless/ggpattern")
 ggplot(df2_melt, aes(x = variable, y = value * 100)) +
-    geom_bar_pattern(aes(fill = variable), stat = "identity") +
+    geom_bar(aes(fill = variable), stat = "identity") +
+    scale_fill_manual(values=c("#F8766D", "#B79F00", "#00BA38", "#00BFC4", "#619CFF", "brown", "grey")) +
     labs(x = "", y = "% of gene") +
     facet_wrap(~ tissue, nrow = 3) +
     gp_style +
     theme(strip.background = element_rect(fill = "white")) +
     theme(legend.position = "none")
 
-ggsave(file = "~/Documents/INET-work/virus_network/figure_results/5PPI_dorwie_percent_individual_withHPA.pdf", width = 6, height = 6)
+ggsave(file = "~/Documents/INET-work/virus_network/figure_results/5PPI_dorwie_percent_individual_withBioID.pdf", width = 6, height = 6)
+```
+
+# 10. fisher test for infected organ
+```{r}
+pvalue <- c()
+for (i in c(2:9)) {
+    for (j in c(1:9)) {
+        data <- matrix(c(dorward[1, j], dorward[i, j], total[1] - dorward[1, j], total[i] - dorward[i, j]), ncol = 2)
+        # print(data)
+        # readline(prompt="Press [enter] to continue")
+        ftest <- fisher.test(data)
+        pvalue <- c(pvalue, ftest$p.value)
+    }
+}
+padj_value <- p.adjust(pvalue, method = "fdr")
+pv <- matrix(padj_value, ncol = 9, byrow = T)
 ```
