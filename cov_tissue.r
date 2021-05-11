@@ -8,11 +8,11 @@ library(ggsignif)
 library(ggpubr)
 
 interactome_raw <- read.xlsx("~/Documents/INET-work/virus_network/statistic_results/7interactome_statistics.xlsx", sheet = 1) # mainly generated from "coronavirus_tissue_specificity.Rmd"
-i_raw_df <- interactome_raw[c(1:6, 9), c(1, 12, 13)]
+i_raw_df <- interactome_raw[c(1:8, 11), c(1, 12, 13)]
 names(i_raw_df) <- c("interactome", "specific", "common")
 ird_melt <- melt(i_raw_df)
 #1 ird_melt$interactome <- factor(ird_melt$interactome, levels = c("HuSCI", "HuRI", "Gordon", "Stukalov", "Li", "Nabeel", "BioPlex3.0"))
-ird_melt$interactome <- factor(ird_melt$interactome, levels = c("HuSCI", "Gordon", "Stukalov", "Li", "Nabeel", "BioID", "HPA"))
+ird_melt$interactome <- factor(ird_melt$interactome, levels = c("HuSCI", "Gordon", "Stukalov", "Li", "Nabeel", "Laurent", "St_Germain", "Samavarchi", "HPA"))
 interactome_p <- read.xlsx("~/Documents/INET-work/virus_network/statistic_results/7interactome_statistics.xlsx", sheet = 3)
 
 gp_style <- theme_bw() +
@@ -48,19 +48,29 @@ gp_percent <- ggplot(ird_melt, aes(x = interactome, y = value)) +
     annotate("segment", x = 0.98343, xend = 5.01657, y = 1.18, yend = 1.18, color = "black") +
     annotate("segment", x = 1, xend = 1, y = 1.15, yend = 1.18, color = "black") +
     annotate("segment", x = 5, xend = 5, y = 1.01, yend = 1.18, color = "black") +
-    # p between HuSCI and BioID
+    # p between HuSCI and Laurent
     annotate("text", x = 3.5, y = 1.25, label = "p < 0.00001", size = 2) +
     annotate("segment", x = 0.98343, xend = 6.01657, y = 1.23, yend = 1.23, color = "black") +
     annotate("segment", x = 1, xend = 1, y = 1.2, yend = 1.23, color = "black") +
     annotate("segment", x = 6, xend = 6, y = 1.01, yend = 1.23, color = "black") +
-    # p between HuSCI and HPA
-    annotate("text", x = 4, y = 1.3, label = "p = 0.041", size = 2) +
-    annotate("segment", x = 0.98343, xend = 7.01657, y = 1.28, yend = 1.28, color = "black") +
+    # p between HuSCI and St_Germain
+    annotate("text", x = 4, y = 1.3, label = "p < 0.00001", size = 2) +
+    annotate("segment", x = 0.98343, xend =7.01657, y = 1.28, yend = 1.28, color = "black") +
     annotate("segment", x = 1, xend = 1, y = 1.25, yend = 1.28, color = "black") +
     annotate("segment", x = 7, xend = 7, y = 1.01, yend = 1.28, color = "black") +
+    # p between HuSCI and Samavarchi
+    annotate("text", x = 4.5, y = 1.35, label = "p < 0.00001", size = 2) +
+    annotate("segment", x = 0.98343, xend = 8.01657, y = 1.32, yend = 1.32, color = "black") +
+    annotate("segment", x = 1, xend = 1, y = 1.3, yend = 1.32, color = "black") +
+    annotate("segment", x = 8, xend = 8, y = 1.01, yend = 1.32, color = "black") +
+    # p between HuSCI and HPA
+    annotate("text", x = 5, y = 1.4, label = "p = 0.041", size = 2) +
+    annotate("segment", x = 0.98343, xend = 9.01657, y = 1.38, yend = 1.38, color = "black") +
+    annotate("segment", x = 1, xend = 1, y = 1.35, yend = 1.38, color = "black") +
+    annotate("segment", x = 9, xend = 9, y = 1.01, yend = 1.38, color = "black") +
     gp_style
 
-ggsave(gp_percent, file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/6interactome_specificity_percent_withBioID.pdf", width = 5, height = 5)
+ggsave(gp_percent, file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/interactome_specificity_percent.pdf", width = 5, height = 5)
 
 
 gp_count <- ggplot(ird_melt, aes(x = interactome, y = value, fill = variable)) +
@@ -71,7 +81,7 @@ ggsave(gp_count, file = "~/Documents/INET-work/virus_network/Y2H_screening/20201
 
 ## statistics ----
 pvalue <- c()
-for (i in 2:7) {
+for (i in 2:9) {
     fp <- fisher.test(matrix(as.numeric(c(i_raw_df[1, c(2, 3)], i_raw_df[i, c(2, 3)])), ncol = 2))
     pvalue <- c(pvalue, fp$p.value)
 }
