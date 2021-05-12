@@ -36,10 +36,20 @@ nabeel <- read.csv("~/Documents/INET-work/virus_network/raw/nabeel_APMS.csv", he
 nabeel_rna <- unique(has_tissue[has_tissue$ensemblID %in% nabeel$Prey_ensembl,])
 row.names(nabeel_rna) <- nabeel_rna$Gene
 
-## loading BioID ----
+## loading BioID (Laurent et al) ----
 bioid1 <- read.csv("~/Documents/INET-work/virus_network/raw/laurent_BioID.csv", header = T) # with identical Gene.name as the human column
 bioid_rna <- unique(has_tissue[has_tissue$ensemblID %in% bioid1$ensemblID, ])
 row.names(bioid_rna) <- bioid_rna$Gene
+
+## loading BioID (St-Germain et al) ----
+bioid_st <- read.csv("~/Documents/INET-work/virus_network/raw/St_BioID.csv", header = T)
+bioid_st_rna <- unique(has_tissue[has_tissue$ensemblID %in% bioid_st$ensemblID, ])
+row.names(bioid_st_rna) <- bioid_st_rna$PreyGene
+
+## loading BioID (St-Germain et al) ----
+bioid_sama <- read.csv("~/Documents/INET-work/virus_network/raw/Samavarchi_BioID.csv", header = T)
+bioid_sama_rna <- unique(has_tissue[has_tissue$ensemblID %in% bioid_sama$ensemblID, ])
+row.names(bioid_sama_rna) <- bioid_sama_rna$PreyGene
 
 ## modified tissue specific data ----
 raw_path <- ("~/Documents/INET-work/virus_network/raw")
