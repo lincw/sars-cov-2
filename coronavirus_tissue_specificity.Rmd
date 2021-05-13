@@ -447,3 +447,36 @@ for (i in c(2:11)) {
 padj_value <- p.adjust(pvalue, method = "fdr")
 pv <- matrix(padj_value, ncol = 9, byrow = T)
 ```
+
+# 11. output tissue specificity
+```{r}
+toOutput <- list(HPA = has_tissue[, c(1:4)],
+    HuSCI = unique(merge(husci[, c(1:2)], has_tissue[, c(1:4)], by.x = "Ensembl_ID", by.y = "ensemblID", all.x = TRUE))[, c(1, 2, 4, 5)],
+    Gordon = unique(merge(gordon_science[, c(9, 4)], has_tissue[, c(1:4)], by.x = "Ensembl_uniprotIDmapping", by.y = "ensemblID", all.x = TRUE))[, c(1, 2, 4, 5)],
+    Stukalov = unique(merge(stukalov[, c(3, 2)], has_tissue[, c(1:4)], by.x = "ensemblID", by.y = "ensemblID", all.x = TRUE))[, c(1, 2, 4, 5)],
+    Li = unique(merge(li[, c(5, 2)], has_tissue[, c(1:4)], by.x = "ensemblID", by.y = "ensemblID", all.x = TRUE))[, c(1, 2, 4, 5)],
+    Nabeel = unique(merge(nabeel[, c(4, 3)], has_tissue[, c(1:4)], by.x = "Prey_ensembl", by.y = "ensemblID", all.x = TRUE))[, c(1, 2, 4, 5)],
+    Laurent = unique(merge(bioid1[, c(4, 2)], has_tissue[, c(1:4)], by.x = "ensemblID", by.y = "ensemblID", all.x = TRUE))[, c(1, 2, 4, 5)],
+    St_Germain = unique(merge(bioid_st[, c(3, 2)], has_tissue[, c(1:4)], by.x = "ensemblID", by.y = "ensemblID", all.x = TRUE))[, c(1, 2, 4, 5)],
+    Samavarchi = unique(merge(bioid_sama[, c(3, 2)], has_tissue[, c(1:4)], by.x = "ensemblID", by.y = "ensemblID", all.x = TRUE))[, c(1, 2, 4, 5)]
+    )
+
+write.xlsx(toOutput, file = "~/Documents/INET-work/virus_network/toSummarize/tissue_specificity/data/tissue_raw.xlsx")
+```
+
+# 12. output infected organ
+```{r}
+toOutput <- list(HPA = has_dorwie,
+    HuSCI = has_dorwie[has_dorwie$from %in% husci$Ensembl_ID, ],
+    Gordon = has_dorwie[has_dorwie$from %in% gordon_science$Ensembl_uniprotIDmapping, ],
+    Stukalov = has_dorwie[has_dorwie$from %in% stukalov$ensemblID, ],
+    Li = has_dorwie[has_dorwie$from %in% li$ensemblID, ],
+    Nabeel = has_dorwie[has_dorwie$from %in% nabeel$Prey_ensembl, ],
+    Laurent = has_dorwie[has_dorwie$from %in% bioid1$ensemblID, ],
+    St_Germain = has_dorwie[has_dorwie$from %in% bioid_st$ensemblID, ],
+    Samavarchi = has_dorwie[has_dorwie$from %in% bioid_sama$ensemblID, ]
+    )
+write.xlsx(toOutput, file = "~/Documents/INET-work/virus_network/toSummarize/infected_organ/data/dorard_raw.xlsx")
+
+write.xlsx(dorward, file = "~/Documents/INET-work/virus_network/toSummarize/infected_organ/data/dorward_summary.xlsx")
+```

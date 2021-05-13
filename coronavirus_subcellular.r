@@ -46,21 +46,20 @@ total <- c(length(unique(has_sub$Ensembl)), length(unique(husci$Ensembl_ID)), le
 path_final <- "~/documents/INET-work/virus_network/"
 
 subset <- list(HPA = has_sub, # 19670
-     HuSCI = unique(merge(husci, has_sub, by.x = "Ensembl_ID", by.y = "Ensembl", all.x = TRUE)[, c(1, 5)]), # 171
-     Gordon = unique(merge(gordon_science, has_sub, by.x = "Ensembl_uniprotIDmapping", by.y = "Ensembl", all.x = TRUE)[, c(1, 11)]), # 384
-    Stukalov = unique(merge(stukalov, has_sub, by.x = "ensemblID", by.y = "Ensembl", all.x = TRUE)[, c(1, 7)]), # 285
-    Li = unique(merge(li, has_sub, by.x = "ensemblID", by.y = "Ensembl", all.x = TRUE)[, c(1, 9)]), # 875
-    Nabeel = unique(merge(nabeel, has_sub, by.x = "Prey_ensembl", by.y = "Ensembl", all.x = TRUE)[, c(1, 6)]),  # 277
-    Laurent = unique(merge(bioid1[, c(4, 2)], has_sub, by.x = "ensemblID", by.y = "Ensembl", all.x = TRUE)),
-    St_Germain = unique(merge(bioid_st[, c(1, 3)], has_sub, by.x = "ensemblID", by.y = "Ensembl", all.x = TRUE)),
-    Samavarchi = unique(merge(bioid_sama[, c(1, 3)], has_sub, by.x = "ensemblID", by.y = "Ensembl", all.x = TRUE))
+     HuSCI = unique(merge(husci, has_sub, by.x = "Ensembl_ID", by.y = "Ensembl", all.x = TRUE)[, c(1, 4:7)]), # 171
+     Gordon = unique(merge(gordon_science, has_sub, by.x = "Ensembl_uniprotIDmapping", by.y = "Ensembl", all.x = TRUE)[, c(1, 5, 11:13)]), # 384
+    Stukalov = unique(merge(stukalov, has_sub, by.x = "ensemblID", by.y = "Ensembl", all.x = TRUE)[, c(1, 3, 7:9)]), # 875
+    Li = unique(merge(li, has_sub, by.x = "ensemblID", by.y = "Ensembl", all.x = TRUE)[, c(1, 3, 9:11)]), # 285
+    Nabeel = unique(merge(nabeel, has_sub, by.x = "Prey_ensembl", by.y = "Ensembl", all.x = TRUE)[, c(1, 4, 6:8)]),  # 277
+    Laurent = unique(merge(bioid1[, c(4, 2)], has_sub, by.x = "ensemblID", by.y = "Ensembl", all.x = TRUE)[, c(1:2, 4:6)]),
+    St_Germain = unique(merge(bioid_st[, c(2, 3)], has_sub, by.x = "ensemblID", by.y = "Ensembl", all.x = TRUE)[, c(1:2, 4:6)]),
+    Samavarchi = unique(merge(bioid_sama[, c(2, 3)], has_sub, by.x = "ensemblID", by.y = "Ensembl", all.x = TRUE)[, c(1:2, 4:6)])
         )
-write.xlsx(subset, file = file.path(path_final, "/toSummarize/subcellular_location/data/subcell_raw_count_0511.xlsx"))
+write.xlsx(subset, file = file.path(path_final, "/toSummarize/subcellular_location/data/subcell_raw.xlsx"))
 
 # display 13 major organelles ----
 ## proportion calculation
 
-############################
 # will not be used for the SARS-CoV-2 paper
 # subset_prop <- lapply(subset, subLocaP)
 # subset_prop_dt <- subset_prop %>% reduce(left_join, by = "dt") %>% setNames(., c("subcell", names(subset_prop)))
@@ -85,7 +84,6 @@ write.xlsx(subset, file = file.path(path_final, "/toSummarize/subcellular_locati
 # subset_count <- lapply(subset, subLocaC)
 # subset_count_dt <- subset_count %>% reduce(left_join, by = "dt") %>% setNames(., c("subcell", names(subset_count)))
 # write.csv(subset_count_dt, file = file.path(path_final, "statistic_results/5interactome_subcell_location_count.csv"), row.names = FALSE)
-############################
 
 subset_major_p <- lapply(subset, subLocaPtoM)
 subset_major_pt <- subset_major_p %>% reduce(left_join, by = "Var1") %>% setNames(., c("subcell", names(subset_major_p)))
