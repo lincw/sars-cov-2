@@ -175,6 +175,53 @@ boxplot(huri_ocg$clustsizes, las = 1, ylab = "size")
 dev.off()
 ```
 
+## summary for HuRI community
+```{r}
+clust <- huri_ocg$nodeclusters
+clust2 <- clust %>% select(cluster) %>% group_by(cluster) %>% mutate(count = n()) %>% distinct() # have community size
+df <- huri_ocg$nodeclusters[huri_ocg$nodeclusters$node %in% binary_node, ] # viral target in community
+df2 <- df %>% select(cluster) %>% group_by(cluster) %>% mutate(count = n()) %>% distinct() # community viral target size
+merged <- merge(clust2, df2, by = "cluster", all.x = TRUE) # merge community size and virtal target
+merged[is.na(merged)] <- 0
+merged$notTarget <- merged[, 2] - merged[, 3]
+row.names(merged) <- merged[, 1]
+merged_checkP <- merged[, c(3, 4)]
+names(merged_checkP) <- c("Target", "notTarget")
+
+total <- c(171, 8274)
+data <- data.frame()
+data <- apply(merged_checkP, 1, function(x) {
+    tab <- rbind(x, total)
+    fisher_test(tab)
+    })
+
+pvalue <- c()
+for (i in 1:length(data)) {
+    pvalue <- c(pvalue, data[[i]]$p)
+}
+padj <- p.adjust(pvalue, method = "fdr")
+
+huri_ocg_enrich <- do.call(rbind.data.frame, data)
+huri_ocg_enrich$cluster <- row.names(huri_ocg_enrich)
+huri_all <- cbind(merged, huri_ocg_enrich, padj)
+names(huri_all) <- c("community", "community_size", "viral_target", "notTarget", "n", "p", "p.signif", "community_2", "p_adjust (fdr)")
+write.csv(huri_all[, c(1, 2, 3, 6, 7, 9)], file = "~/Documents/INET-work/virus_network/statistic_results/HuRI_signif_community.csv", row.names = F)
+
+check_list <- huri_all[huri_all[, 2] > 4 & huri_all[, 6] < 0.05, 1]
+
+pdf("~/Documents/INET-work/virus_network/figure_results/HuRI_community_distribution.pdf", width = 7, height = 5)
+layout(matrix(c(1, 1, 2), nrow = 1, byrow = TRUE))
+barplot(table(huri_ocg$clustsizes), las = 1, xlab = "size", ylab = "count")
+text(16, 600, labels = "Size:\n
+    Min: 1\n
+    1st Qu: 4\n
+    Median: 5\n
+    3rd Qu: 6\n
+    Max: 16", pos = 2)
+boxplot(huri_ocg$clustsizes, las = 1, ylab = "size")
+dev.off()
+```
+
 ## running GO functional enrichment analysis
 ```{r}
 binary <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/binary_node_1126_simple.csv", header = T)
