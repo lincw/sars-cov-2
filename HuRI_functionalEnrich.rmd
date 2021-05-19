@@ -160,7 +160,7 @@ huri_all <- cbind(merged, huri_ocg_enrich, padj)
 names(huri_all) <- c("community", "community_size", "viral_target", "notTarget", "n", "p", "p.signif", "community_2", "p_adjust (fdr)")
 write.csv(huri_all[, c(1, 2, 3, 6, 7, 9)], file = "~/Documents/INET-work/virus_network/statistic_results/HuRI_signif_community.csv", row.names = F)
 
-check_list <- huri_all[huri_all[, 2] > 3 & huri_all[, 6] < 0.05, 1] # based on community size and fisher test p value
+check_list <- huri_all[huri_all[, 2] > 3 & huri_all[, 4] < 0.05, 1] # based on community size and fisher test p value
 
 pdf("~/Documents/INET-work/virus_network/figure_results/HuRI_community_distribution.pdf", width = 7, height = 5)
 layout(matrix(c(1, 1, 2), nrow = 1, byrow = TRUE))
