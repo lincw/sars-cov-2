@@ -2,8 +2,9 @@
 # Lin Chung-wen
 # 18.05.2021 (adapted from "coronavirus_subnetwork.rmd", 02.11.2020)
 
-library(igraph)
+library(linkcomm)
 library(openxlsx)
+library(igraph)
 
 huri <- read.csv("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_Tong_withSymbol.csv", header = T)
 huri <- huri[, c(5:6)]
@@ -40,10 +41,17 @@ co <- cluster_optimal(huri_g)
 # spin-glass
 cls <- cluster_spinglass(huri_g, spins = 2)
 
+# OCG
+ocg <- getOCG.clusters(as_data_frame(huri_g_sub))
+ocg_max_Cliques <- getOCG.clusters(as_data_frame(huri_g_sub), init.class.sys = 1, cent.class.sys = 0)
+ocg_min_cluster10 <- getOCG.clusters(as_data_frame(huri_g_sub), min.class = 10, cent.class.sys = 0)
+
+ocg_min_cluster6 <- getOCG.clusters(as_data_frame(huri_g_sub), min.class = 6, cent.class.sys = 0)
+
 huri_community <- list(
-    walktrap = data.frame(gene = cw$names, membership = cw$membership), 
-    greedy = data.frame(gene = cfg$names, membership = cfg$membership), 
-    propagating = data.frame(gene = clp$names, membership = clp$membership), 
-    leading_eigenvector = data.frame(gene = cle$names, membership = cle$membership), 
+    walktrap = data.frame(gene = cw$names, membership = cw$membership),
+    greedy = data.frame(gene = cfg$names, membership = cfg$membership),
+    propagating = data.frame(gene = clp$names, membership = clp$membership),
+    leading_eigenvector = data.frame(gene = cle$names, membership = cle$membership),
     multi_level = data.frame(gene = cl$names, membership = cl$membership))
 write.xlsx(huri_community, file = "/tmp/HuRI_communities.xlsx")
