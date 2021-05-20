@@ -4,7 +4,7 @@
 
 library(linkcomm)
 library(openxlsx)
-library(igraph)
+# library(igraph)
 
 huri <- read.csv("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_Tong_withSymbol.csv", header = T)
 huri <- huri[, c(5:6)]
@@ -44,9 +44,12 @@ cls <- cluster_spinglass(huri_g, spins = 2)
 # OCG
 ocg <- getOCG.clusters(as_data_frame(huri_g_sub))
 ocg_max_Cliques <- getOCG.clusters(as_data_frame(huri_g_sub), init.class.sys = 1, cent.class.sys = 0)
-ocg_min_cluster10 <- getOCG.clusters(as_data_frame(huri_g_sub), min.class = 10, cent.class.sys = 0)
+ocg_edge_Cliques <- getOCG.clusters(as_data_frame(huri_g_sub), init.class.sys = 2, cent.class.sys = 0, min.class = 100)
+ocg_edge_Cliques50 <- getOCG.clusters(as_data_frame(huri_g_sub), init.class.sys = 2, cent.class.sys = 0, min.class = 50)
 
-ocg_min_cluster6 <- getOCG.clusters(as_data_frame(huri_g_sub), min.class = 6, cent.class.sys = 0)
+ocg_min_cluster10 <- getOCG.clusters(as_data_frame(huri_g_sub), min.class = 10, cent.class.sys = 0) # not good, 1 huge community
+
+ocg_min_cluster6 <- getOCG.clusters(as_data_frame(huri_g_sub), min.class = 6, cent.class.sys = 0) # not good, 1 huge community
 
 huri_community <- list(
     walktrap = data.frame(gene = cw$names, membership = cw$membership),

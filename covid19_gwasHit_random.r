@@ -6,6 +6,8 @@ library(openxlsx)
 library(igraph)
 library(rethinking)
 
+library(gprofiler2)
+
 ## load dataset ----
 huri <- read.csv("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_Tong_withSymbol.csv", header = T)
 gwas <- read.xlsx("~/Documents/INET-work/virus_network/statistic_results/GWAS/COVID_GWAS hits.xlsx")
@@ -40,9 +42,13 @@ gwas_check <- length(unique(unlist(lapply
     (gwas_hit_1st, check_update)))) #11 interactors
 
 ## filter interactor of GWAS hit
+gwas_list <- gwas_2[gwas_2[, 2] > 0, 1]
+gwas_list <- gwas_list[!gwas_list %in% c("TMEM65", "MUC1", "ICAM3", "NXPE3")]
+
 gwas_hit_1st_sel <- make_ego_graph(huri_g, nodes = sort(gwas_2[gwas_2[, 2] < 30 & gwas_2[, 2] > 0, 1]), order = 1, mode = "all") #100 for exclude MUC1; 30 for exclude MUC1&TMEM65
+gwas_hit_1st_sel <- make_ego_graph(huri_g, nodes = sort(gwas_list), order = 1, mode = "all") #exclude TMEM65
 gwas_check_sel <- length(unique(unlist(lapply
-    (gwas_hit_1st_sel, check_update)))) #11 from exclude MUC1; 10 from exclude MUC1&TMEM65
+    (gwas_hit_1st_sel, check_update)))) #11 from exclude MUC1, ICAM3, NXPE3, TMEM65; 10 from exclude MUC1&TMEM65
 
 ## protein list filter 2 ----
 gwas_husci <- unique(unlist(lapply
@@ -67,6 +73,8 @@ random_check <- function(sel = 0) {
         gwas_hit_deg_1st <- make_ego_graph(huri_deg_g, gwas_2[gwas_2[, 2] < 100 & gwas_2[, 2] > 0, 1], order = 1, mode = "all")
     } else if (sel == 30) {
         gwas_hit_deg_1st <- make_ego_graph(huri_deg_g, gwas_2[gwas_2[, 2] < 30 & gwas_2[, 2] > 0, 1], order = 1, mode = "all")
+    } else if (sel == "TMEM65") {
+        gwas_hit_deg_1st <- make_ego_graph(huri_deg_g, gwas_list, order = 1, mode = "all")
     }
     gwas_deg_check <- length(unique(unlist(lapply(gwas_hit_deg_1st, check_update))))
     return(gwas_deg_check)
@@ -76,7 +84,7 @@ random_out <- c()
 random_out <- c(random_out, mcreplicate(10000, random_check(0), mc.cores = detectCores()))
 
 random_out_sel <- c()
-random_out_sel <- c(random_out_sel, mcreplicate(10000, random_check(30), mc.cores = detectCores()))
+random_out_sel <- c(random_out_sel, mcreplicate(10000, random_check("TMEM65"), mc.cores = detectCores()))
 
 ## fisher test ----
 
@@ -101,12 +109,71 @@ fisher.test(df)
 # odds ratio: 8.107661
 
 # plot permutation analysis ----
-pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_GWAS_hit_2.pdf", width = 3, height = 3)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_GWAS_hit_5.pdf", width = 3, height = 3)
 dens_gwas <- hist(random_out_sel, breaks = 15, plot = FALSE)
 par(mgp = c(2, 0.7, 0), ps = 8)
-plot(dens_gwas, xlim = c(0, 20), ylim = c(0, 0.22), col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlab = "Number of interactor in HuSCI", ylab = "Frequency density", main = "COVID19 GWAS hit\nMUC1&TMEM65 excluded", xaxt = "n")
+plot(dens_gwas, xlim = c(0, 20), ylim = c(0, 0.25), col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlab = "Number of interactor in HuSCI", ylab = "Frequency density", main = "", xaxt = "n", cex.sub = 0.5)
+mytitle <- "COVID19 GWAS hit"
+mysubtitle <- "TMEM65, ICAM3, NXPE3 and MUC1 excluded"
+mtext(side = 3, line = 1, cex = 1, mytitle)
+mtext(side = 3, line = 0.5, cex = .7, mysubtitle)
 axis(side = 1, at = seq(1, 20, 4) - 0.5, labels = seq(0, 19, 4))
 box(col = "black")
 arrows(length(gwas_husci) + 0.5, 400/10000, length(gwas_husci) + 0.5, 50/10000, col = "red", lwd = 2, length = 0.1)
-text(length(gwas_husci) - 2, 550/10000, paste0("p = ", 0.0042), cex = 0.4, pos = 4)
+text(length(gwas_husci) - 2, 550/10000, paste0("p = ", 0.0034), cex = 0.4, pos = 4)
 dev.off()
+
+## GO enrichment analysis ----
+
+cluster_list <- lapply(gwas_hit_1st, function(x) {
+    df <- as_data_frame(x)
+    unique(c(df$from, df$to))
+})
+names(cluster_list) <- sort(gwas$All.LD[gwas$All.LD %in% V(huri_g)$name])
+
+go2check <- function(x, organism) {
+    goquery <- gost(query = x, organism = organism, correction_method = "bonferroni", evcodes = T)
+    goquery$result$inCommunity <- paste0( goquery$meta$query_metadata$queries$query_1, collapse = ",")
+    goquery$result$annotatedInCommunity <- paste0(goquery$meta$genes_metadata$query$query_1$ensgs, collapse = ",")
+    return(goquery$result)
+}
+
+bp_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HuRI_GOBP_EXP.gmt")
+mf_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HuRI_GOMF_EXP.gmt")
+cc_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HuRI_GOCC_EXP.gmt")
+
+gobp_check <- lapply(cluster_list, function(x) {
+    goquery <- gost(query = x, organism = bp_cust, correction_method = "bonferroni", evcodes = T)
+    goquery$result$inCommunity <- paste0( goquery$meta$query_metadata$queries$query_1, collapse = ",")
+    goquery$result$annotatedInCommunity <- paste0(goquery$meta$genes_metadata$query$query_1$ensgs, collapse = ",")
+    goquery$result})
+
+gomf_check <- lapply(cluster_list, function(x) {
+    goquery <- gost(query = x, organism = mf_cust, correction_method = "bonferroni", evcodes = T)
+    goquery$result$inCommunity <- paste0( goquery$meta$query_metadata$queries$query_1, collapse = ",")
+    goquery$result$annotatedInCommunity <- paste0(goquery$meta$genes_metadata$query$query_1$ensgs, collapse = ",")
+    goquery$result})
+
+gocc_check <- lapply(cluster_list, function(x) {
+    goquery <- gost(query = x, organism = cc_cust, correction_method = "bonferroni", evcodes = T)
+    goquery$result$inCommunity <- paste0( goquery$meta$query_metadata$queries$query_1, collapse = ",")
+    goquery$result$annotatedInCommunity <- paste0(goquery$meta$genes_metadata$query$query_1$ensgs, collapse = ",")
+    goquery$result})
+
+bp <- do.call(rbind.data.frame, gobp_check[c(1:12, 14:16)])
+mf <- do.call(rbind.data.frame, gomf_check[c(2, 4:12, 14, 16)])
+cc <- do.call(rbind.data.frame, gocc_check[c(3, 5:7, 9, 12, 14)])
+write.csv(rbind(bp, mf, cc)[, c(1:13, 15:18)], file = "/tmp/GWAS_GO_individual.csv")
+
+clust1 <- c("MUC1", "TMEM65", "ICAM3", "NXPE3")
+clust2 <- names(cluster_list)[!names(cluster_list) %in% clust1]
+
+clust1_bp <- go2check(unique(as.character(unlist(cluster_list[clust1]))), bp_cust)
+clust1_mf <- go2check(unique(as.character(unlist(cluster_list[clust1]))), mf_cust)
+clust1_cc <- go2check(unique(as.character(unlist(cluster_list[clust1]))), cc_cust)
+write.csv(rbind(clust1_bp, clust1_mf, clust1_cc)[, c(1:13, 15:18)], file = "/tmp/GWAS_GO_clust1.csv")
+
+clust2_bp <- go2check(unique(as.character(unlist(cluster_list[clust2]))), bp_cust)
+clust2_mf <- go2check(unique(as.character(unlist(cluster_list[clust2]))), mf_cust)
+clust2_cc <- go2check(unique(as.character(unlist(cluster_list[clust2]))), cc_cust)
+write.csv(rbind(clust2_mf, clust2_cc)[, c(1:13, 15:18)], file = "/tmp/GWAS_GO_clust2.csv")
