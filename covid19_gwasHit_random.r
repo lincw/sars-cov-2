@@ -119,7 +119,7 @@ mtext(side = 3, line = 1, cex = 1, mytitle)
 mtext(side = 3, line = 0.5, cex = .7, mysubtitle)
 axis(side = 1, at = seq(1, 20, 4) - 0.5, labels = seq(0, 19, 4))
 box(col = "black")
-arrows(length(gwas_husci) + 0.5, 400/10000, length(gwas_husci) + 0.5, 50/10000, col = "red", lwd = 2, length = 0.1)
+arrows(length(gwas_husci) + 0.5, 400/10000, length(gwas_husci) + 0.5, 50/10000, col = "#922687", lwd = 2, length = 0.1)
 text(length(gwas_husci) - 2, 550/10000, paste0("p = ", 0.0034), cex = 0.4, pos = 4)
 dev.off()
 

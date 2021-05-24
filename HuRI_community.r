@@ -45,7 +45,7 @@ cls <- cluster_spinglass(huri_g, spins = 2)
 ocg <- getOCG.clusters(as_data_frame(huri_g_sub))
 ocg_max_Cliques <- getOCG.clusters(as_data_frame(huri_g_sub), init.class.sys = 1, cent.class.sys = 0)
 ocg_edge_Cliques <- getOCG.clusters(as_data_frame(huri_g_sub), init.class.sys = 2, cent.class.sys = 0, min.class = 100)
-ocg_edge_Cliques50 <- getOCG.clusters(as_data_frame(huri_g_sub), init.class.sys = 2, cent.class.sys = 0, min.class = 50)
+ocg_edge_Cliques20 <- getOCG.clusters(as_data_frame(huri_g_sub), init.class.sys = 2, cent.class.sys = 0, min.class = 20)
 
 ocg_min_cluster10 <- getOCG.clusters(as_data_frame(huri_g_sub), min.class = 10, cent.class.sys = 0) # not good, 1 huge community
 
