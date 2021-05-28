@@ -17,11 +17,12 @@ gwas_graph_sub <- induced_subgraph(gwas_graph, names(gwas_strong$membership[gwas
 ######
 # community detection
 # 1. edge betweenness
+gwas_eb_whole <- cluster_edge_betweenness(gwas_graph, directed = FALSE)
 gwas_eb <- cluster_edge_betweenness(gwas_graph_sub, directed = FALSE)
 # 2. edge similarity
 gwas_strong_df <- as_data_frame(gwas_graph_sub)
 gwas_ocg <- getOCG.clusters(gwas_strong_df, init.class.sys = 1, cent.class.sys = 0)
-gwas_ocg2 <- getOCG.clusters(gwas_strong_df)
+gwas_ocg2 <- getOCG.clusters(gwas_strong_df, min.class = 5)
 linkcomm2cytoscape(gwas_ocg)
 
 ######

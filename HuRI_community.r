@@ -3,7 +3,6 @@
 # 18.05.2021 (adapted from "coronavirus_subnetwork.rmd", 02.11.2020)
 
 library(linkcomm)
-library(openxlsx)
 # library(igraph)
 
 huri <- read.csv("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_Tong_withSymbol.csv", header = T)
@@ -47,9 +46,9 @@ ocg_max_Cliques <- getOCG.clusters(as_data_frame(huri_g_sub), init.class.sys = 1
 ocg_edge_Cliques <- getOCG.clusters(as_data_frame(huri_g_sub), init.class.sys = 2, cent.class.sys = 0, min.class = 100)
 ocg_edge_Cliques20 <- getOCG.clusters(as_data_frame(huri_g_sub), init.class.sys = 2, cent.class.sys = 0, min.class = 20)
 
-ocg_min_cluster10 <- getOCG.clusters(as_data_frame(huri_g_sub), min.class = 10, cent.class.sys = 0) # not good, 1 huge community
+ocg_min_cluster10 <- getOCG.clusters(as_data_frame(huri_g_sub), min.class = 10, cent.class.sys = 0) # not good, 1 huge community (# 6349)
 
-ocg_min_cluster6 <- getOCG.clusters(as_data_frame(huri_g_sub), min.class = 6, cent.class.sys = 0) # not good, 1 huge community
+ocg_min_cluster6 <- getOCG.clusters(as_data_frame(huri_g_sub), min.class = 6, cent.class.sys = 0) # not good, 1 huge community ()
 
 huri_community <- list(
     walktrap = data.frame(gene = cw$names, membership = cw$membership),
