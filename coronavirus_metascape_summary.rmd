@@ -110,9 +110,7 @@ dev.off()
 ## 30.11.2020 Final integrate VirHostome
 
 **2021.02.10** - update background list with HuRI_9.1 + fBFGORFeome
-
 **2021.01.06** - update background list with hORFeome + fBFGORFeome
-
 **2020.12.08** have figure with GO only
 
 ```{r}
@@ -136,79 +134,114 @@ dev.off()
 
 ## 05.12.2020 Functional enrichment analysis
 **21.02.2021 21:18**- update Gordon data with the one from Science
+**04.06.2021 13:30**-- update with 3 BioID dataset
 
 1. Gordon AP-MS
 ```{r}
 gordon <- read.csv("~/Documents/INET-work/virus_network/statistic_results/metascape/Gordon_Science_GO_customBG/metascape_summary.csv", header = T)
 gordon$term <- factor(gordon$term, levels = gordon$term[order(gordon$enrichment)])
-# pdf("~/Documents/INET-work/virus_network/figure_results/Gordon_GO_meta.pdf", width = 11, height = 9)
 gordon_p <-
     ggplot(gordon, aes(x = term, y = enrichment)) +
     geom_bar(stat = "identity", fill = "black") +
     coord_flip() +
-    labs(y = "Effect size", x = "Functional Category (p < 0.05)") +
+    labs(y = "Enrichment over\nbackground", x = "Functional Category (p < 0.05)") +
     theme_bw() +
     theme(axis.text = element_text(color = "black", size = 8, hjust = 0),
-        axis.title = element_text(size = 8, color = "black", face = "bold")) +
+        axis.title = element_text(color = "black", face = "bold")) +
     theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
-# dev.off()
 ```
 
 2. Stukalov AP-MS
 ```{r}
 Stukalov <- read.csv("~/Documents/INET-work/virus_network/statistic_results/metascape/Stukalov_GO_customBG/metascape_summary.csv", header = T)
 Stukalov$term <- factor(Stukalov$term, levels = Stukalov$term[order(Stukalov$enrichment)])
-# pdf("~/Documents/INET-work/virus_network/figure_results/Stukalov_GO_meta.pdf", width = 11, height = 9)
 stukalov_p <-
     ggplot(Stukalov, aes(x = term, y = enrichment)) +
     geom_bar(stat = "identity", fill = "black") +
     coord_flip() +
-    labs(y = "Effect size", x = "Functional Category (p < 0.05)") +
+    labs(y = "Enrichment over\nbackground", x = "Functional Category (p < 0.05)") +
     theme_bw() +
-    theme(axis.text = element_text(color = "black", size = 8, hjust = 0),
-        axis.title = element_text(size = 8, color = "black", face = "bold")) +
+    theme(axis.text = element_text(color = "black", hjust = 0),
+        axis.title = element_text(color = "black", face = "bold")) +
     theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
-# dev.off()
 ```
 
 3. Li AP-MS
 ```{r}
 Li <- read.csv("~/Documents/INET-work/virus_network/statistic_results/metascape/Li_GO_customBG/metascape_summary.csv", header = T)
 Li$term <- factor(Li$term, levels = Li$term[order(Li$enrichment)])
-# pdf("~/Documents/INET-work/virus_network/figure_results/Li_GO_meta.pdf", width = 11, height = 9)
 li_p <-
     ggplot(Li, aes(x = term, y = enrichment)) +
     geom_bar(stat = "identity", fill = "black") +
     coord_flip() +
-    labs(y = "Effect size", x = "Functional Category (p < 0.05)") +
+    labs(y = "Enrichment over\nbackground", x = "Functional Category (p < 0.05)") +
     theme_bw() +
-    theme(axis.text = element_text(color = "black", size = 8, hjust = 0),
-        axis.title = element_text(size = 8, color = "black", face = "bold")) +
+    theme(axis.text = element_text(color = "black", hjust = 0),
+        axis.title = element_text(color = "black", face = "bold")) +
     theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
-# dev.off()
 ```
 
 4. Nabeel AP-MS
 ```{r}
 Nabeel <- read.csv("~/Documents/INET-work/virus_network/statistic_results/metascape/Nabeel_GO_customBG/metascape_summary.csv", header = T)
 Nabeel$term <- factor(Nabeel$term, levels = Nabeel$term[order(Nabeel$enrichment)])
-# pdf("~/Documents/INET-work/virus_network/figure_results/Nabeel_GO_meta.pdf", width = 11, height = 9)
 nabeel_p <-
     ggplot(Nabeel, aes(x = term, y = enrichment)) +
     geom_bar(stat = "identity", fill = "black") +
     coord_flip() +
-    labs(y = "Effect size", x = "Functional Category (p < 0.05)") +
+    labs(y = "Enrichment over\nbackground", x = "Functional Category (p < 0.05)") +
     theme_bw() +
-    theme(axis.text = element_text(color = "black", size = 8, hjust = 0),
-        axis.title = element_text(size = 8, color = "black", face = "bold")) +
+    theme(axis.text = element_text(color = "black", hjust = 0),
+        axis.title = element_text(color = "black", face = "bold")) +
     theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
-# dev.off()
 ```
-
-5. Merge 4 graphs into a single graphs
+5. Laurent BioID
 ```{r}
-pdf("~/Documents/INET-work/virus_network/figure_results/4interactom_GO_meta5.pdf", width = 10, height = 10)
-ggarrange(gordon_p, stukalov_p, li_p, nabeel_p, ncol = 2, nrow = 2, labels = c("A", "B", "C", "D"))
+Laurent <- read.csv("~/Documents/INET-work/virus_network/statistic_results/metascape/Laurent_GO_customBG/metascape_summary.csv", header = T)
+Laurent$term <- factor(Laurent$term, levels = Laurent$term[order(Laurent$enrichment)])
+laurent_p <-
+    ggplot(Laurent, aes(x = term, y = enrichment)) +
+    geom_bar(stat = "identity", fill = "black") +
+    coord_flip() +
+    labs(y = "Enrichment over\nbackground", x = "Functional Category (p < 0.05)") +
+    theme_bw() +
+    theme(axis.text = element_text(color = "black", hjust = 0),
+        axis.title = element_text(color = "black", face = "bold")) +
+    theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
+```
+6. Samavarchi BioID
+```{r}
+Samavarchi <- read.csv("~/Documents/INET-work/virus_network/statistic_results/metascape/Samavarchi_GO_customBG/metascape_summary.csv", header = T)
+Samavarchi$term <- factor(Samavarchi$term, levels = Samavarchi$term[order(Samavarchi$enrichment)])
+samavarchi_p <-
+    ggplot(Samavarchi, aes(x = term, y = enrichment)) +
+    geom_bar(stat = "identity", fill = "black") +
+    coord_flip() +
+    labs(y = "Enrichment over\nbackground", x = "Functional Category (p < 0.05)") +
+    theme_bw() +
+    theme(axis.text = element_text(color = "black", hjust = 0),
+        axis.title = element_text(color = "black", face = "bold")) +
+    theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
+```
+7. St_germain BioID
+```{r}
+St_germain <- read.csv("~/Documents/INET-work/virus_network/statistic_results/metascape/St_germain_GO_customBG/metascape_summary.csv", header = T)
+St_germain$term <- factor(St_germain$term, levels = St_germain$term[order(St_germain$enrichment)])
+st_germain_p <-
+    ggplot(St_germain, aes(x = term, y = enrichment)) +
+    geom_bar(stat = "identity", fill = "black") +
+    coord_flip() +
+    labs(y = "Enrichment over\nbackground", x = "Functional Category (p < 0.05)") +
+    theme_bw() +
+    theme(axis.text = element_text(color = "black", hjust = 0),
+        axis.title = element_text(color = "black", face = "bold")) +
+    theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
+```
+8. Merge 4 graphs into a single graphs
+```{r}
+pdf("~/Documents/INET-work/virus_network/figure_results/4interactom_GO_meta6.pdf", width = 12, height = 14)
+par(ps = 8)
+ggarrange(gordon_p, stukalov_p, li_p, nabeel_p, laurent_p, st_germain_p, samavarchi_p, ncol = 2, nrow = 4, labels = c("a) Gordon", "b) Stukalov", "c) Li", "d) Nabeel", "e) Laurent", "f) St-Germain", "g) Samavarchi"))
 dev.off()
 ```
 
