@@ -9,6 +9,7 @@ library(igraph)
 library(rethinking)
 library(gprofiler2)
 library(linkcomm)
+# functions
 source("~/Documents/INET-work/virus_network/src/plotOCGGraph.r")
 
 go2check <- function(x, organism) {
@@ -18,6 +19,55 @@ go2check <- function(x, organism) {
     return(goquery$result)
 }
 
+check <- function(x) {
+    value <- table(V(x)$name %in% husci_sym)[2]
+    value <- ifelse(is.na(value), "0", value)
+    return(as.numeric(value))
+}
+
+checkUpdate <- function(x) {
+    V(x)$name[V(x)$name %in% husci_sym]
+}
+
+combineNetwork <- function(network, node) {
+    gwas_random_g <- make_ego_graph(network, nodes = node, order = 1, mode = "all")
+    gwas_random_list_df <- lapply(gwas_random_g, as_data_frame)
+    gwas_random_df <- do.call(rbind, gwas_random_list_df)
+    gwas_random_g_merge <- graph_from_data_frame(gwas_random_df, directed = FALSE)
+    gwas_random_final <- simplify(induced_subgraph(huri_g, names(V(gwas_random_g_merge))), remove.loops = FALSE)
+    return(gwas_random_final)
+}
+
+huriRewire <- function(...) {
+    huri_re <- rewire(huri_g, keeping_degseq(niter = gsize(huri_g) * 10))
+    huri_sim <- simplify(huri_re, remove.loops = FALSE)
+    return(huri_sim)
+}
+
+huriRewireHusci <- function(node) {
+    huri_re <- huriRewire()
+    merged <- combineNetwork(huri_re, node)
+    merged_inHuSCI <- table(V(merged)$name %in% husci_sym)["TRUE"]
+    return(merged_inHuSCI)
+}
+
+ocgRewire <- function(node) {
+    df <- c()
+    rewire <- huriRewire()
+    combine <- combineNetwork(rewire, node)
+    strong <- components(combine, mode = "strong")
+    strong1 <- induced_subgraph(combine, names(strong$membership[strong$membership == 1]))
+    strong_ocg <- getOCG.clusters(as_data_frame(strong1), init.class.sys = 3, cent.class.sys = 0)
+    data <- as.numeric(sort(strong_ocg$clustsizes, decreasing = TRUE))
+    df <- c(df, data)
+    if(data[2] > 4) {
+        df <- c((data[1] / data[2]), df)
+    } else {
+        df <- c("NA", df)
+    }
+    return(df)
+}
+# edit plot parameters
 trace("plot.igraph", edit = T)
 ######
 # load dataset
@@ -33,53 +83,101 @@ gwas_ctcl <- read.xlsx(gwas_file, sheet = "critical")
 gwas_hosp <- read.xlsx(gwas_file, sheet = "hospitalization")
 gwas_infct <- read.xlsx(gwas_file, sheet = "infection")
 ######
-# HuRI graph generation
+# 1. HuRI graph generation
 huri_symbol <- huri[, c(5:6)]
 huri_g <- graph_from_data_frame(huri_symbol, directed = FALSE) # V:8274, E:52573
 huri_g <- simplify(huri_g, remove.loops = FALSE) # V:8274, E:52558
-######
 # protein list filter
 husci_sym <- husci[husci$group == "human", "node"]
 husci_huri <- V(huri_g)$name[V(huri_g)$name %in% husci_sym] # HuSCI in HuRI whole
 gwas_huri <- gwas$All.LD[gwas$All.LD %in% V(huri_g)$name] # GWAS hit in HuRI
-######
-# functions
-check <- function(x) {
-    value <- table(V(x)$name %in% husci_sym)[2]
-    value <- ifelse(is.na(value), "0", value)
-    return(as.numeric(value))
-}
-checkUpdate <- function(x) {
-    V(x)$name[V(x)$name %in% husci_sym]
-}
-combineNetwork <- function(network, node) {
-    gwas_random_g <- make_ego_graph(network, nodes = node, order = 1, mode = "all")
-    gwas_random_list_df <- lapply(gwas_random_g, as_data_frame)
-    gwas_random_df <- do.call(rbind, gwas_random_list_df)
-    gwas_random_g_merge <- graph_from_data_frame(gwas_random_df, directed = FALSE)
-    gwas_random_final <- simplify(induced_subgraph(huri_g, names(V(gwas_random_g_merge))), remove.loops = FALSE)
-    return(gwas_random_final)
-}
-######
-# interactor of GWAS hit
-gwas_hit_1st <- make_ego_graph(huri_g, nodes = sort(gwas$All.LD[gwas$All.LD %in% V(huri_g)$name]), order = 1, mode = "all") #17 of 42 in HuRI
-gwas_check <- length(unique(unlist(lapply
-    (gwas_hit_1st, checkUpdate)))) #11 interactors
-# keep one ortholog at a time
-all_candidate <- expand.grid(strsplit(gwas_ortholog$candidate, split = ","))
 
 ######
-# rewiring analysis of HuRI, to see if the HuSCI viral target is significant.
+# 2. interactor of GWAS hit
+gwas_hit_1st <- make_ego_graph(huri_g, nodes = sort(gwas$All.LD[gwas$All.LD %in% V(huri_g)$name]), order = 1, mode = "all") #17 of 42 in HuRI
+
+# 2.1 interactors of GWAS hits with critical illness phenotypes
+ctcl <- gwas[, 2][gwas[, 5] == 1]
+ctcl <- unique(ctcl[!is.na(ctcl)])
+ctcl_huri <- ctcl[ctcl %in% V(huri_g)$name]
+ctcl_1st <- combineNetwork(huri_g, ctcl_huri)
+gwas_ctcl_husci <- V(ctcl_1st)$name[V(ctcl_1st)$name %in% husci_sym]
+gwas_ctcl_husci_length <- length(gwas_ctcl_husci)
+
+hosp <- gwas[, 2][gwas[, 6] == 1]
+hosp <- unique(hosp[!is.na(hosp)])
+hosp_huri <- hosp[hosp %in% V(huri_g)$name]
+hosp_1st <- combineNetwork(huri_g, hosp_huri)
+gwas_hosp_husci <- V(hosp_1st)$name[V(hosp_1st)$name %in% husci_sym]
+gwas_hosp_husci_length <- length(gwas_hosp_husci)
+
+infct <- gwas[, 2][gwas[, 7] == 1]
+infct <- unique(infct[!is.na(infct)])
+infct_huri <- infct[infct %in% V(huri_g)$name]
+infct_1st <- combineNetwork(huri_g, infct_huri)
+gwas_infct_husci <- V(infct_1st)$name[V(infct_1st)$name %in% husci_sym]
+gwas_infct_husci_length <- length(gwas_infct_husci)
+
+######
+# 3. **rewiring analysis of HuRI**, to see if the HuSCI viral target is significant.
 # load gwas loci info, with 3 phenotype (critical illness, hospitalization and infection)
 # subnetwork of GWAS hit from HuRI
-## inherite from above code
+# inherite from above code
 gwas_all_list_df <- lapply(gwas_hit_1st, as_data_frame)
 gwas_all_df <- do.call(rbind, gwas_all_list_df)
 gwas_all_g_merge <- graph_from_data_frame(gwas_all_df, directed = FALSE)
-## to have interaction between 1st interactors
+# to have interaction between 1st interactors
 gwas_all_final <- simplify(induced_subgraph(huri_g, names(V(gwas_all_g_merge))), remove.loops = FALSE) # V:118, E:370
+gwas_all_husci <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% husci_sym] # 11 viral targets
+gwas_all_husci_length <- length(gwas_all_husci)
+# 3.1. do statistical analysis for all 17 GWAS hit candidate genes
+all_re_husci <- c()
+all_re_husci <- c(all_re_husci, mcreplicate(10000, huriRewireHusci(gwas_huri)), mc.cores = detectCores())
+
+# 3.2 for critical illness, hospitalization and infection phenotype associated genes
+ctcl_re_husci <- c()
+ctcl_re_husci <- c(ctcl_re_husci, mcreplicate(10000, huriRewireHusci(ctcl_huri)), mc.cores = detectCores())
+
+hosp_re_husci <- c()
+hosp_re_husci <- c(hosp_re_husci, mcreplicate(10000, huriRewireHusci(hosp_huri)), mc.cores = detectCores())
+
+infct_re_husci <- c()
+infct_re_husci <- c(infct_re_husci, mcreplicate(10000, huriRewireHusci(infct_huri)), mc.cores = detectCores())
+# plotting
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_GWAS_viral_target_v2.pdf", width = 3, height = 3)
+par(mgp = c(2, 0.7, 0), ps = 8)
+dens_gwas <- hist(all_re_husci, breaks = 15, plot = FALSE)
+plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 20), xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
+mytitle <- "COVID19 GWAS loci candidate genes\n(all candidate genes)"
+mtext(side = 3, line = 1, cex = 1, mytitle)
+arrows(gwas_all_husci_length + 0.5, 0.04, gwas_all_husci_length + 0.5, 0.02, col = "#922687", lwd = 2, length = 0.1)
+text(gwas_all_husci_length - 2, 0.06, paste0("observed = ", gwas_all_husci_length, "\np = ", table(all_re_husci >= gwas_all_husci_length)["TRUE"]/10000), cex = 0.4, pos = 4)
+
+dens_gwas <- hist(ctcl_re_husci, breaks = 15, plot = FALSE)
+plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 20), xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
+mytitle <- "COVID19 GWAS loci candidate genes\n(critical illness)"
+mtext(side = 3, line = 1, cex = 1, mytitle)
+arrows(gwas_ctcl_husci_length + 0.5, 0.06, gwas_ctcl_husci_length + 0.5, 0.02, col = "#922687", lwd = 2, length = 0.1)
+text(gwas_ctcl_husci_length - 1, 0.08, paste0("observed = ", gwas_ctcl_husci_length, "\np = ", table(ctcl_re_husci >= gwas_ctcl_husci_length)["TRUE"]/10000), cex = 0.4, pos = 4)
+
+dens_gwas <- hist(hosp_re_husci, breaks = 15, plot = FALSE)
+plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 20), xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
+mytitle <- "COVID19 GWAS loci candidate genes\n(hospitalization)"
+mtext(side = 3, line = 1, cex = 1, mytitle)
+arrows(gwas_hosp_husci_length + 0.5, 0.04, gwas_hosp_husci_length + 0.5, 0.02, col = "#922687", lwd = 2, length = 0.1)
+text(gwas_hosp_husci_length - 2, 0.06, paste0("observed = ", gwas_hosp_husci_length, "\np = ", table(hosp_re_husci >= gwas_hosp_husci_length)["TRUE"]/10000), cex = 0.4, pos = 4)
+
+dens_gwas <- hist(infct_re_husci, breaks = 10, plot = FALSE)
+plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 10), xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
+mytitle <- "COVID19 GWAS loci candidate genes\n(infection)"
+mtext(side = 3, line = 1, cex = 1, mytitle)
+arrows(gwas_infct_husci_length + 0.5, 0.1, gwas_infct_husci_length + 0.5, 0.02, col = "#922687", lwd = 2, length = 0.1)
+text(gwas_infct_husci_length - 1, 0.2, paste0("observed = ", gwas_infct_husci_length, "\np = ", table(infct_re_husci >= gwas_infct_husci_length)["TRUE"]/10000), cex = 0.4, pos = 4)
+
+dev.off()
+
 #######
-# keep one ortholog at a time
+# 4. keep one ortholog at a time
 ortholog_count <- list()
 for (i in 1:dim(all_candidate)[1]) {
     ortholog_gra <- combineNetwork(huri_g, c(as.matrix(all_candidate[i, ])))
@@ -134,7 +232,42 @@ random_gwas_infct_final[is.na(random_gwas_infct_final)] <- 0
 source("gwas_phenotype_plot.r")
 
 ######
-# community detected based on 3 different phenotype
+# 5. community detected
+gwas_all_strong <- components(gwas_all_final, mode = "strong")
+gwas_all_strong1 <- induced_subgraph(gwas_all_final, names(gwas_all_strong$membership[gwas_all_strong$membership == 1]))
+gwas_all_ocg <- getOCG.clusters(as_data_frame(gwas_all_strong1), init.class.sys = 3, cent.class.sys = 0)
+## visualized with whole network
+pdf('/tmp/gwas_ocg.pdf')
+plotOCGraph(gwas_all_ocg)
+dev.off()
+
+gwas_all_ocg_dif <- sort(gwas_all_ocg$clustsizes, decreasing = T)[1] / sort(gwas_all_ocg$clustsizes, decreasing = T)[2]
+## randomized network, gwas all
+all_ocg_rand_count <- list()
+for (i in 1:1350) {
+    tryCatch({
+        all_ocg_rand_count[[i]] <- ocgRewire(gwas_huri)
+    }, error = function(e){
+        print("Wired error!")
+    })
+}
+all_ocg_sum <- as.numeric(unlist(lapply(all_ocg_rand_count, function(x) x[1])))[c(1:1000)]
+all_ocg_sum3 <- as.numeric(unlist(lapply(all_ocg_rand_count, function(x) x[3])))[c(1:1000)]
+## visualized with boxplot
+boxplot(all_ocg_sum, horizontal = TRUE, cex.axis = 2)
+points(gwas_all_ocg_dif, 1, pch = 19, col = "red", cex = 1.5)
+## visualized with histogram
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_GWAS_commuRatio_v2.pdf", width = 3, height = 3)
+dens <- hist(all_ocg_sum, breaks = 15, plot = FALSE)
+par(mgp = c(2, 0.7, 0), ps = 8)
+plot(dens, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 20), xlab = "Ratio of communities", ylab = "Frequency density", main = "", cex.sub = 0.5)
+arrows(gwas_all_ocg_dif + 0.5, 0.1, gwas_all_ocg_dif + 0.5, 0.02, col = "#922687", lwd = 2, length = 0.1)
+text(gwas_all_ocg_dif - 2, 0.12, paste0("observed = ", gwas_all_ocg_dif, "\np = ", table(all_ocg_sum >= gwas_all_ocg_dif)["TRUE"]/1000, "/", table(all_ocg_sum >= gwas_all_ocg_dif)["FALSE"]/1000), cex = 0.4, pos = 4)
+dev.off()
+## randomized network to reveal viral target significance
+
+
+# 5.1.  based on 3 different phenotype
 ctcl_network <- combineNetwork(huri_g, gwas_ctcl_candidate_huri)
 ctcl_strong <- components(ctcl_network, mode = "strong")
 ctcl_network_sub <- induced_subgraph(ctcl_network, names(ctcl_strong$membership[ctcl_strong[1]$membership == 1]))
@@ -158,45 +291,3 @@ plot(gwas_all_final, vertex.size = 3, vertex.label = NA)
 plot(ctcl_network, vertex.size = 3, vertex.label = NA)
 plot(hosp_network, vertex.size = 3, vertex.label = NA)
 plot(infct_network, vertex.size = 3, vertex.label = NA)
-
-######
-# GO enrichment analysis
-cluster_list <- lapply(gwas_hit_1st, function(x) {
-    df <- as_data_frame(x)
-    unique(c(df$from, df$to))
-})
-names(cluster_list) <- sort(gwas$All.LD[gwas$All.LD %in% V(huri_g)$name])
-
-bp_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HuRI_GOBP_EXP.gmt")
-mf_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HuRI_GOMF_EXP.gmt")
-cc_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HuRI_GOCC_EXP.gmt")
-## individual subnetwork
-gobp_check <- lapply(cluster_list, function(x) {go2check(x, bp_cust)})
-gomf_check <- lapply(cluster_list, function(x) {go2check(x, mf_cust)})
-gocc_check <- lapply(cluster_list, function(x) {go2check(x, cc_cust)})
-
-bp <- do.call(rbind.data.frame, gobp_check[c(1:12, 14:16)])
-mf <- do.call(rbind.data.frame, gomf_check[c(2, 4:12, 14, 16)])
-cc <- do.call(rbind.data.frame, gocc_check[c(3, 5:7, 9, 12, 14)])
-write.csv(rbind(bp, mf, cc)[, c(1:13, 15:18)], file = "/tmp/GWAS_GO_individual.csv")
-## whole GWAS hits set
-whole_gwas_bp <- go2check(unique(as.character(unlist(lapply(gwas_hit_1st, as_data_frame)))), bp_cust)
-whole_gwas_mf <- go2check(unique(as.character(unlist(lapply(gwas_hit_1st, as_data_frame)))), mf_cust)
-whole_gwas_cc <- go2check(unique(as.character(unlist(lapply(gwas_hit_1st, as_data_frame)))), cc_cust)
-write.csv(rbind(whole_gwas_mf)[, c(1:13, 15:18)], file = "~/Documents/INET-work/virus_network/statistic_results/GWAS/whole_GWAS_GO_v2.csv")
-######
-# 3 phenotypes GO enrichment analysis
-ctcl_gobp <- go2check(unique(as.character(unlist(lapply(gwas_ctcl_graph, as_data_frame)))), bp_cust)
-ctcl_gomf <- go2check(unique(as.character(unlist(lapply(gwas_ctcl_graph, as_data_frame)))), mf_cust)
-ctcl_gocc <- go2check(unique(as.character(unlist(lapply(gwas_ctcl_graph, as_data_frame)))), cc_cust)
-write.csv(rbind(ctcl_gomf)[, c(1:13, 15:18)], file = "/tmp/ctcl_GWAS_go.csv")
-
-hosp_gobp <- go2check(unique(as.character(unlist(lapply(gwas_hosp_graph, as_data_frame)))), bp_cust)
-hosp_gomf <- go2check(unique(as.character(unlist(lapply(gwas_hosp_graph, as_data_frame)))), mf_cust)
-hosp_gocc <- go2check(unique(as.character(unlist(lapply(gwas_hosp_graph, as_data_frame)))), cc_cust)
-write.csv(rbind(hosp_gomf)[, c(1:13, 15:18)], file = "/tmp/hosp_GWAS_go.csv")
-
-infct_gobp <- go2check(unique(as.character(unlist(lapply(gwas_infct_graph, as_data_frame)))), bp_cust)
-infct_gomf <- go2check(unique(as.character(unlist(lapply(gwas_infct_graph, as_data_frame)))), mf_cust)
-infct_gocc <- go2check(unique(as.character(unlist(lapply(gwas_infct_graph, as_data_frame)))), cc_cust)
-write.csv(rbind(infct_gomf, infct_gocc)[, c(1:13, 15:18)], file = "/tmp/infct_GWAS_go.csv")

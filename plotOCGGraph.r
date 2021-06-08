@@ -1,5 +1,5 @@
 # ref: https://github.com/alextkalinka/linkcomm/blob/master/R/OCG_main.R
-plotOCGraph <- function(x, clusterids = 1:x$numbers[3], nodes = NULL, pie.local = TRUE, incident = TRUE, layout = layout.fruchterman.reingold, vertex.radius = 0.03, scale.vertices = 0.05, edge.color = "grey", vertex.label.color = "black", vertex.label.cex = 0.5, pal = brewer.pal(7,"Set2"), shownodesin = 0, vlabel = TRUE, random = TRUE, ...)
+plotOCGraph <- function(x, clusterids = 1:x$numbers[3], nodes = NULL, pie.local = TRUE, incident = TRUE, layout = layout.fruchterman.reingold, vertex.radius = 0.03, scale.vertices = 0.05, edge.color = "grey", vertex.label.color = "black", vertex.label.cex = 0.5, pal = brewer.pal(7,"Set2"), shownodesin = 0, vlabel = TRUE, random = FALSE, ...)
 	# x is an "OCG" object.
 	{
 	# Make an edgelist based on clusterids or nodes.
@@ -31,9 +31,9 @@ plotOCGraph <- function(x, clusterids = 1:x$numbers[3], nodes = NULL, pie.local 
 	names(cols) <- clusterids
 
 	if(shownodesin == 0){
-		vnames <- V(ig)$name
+		vnames <- ifelse(V(ig)$name %in% husci_sym, V(ig)$name, "")
 	}else{ # Show nodes that belong to more than x number of communities.
-		vnames <- V(ig)$name
+		vnames <- ifelse(V(ig)$name %in% husci_sym, V(ig)$name, "")
 		inds <- NULL
 		for(i in 1:length(vnames)){
 			if(x$numclusters[which(names(x$numclusters)==vnames[i])] < shownodesin){
@@ -74,14 +74,14 @@ plotOCGraph <- function(x, clusterids = 1:x$numbers[3], nodes = NULL, pie.local 
 			polygon(node.pies[[i]][[j]][,1], node.pies[[i]][[j]][,2], col = seg.col)
 			yp <- append(yp, node.pies[[i]][[j]][,2])
 			}
-		lx <- lay[which(rownames(lay)==names(node.pies[i])),1] + 0.1
-		ly <- max(yp) + 0.02 # Highest point of node pie.
+		lx <- lay[which(rownames(lay)==names(node.pies[i])),1]
+		ly <- max(yp) # Highest point of node pie.
 		labels[[i]] <- c(lx, ly)
 		}
 	# Plot node names after nodes so they overlay them.
-	# for(i in 1:length(labels)){
-	# 	text(labels[[i]][1], labels[[i]][2], labels = vnames[which(nodes==names(node.pies[i]))], cex = vertex.label.cex, col = vertex.label.color)
-	# 	}
+	for(i in 1:length(labels)){
+		text(labels[[i]][1], labels[[i]][2], labels = vnames[which(nodes==names(node.pies[i]))], cex = vertex.label.cex, col = vertex.label.color)
+		}
 	}
 
 .nodePie <- function(edge.memb, layout, nodes, edges, radius, scale = NULL)
