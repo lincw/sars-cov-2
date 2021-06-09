@@ -41,6 +41,7 @@ candidate <- read.xlsx(gwas_file, sheet = "all")
 ctcl <- read.xlsx(gwas_file, sheet = "critical")
 hosp <- read.xlsx(gwas_file, sheet = "hospitalization")
 infct <- read.xlsx(gwas_file, sheet = "infection")
+gwas_ortholog <- read.xlsx(gwas_file, sheet = "Ortholog")
 
 ######
 # HuRI graph generation
@@ -96,6 +97,9 @@ dev.off()
 all_candidate <- expand.grid(strsplit(candidate[c(5:13), 5], split = ","))
 all_candidate_uniq <- unname(unique(as.matrix(unlist(all_candidate)))[, 1])
 all_candidate_huri <- all_candidate_uniq[all_candidate_uniq %in% V(huri_g)$name]
+## 1.1. checking ICAM1, ICAM3 and ICAM4
+all_ortholog <- expand.grid(strsplit(gwas_ortholog[, "candidate"], split = ","))
+
 ## 2. Critical illness
 ctcl_candidate <- expand.grid(strsplit(ctcl[c(3:6), 5], split = ","))
 ctcl_candidate_uniq <- unname(unique(as.matrix(unlist(ctcl_candidate)))[, 1])
@@ -109,7 +113,7 @@ infct_candidate <- expand.grid(strsplit(infct[c(3:7), 5], split = ","))
 infct_candidate_uniq <- unname(unique(as.matrix(unlist(infct_candidate)))[, 1])
 infct_candidate_huri <- infct_candidate_uniq[infct_candidate_uniq %in% V(huri_g)$name]
 ## check subnetwork from GWAS candidates, one for each SNP
-to_check <- list(All_GWAS = all_candidate, CTCL_GWAS = ctcl_candidate, HOSP_GWAS = hosp_candidate, INFCT_GWAS = infct_candidate)
+to_check <- list(Ortholog = all_ortholog)
 for (i in 1:length(to_check)) {
     pdf(paste0("/tmp/", names(to_check[i]), ".pdf"))
     count_check <- list()
@@ -118,7 +122,9 @@ for (i in 1:length(to_check)) {
         if(table(genes %in% V(huri_g)$name)["TRUE"] == dim(to_check[[i]])[2]) {
             check <- c()
             network <- combineNetwork(huri_g, genes)
-            plot(network, vertex.size = 4, vertex.label.cex = .5, vertex.label.dist = 1)
+            # if(i == 1) lay <- layout_components(network)
+            V(network)$color <- ifelse(V(network)$name %in% husci_sym, "red", "grey")
+            plot(network, vertex.size = 4, vertex.label.cex = .5, vertex.label.dist = 1, layout = lay)
             title(paste0(genes, collapse = "-"), cex.main = 0.8)
             mtext(paste0("vcount: ", vcount(network)), side = 3, line = 0.5, cex = 0.5)
             mtext(paste0("ecount: ", ecount(network)), side = 3, line = -0.5, cex = 0.5)

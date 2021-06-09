@@ -29,18 +29,11 @@ checkUpdate <- function(x) {
     V(x)$name[V(x)$name %in% husci_sym]
 }
 
-combineNetwork <- function(network, node) {
-    gwas_random_g <- make_ego_graph(network, nodes = node, order = 1, mode = "all")
-    gwas_random_list_df <- lapply(gwas_random_g, as_data_frame)
-    gwas_random_df <- do.call(rbind, gwas_random_list_df)
-    gwas_random_g_merge <- graph_from_data_frame(gwas_random_df, directed = FALSE)
-    gwas_random_final <- simplify(induced_subgraph(huri_g, names(V(gwas_random_g_merge))), remove.loops = FALSE)
-    return(gwas_random_final)
-}
+source("~/Documents/INET-work/virus_network/src/combineNetwork.r")
 
-huriRewire <- function(...) {
+huriRewire <- function(remove.loops = FALSE, ...) {
     huri_re <- rewire(huri_g, keeping_degseq(niter = gsize(huri_g) * 10))
-    huri_sim <- simplify(huri_re, remove.loops = FALSE)
+    huri_sim <- simplify(huri_re, remove.loops = remove.loops)
     return(huri_sim)
 }
 
@@ -50,14 +43,17 @@ huriRewireHusci <- function(node) {
     merged_inHuSCI <- table(V(merged)$name %in% husci_sym)["TRUE"]
     return(merged_inHuSCI)
 }
-
 ocgRewire <- function(node) {
-    df <- c()
     rewire <- huriRewire()
     combine <- combineNetwork(rewire, node)
     strong <- components(combine, mode = "strong")
     strong1 <- induced_subgraph(combine, names(strong$membership[strong$membership == 1]))
     strong_ocg <- getOCG.clusters(as_data_frame(strong1), init.class.sys = 3, cent.class.sys = 0)
+    return(strong_ocg)
+}
+ocgRewireRatio <- function(node) {
+    df <- c()
+    strong_ocg <- ocgRewire(node)
     data <- as.numeric(sort(strong_ocg$clustsizes, decreasing = TRUE))
     df <- c(df, data)
     if(data[2] > 4) {
@@ -85,8 +81,9 @@ gwas_infct <- read.xlsx(gwas_file, sheet = "infection")
 ######
 # 1. HuRI graph generation
 huri_symbol <- huri[, c(5:6)]
-huri_g <- graph_from_data_frame(huri_symbol, directed = FALSE) # V:8274, E:52573
-huri_g <- simplify(huri_g, remove.loops = FALSE) # V:8274, E:52558
+huri_g_ori <- graph_from_data_frame(huri_symbol, directed = FALSE) # V:8274, E:52573
+huri_g <- simplify(huri_g_ori, remove.loops = FALSE) # V:8274, E:52558
+huri_g_noloop <- simplify(huri_g_ori) # V:8274 E:52078 without self-loops
 # protein list filter
 husci_sym <- husci[husci$group == "human", "node"]
 husci_huri <- V(huri_g)$name[V(huri_g)$name %in% husci_sym] # HuSCI in HuRI whole
@@ -127,9 +124,17 @@ gwas_all_list_df <- lapply(gwas_hit_1st, as_data_frame)
 gwas_all_df <- do.call(rbind, gwas_all_list_df)
 gwas_all_g_merge <- graph_from_data_frame(gwas_all_df, directed = FALSE)
 # to have interaction between 1st interactors
-gwas_all_final <- simplify(induced_subgraph(huri_g, names(V(gwas_all_g_merge))), remove.loops = FALSE) # V:118, E:370
+gwas_all_final <- simplify(induced_subgraph(huri_g, names(V(gwas_all_g_merge))), remove.loops = F) # V:118, E:370; E:351, removing self-loops
 gwas_all_husci <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% husci_sym] # 11 viral targets
 gwas_all_husci_length <- length(gwas_all_husci)
+# visualization of gwas subnetwork
+bd <- ifelse(V(gwas_all_final)$name %in% husci_sym, "orange", NA)
+label <- ifelse(V(gwas_all_final)$name %in% c(husci_sym, gwas_huri), V(gwas_all_final)$name, NA)
+color <- ifelse(V(gwas_all_final)$name %in% gwas_huri, "red", "grey")
+pdf("/tmp/GWAS_subnetwork.pdf")
+plot(gwas_all_final, vertex.frame.color = bd, vertex.size = 3, vertex.label.dist = 1, vertex.label.color = "black", vertex.label = label, vertex.color = color, vertex.frame.width = 2)
+write_graph(gwas_all_final, "/tmp/GWAS_subnetwork.gml", format = "gml")
+dev.off()
 # 3.1. do statistical analysis for all 17 GWAS hit candidate genes
 all_re_husci <- c()
 all_re_husci <- c(all_re_husci, mcreplicate(10000, huriRewireHusci(gwas_huri)), mc.cores = detectCores())
@@ -235,6 +240,7 @@ source("gwas_phenotype_plot.r")
 # 5. community detected
 gwas_all_strong <- components(gwas_all_final, mode = "strong")
 gwas_all_strong1 <- induced_subgraph(gwas_all_final, names(gwas_all_strong$membership[gwas_all_strong$membership == 1]))
+gwas_all_strong1 <- simplify(gwas_all_strong1) # looks like doesn't hurt
 gwas_all_ocg <- getOCG.clusters(as_data_frame(gwas_all_strong1), init.class.sys = 3, cent.class.sys = 0)
 ## visualized with whole network
 pdf('/tmp/gwas_ocg.pdf')
@@ -246,7 +252,7 @@ gwas_all_ocg_dif <- sort(gwas_all_ocg$clustsizes, decreasing = T)[1] / sort(gwas
 all_ocg_rand_count <- list()
 for (i in 1:1350) {
     tryCatch({
-        all_ocg_rand_count[[i]] <- ocgRewire(gwas_huri)
+        all_ocg_rand_count[[i]] <- ocgRewireRatio(gwas_huri)
     }, error = function(e){
         print("Wired error!")
     })
