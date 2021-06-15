@@ -6,6 +6,7 @@
 # load package
 library(openxlsx)
 library(linkcomm)
+library(pheatmap)
 
 ######
 # load OCG data
@@ -27,6 +28,7 @@ comm_member <- list()
 for (i in 1:length(community)) {
     comm_member[[i]] <- getNodesIn(huri_ocg, clusterids = community[i])
 }
+write.xlsx(unlist(lapply(comm_member, function(x) paste0(x, collapse = ","))), file = "/tmp/gwas_trait.xlsx")
 
 ######
 # Jaccard similarity calculation
@@ -38,4 +40,15 @@ for (i in 1:length(community)) {
 }
 
 jac_result_df <- matrix(jac_result, ncol = 29)
+rownames(jac_result_df) <- community
+colnames(jac_result_df) <- community
+pdf("~/Documents/INET-work/virus_network/figure_results/gwas_trait_jaccard.pdf", width = 5, height = 5)
+pheatmap(jac_result_df, cutree_rows = 8, cutree_cols = 8, main = "Jaccard similarity of community membership",
+    legend_breaks = c(0, 0.2, 0.4, 0.6, 0.8, 1),
+    legend_labels = c("0", "0.2", "0.4", "0.6", "0.8", "score\n"),
+    legend = TRUE)
+dev.off()
+
+df <- kmeans(jac_result_df, 8)
+
 write.csv(jac_result_df, file = "/tmp/community_jaccard.csv")
