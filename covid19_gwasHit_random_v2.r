@@ -9,6 +9,7 @@ library(igraph)
 library(rethinking)
 library(gprofiler2)
 library(linkcomm)
+library(gplots)
 # functions
 source("~/Documents/INET-work/virus_network/src/plotOCGGraph.r")
 
@@ -115,6 +116,24 @@ infct_1st <- combineNetwork(huri_g, infct_huri)
 gwas_infct_husci <- V(infct_1st)$name[V(infct_1st)$name %in% husci_sym]
 gwas_infct_husci_length <- length(gwas_infct_husci)
 
+overlap_gwas <- list(
+    ctcl = ctcl,
+    hosp = hosp,
+    infct = infct
+)
+venn(overlap_gwas); title("Overlap between all LD")
+overlap_huri <- list(
+    ctcl = ctcl_huri,
+    hosp = hosp_huri,
+    infct = infct_huri
+)
+venn(overlap_huri); title("Overlap between all LD in HuRI")
+overlap_husci <- list(
+    ctcl = V(ctcl_1st)$name[V(ctcl_1st)$name %in% husci_sym],
+    hosp = V(hosp_1st)$name[V(hosp_1st)$name %in% husci_sym],
+    infct = V(infct_1st)$name[V(infct_1st)$name %in% husci_sym]
+)
+venn(overlap_husci); title("Overlap between 1st node in HuSCI")
 ######
 # 3. **rewiring analysis of HuRI**, to see if the HuSCI viral target is significant.
 # load gwas loci info, with 3 phenotype (critical illness, hospitalization and infection)
