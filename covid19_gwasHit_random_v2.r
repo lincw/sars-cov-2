@@ -186,6 +186,7 @@ all_re_husci_df <- as.data.frame(matrix(all_re_husci, ncol = 4, byrow = T))
 all_re_husci_noLoop <- c()
 all_re_husci_noLoop <- c(all_re_husci_noLoop, mcreplicate(10000, huriRewireHusciMulti(gwas_huri, ctcl_huri, hosp_huri, infct_huri, TRUE), mc.cores = detectCores()))
 all_re_husci_noLoop[is.na(all_re_husci_noLoop)] <- 0
+all_re_husci_noLoop_df <- as.data.frame(matrix(all_re_husci_noLoop, ncol = 4, byrow = T))
 
 inHuSCI_length <- list(
     allGWAS = gwas_all_husci_length,
