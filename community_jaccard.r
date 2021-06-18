@@ -9,7 +9,8 @@ library(linkcomm)
 library(pheatmap)
 library(ComplexHeatmap)
 library(circlize) # color used for ComplexHeatmap
-
+library(seriation)
+library(dendextend)
 ######
 # plot heatmap
 pheatmapPlotBasic <- function(data, main) {
@@ -152,3 +153,12 @@ plot_p10 <- -log(plot_p, 10)
 row_dim <- c(3, 5:13, 16:22, 26:29)
 col_dim <- c(1:14, 16)
 source("~/Documents/INET-work/virus_network/src/gwasHit_cluster_plot.r")
+
+# reorder dendrogram
+# custom trait order (FDR might not < 0.05?)
+row_dim2 <- c(16, 9, 11, 4, 10,  2, 5, 7, 12, 8, 13, 14, 6, 3, 1)
+non_community_list <- c(891, 3205, 8, 3564, 364, 145, 1515, 3035, 1627)
+source("~/Documents/INET-work/virus_network/src/gwasHit_cluster_plot_reorder.r")
+
+gwas_comm <- read.xlsx("~/workplace/GWAS_list.xlsx", sheet = "community")
+gwas_trait <- read.xlsx("~/workplace/GWAS_list.xlsx", sheet = "trait")
