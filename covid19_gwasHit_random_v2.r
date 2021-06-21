@@ -267,16 +267,32 @@ text(gwas_infct_husci_length - 1, 0.2, paste0("observed = ", gwas_infct_husci_le
 dev.off()
 
 boxplot(inHuSCI_summary, las = 1)
-pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_GWAS_viral_target_v2.1.pdf", width = 4, height = 4)
-for (i in 1:length(inHuSCI_summary)) {
-    dens_gwas <- hist(inHuSCI_summary[[i]], breaks = seq(0, max(inHuSCI_summary[[i]]), by = 1), plot = FALSE, right = FALSE)
-    plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, max(inHuSCI_summary[[i]])), xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_GWAS_viral_target_v2_left_closed.pdf", width = 4, height = 4)
+for (i in seq(1, length(inHuSCI_summary), by = 2)) {
+    dens_gwas <- hist(inHuSCI_summary[[i]], breaks = seq(0, max(inHuSCI_summary[[i]]), by = 1), plot = FALSE, right = TRUE)
+    plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, max(inHuSCI_summary[[i]])), xaxt = "n", xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
+    lines(dens_gwas$mids, dens_gwas$density, col = "darkgrey", lwd = 3)
     mytitle <- paste0("COVID19 GWAS loci candidate genes\n", names(inHuSCI_summary[i]))
     mtext(side = 3, line = 1, cex = 1, mytitle)
+    axis(side = 1, at = seq(min(dens_gwas$mids), max(dens_gwas$mids) , 2), labels = seq(min(dens_gwas$mids) - 0.5, max(dens_gwas$mids) - 0.5, 2))
     arrows(inHuSCI_length[[i]] + 0.5, 0.04, inHuSCI_length[[i]] + 0.5, 0.01, col = "#922687", lwd = 2, length = 0.1)
     text(inHuSCI_length[[i]], 0.05, paste0("observed = ", inHuSCI_length[[i]], "\n p = ", table(inHuSCI_summary[[i]] >= inHuSCI_length[[i]])["TRUE"]/10000), cex = 0.4, pos = 4)
 }
 dev.off()
+
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_GWAS_viral_target_v2_right_closed.pdf", width = 4, height = 4)
+for (i in seq(1, length(inHuSCI_summary), by = 2)) {
+    dens_gwas <- hist(inHuSCI_summary[[i]], breaks = seq(0, max(inHuSCI_summary[[i]]), by = 1), plot = FALSE, right = FALSE)
+    plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, max(inHuSCI_summary[[i]])), xaxt = "n", xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
+    lines(dens_gwas$mids, dens_gwas$density, col = "darkgrey", lwd = 3)
+    mytitle <- paste0("COVID19 GWAS loci candidate genes\n", names(inHuSCI_summary[i]))
+    mtext(side = 3, line = 1, cex = 1, mytitle)
+    axis(side = 1, at = seq(min(dens_gwas$mids), max(dens_gwas$mids) , 2), labels = seq(min(dens_gwas$mids) - 0.5, max(dens_gwas$mids) - 0.5, 2))
+    arrows(inHuSCI_length[[i]] + 0.5, 0.04, inHuSCI_length[[i]] + 0.5, 0.01, col = "#922687", lwd = 2, length = 0.1)
+    text(inHuSCI_length[[i]], 0.05, paste0("observed = ", inHuSCI_length[[i]], "\n p = ", table(inHuSCI_summary[[i]] >= inHuSCI_length[[i]])["TRUE"]/10000), cex = 0.4, pos = 4)
+}
+dev.off()
+
 #######
 # 4. keep one ortholog at a time
 ortholog_count <- list()

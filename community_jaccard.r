@@ -80,9 +80,6 @@ plot_data <- data[, c(2:22)]
 plot_fdr <- data_fdr[, c(2:22)]
 plot_p <- data_p[, c(2:22)]
 
-# plot_fdr <- ifelse(data_fdr[, c(2:22)] < 0.1, "*", "")
-# plot_fdr_005 <- ifelse(data_fdr[, c(2:22)] < 0.05, "*", "")
-
 rownames(plot_fdr) <- data_fdr[, 1]
 rownames(plot_data) <- data[, 1]
 rownames(plot_p) <- data_p[, 1]
@@ -149,9 +146,12 @@ plot_data_2[abs(plot_data_2) < 1]  <- 0
 # 1.3 & 2.3 from 1, with cell gaps
 # 3. cluster based on p-value
 plot_p10 <- -log(plot_p, 10)
+plot_fdr10 <- -log(plot_fdr, 10)
 # 4. filter all matrix by FDR < 0.05
 row_dim <- c(3, 5:13, 16:22, 26:29)
 col_dim <- c(1:14, 16)
+# 5. binary
+plot_p_binary0.1 <- ifelse(plot_fdr < 0.1, 1, 0)
 source("~/Documents/INET-work/virus_network/src/gwasHit_cluster_plot.r")
 
 # reorder dendrogram
@@ -162,3 +162,4 @@ source("~/Documents/INET-work/virus_network/src/gwasHit_cluster_plot_reorder.r")
 
 gwas_comm <- read.xlsx("~/workplace/GWAS_list.xlsx", sheet = "community")
 gwas_trait <- read.xlsx("~/workplace/GWAS_list.xlsx", sheet = "trait")
+comm_position <- gwas_comm$index[!gwas_comm$community %in% non_community_list]
