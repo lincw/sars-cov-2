@@ -11,6 +11,7 @@ library(ComplexHeatmap)
 library(circlize) # color used for ComplexHeatmap
 library(seriation)
 library(dendextend)
+library(ctc) # output hclust data as .cdt for java treeview
 ######
 # plot heatmap
 pheatmapPlotBasic <- function(data, main) {
@@ -36,7 +37,7 @@ jaccard <- function(a, b) {
 
 ######
 # The communities used in GWAS trait analysis
-community <- c(8, 145, 316, 364, 377, 415, 525, 571, 692, 731, 891, 926, 1353, 1515, 1627, 1652, 1833, 1882, 2398, 2545, 2769, 2831, 3035, 3205, 3564, 3682, 3941, 4160, 4227)
+community <- c(3682, 2769, 731, 316, 4227, 1353, 4160, 2831, 1833, 2545, 692, 926, 2398, 525, 1882, 1652, 3941, 415, 377, 571)
 
 comm_member <- list()
 for (i in 1:length(community)) {
@@ -53,20 +54,22 @@ for (i in 1:length(community)) {
     }
 }
 
-jac_result_df <- matrix(jac_result, ncol = 29)
+jac_result_df <- matrix(jac_result, ncol = 20)
 rownames(jac_result_df) <- community
 colnames(jac_result_df) <- community
 
-pdf("~/Documents/INET-work/virus_network/figure_results/gwas_trait_jaccard.pdf", width = 5, height = 5)
-pheatmap(jac_result_df, cutree_rows = jac_kmeans, cutree_cols = 8, main = "Jaccard similarity of community membership",
+paletteLength <- 50
+myColor_jac <- colorRampPalette(c("blue", "white", "red"))(paletteLength)
+myBreaks_jac <- c(seq(min(jac_result_df), 0, length.out = ceiling(paletteLength/2) + 1), seq(max(jac_result_df)/paletteLength, max(jac_result_df), length.out = floor(paletteLength/2)))
+
+pdf("~/Documents/INET-work/virus_network/figure_results/gwas_trait_jaccard_v3.pdf", width = 5, height = 5)
+pheatmap(jac_result_df, cutree_rows = 5, cutree_cols = 5, main = "Jaccard similarity of community membership",
+    color = myColor_jac,
+    breaks = myBreaks_jac,
     legend_breaks = c(0, 0.2, 0.4, 0.6, 0.8, 1),
     legend_labels = c("0", "0.2", "0.4", "0.6", "0.8", "score\n"),
     legend = TRUE)
 dev.off()
-
-df <- kmeans(jac_result_df, 8)
-
-write.csv(jac_result_df, file = "/tmp/community_jaccard.csv")
 
 ######
 # extract heatmap from Matthias
@@ -163,3 +166,56 @@ source("~/Documents/INET-work/virus_network/src/gwasHit_cluster_plot_reorder.r")
 gwas_comm <- read.xlsx("~/workplace/GWAS_list.xlsx", sheet = "community")
 gwas_trait <- read.xlsx("~/workplace/GWAS_list.xlsx", sheet = "trait")
 comm_position <- gwas_comm$index[!gwas_comm$community %in% non_community_list]
+
+comm_cluster <- data.frame(
+    community_cluster = c("A", "A",
+        "A", "A",
+        "A", "D",
+        "D", "D",
+        "D", "D",
+        "D",
+        "B",
+        "B", "B",
+        "B", "E", "E",
+        "E", "C", "C"
+    )
+)
+rownames(comm_cluster) <- c("415", "3941",
+        "1652", "377",
+        "571", "2545",
+        "2398", "525",
+        "926", "1882",
+        "692",
+        "1833",
+        "3682", "2769",
+        "316", "4227", "731",
+        "2831", "4160", "1353")
+trait_cluster <- data.frame(
+    trait_cluster = c("I",
+        "I",
+        "I", "II",
+        "III",
+        "IV", "IV",
+        "IV", "II",
+        "IV", "IV",
+        "IV",
+        "III",
+        "II", "II"
+    )
+)
+rownames(trait_cluster) <- c("IBD_UKBS",
+        "T2D_UKBS",
+        "OST_UKBS", "BMIA",
+        "NEUROT_UKB",
+        "HRET", "RET",
+        "ADPN", "PHF",
+        "HC_UKBS", "FAT_UKB",
+        "HYPOTHY_UKBS",
+        "SCZ_UKBS",
+        "HIP",
+        "HEIGHT"
+)
+cluster_color <- list(trait_cluster = c(
+    "I" = "#E6194B", "II" = "#F58231", "III" = "#FFE119", "IV" = "#42D4F4"),
+    community_cluster = c(
+    A = "#800000", B = "#9A6324", C = "#808000", D = "#469990", E = "#000075"))
