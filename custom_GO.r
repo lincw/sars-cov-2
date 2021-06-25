@@ -48,34 +48,10 @@ horf_bp_all <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/h
 horf_mf_all <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/hORFeome_gomf.gmt")
 horf_cc_all <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/hORFeome_gocc.gmt")
 
-horf_bp_noIEA <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/hORFeome_gobp_noIEA.gmt")
-horf_mf_noIEA <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/hORFeome_gomf_noIEA.gmt")
-horf_cc_noIEA <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/hORFeome_gocc_noIEA.gmt")
-
-horf_bp_exp <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/hORFeome_gobp_exp.gmt")
-horf_mf_exp <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/hORFeome_gomf_exp.gmt")
-horf_cc_exp <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/hORFeome_gocc_exp.gmt")
-
-horf_bp_exp_phy <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/hORFeome_gobp_exp_phy.gmt")
-horf_mf_exp_phy <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/hORFeome_gomf_exp_phy.gmt")
-horf_cc_exp_phy <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/hORFeome_gocc_exp_phy.gmt")
-
 # for all others
 bp_all <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/gobp.gmt")
 mf_all <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/gomf.gmt")
 cc_all <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/gocc.gmt")
-
-bp_noIEA <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/gobp_noIEA.gmt")
-mf_noIEA <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/gomf_noIEA.gmt")
-cc_noIEA <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/gocc_noIEA.gmt")
-
-bp_exp <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/gobp_exp.gmt")
-mf_exp <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/gomf_exp.gmt")
-cc_exp <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/gocc_exp.gmt")
-
-bp_exp_phy <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/gobp_exp_phy.gmt")
-mf_exp_phy <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/gomf_exp_phy.gmt")
-cc_exp_phy <- upload_GMT_file(gmtfile = "~/workplace/database/Homo_sapiens/GO/gocc_exp_phy.gmt")
 
 ######
 # load PPI data
@@ -113,235 +89,106 @@ husci_mf <- funcEnrich(husci_node, horf_mf_all, "fdr")
 husci_cc <- funcEnrich(husci_node, horf_cc_all, "fdr")
 husci_all <- list(BP = husci_bp, MF = husci_mf, CC = husci_cc)
 husci_all_df <- do.call(rbind, husci_all)[, c(1:13, 15:19)]
-write.csv(husci_all_df, file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/husci_all_fdr.csv", row.names = F)
+write.csv(husci_all_df, file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/husci_go_fdr.csv", row.names = F)
 ## plot
 husci_all_plot <- toDataFrame(husci_all_df)
-metaPlot(husci_all_plot, "HuSCI vs all ECs")
-ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/husci_fdr_all.pdf")
-
-# based on all evidence codes, IEA excluded
-husci_bp_noIEA <- funcEnrich(husci_node, horf_bp_noIEA, "fdr")
-husci_mf_noIEA <- funcEnrich(husci_node, horf_mf_noIEA, "fdr")
-husci_cc_noIEA <- funcEnrich(husci_node, horf_cc_noIEA, "fdr")
-husci_noIEA <- list(BP = husci_bp_noIEA, MF = husci_mf_noIEA, CC = husci_cc_noIEA)
-husci_noIEA_df <- do.call(rbind, husci_noIEA)[, c(1:13, 15:19)]
-write.csv(husci_noIEA_df, file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/husci_noIEA_fdr.csv", row.names = F)
-## plot
-husci_noIEA_plot <- toDataFrame(husci_noIEA_df)
-metaPlot(husci_noIEA_plot, "HuSCI vs no IEA")
-ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/husci_fdr_noIEA.pdf")
-
-# based on Experimental evidence codes
-husci_bp_exp <- funcEnrich(husci_node, horf_bp_exp, "fdr")
-husci_mf_exp <- funcEnrich(husci_node, horf_mf_exp, "fdr")
-husci_cc_exp <- funcEnrich(husci_node, horf_cc_exp, "fdr") # no significant terms
-husci_exp <- list(BP = husci_bp_exp, MF = husci_mf_exp)
-husci_exp_df <- do.call(rbind, husci_exp)[, c(1:13, 15:19)]
-write.csv(do.call(rbind, husci_exp)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/husci_exp_fdr.csv", row.names = F)
-
-## plot
-husci_exp_plot <- toDataFrame(husci_exp_df)
-metaPlot(husci_exp_plot, "HuSCI vs EXP")
-ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/husci_fdr_exp.pdf")
-
-# based on Experimental evidence codes and phylogenetically-inferred  annotations
-husci_bp_exp_phy <- funcEnrich(husci_node, horf_bp_exp_phy, "fdr")
-husci_mf_exp_phy <- funcEnrich(husci_node, horf_mf_exp_phy, "fdr")
-husci_cc_exp_phy <- funcEnrich(husci_node, horf_cc_exp_phy, "fdr")
-husci_exp_phy <- list(BP = husci_bp_exp_phy, MF = husci_mf_exp_phy, CC = husci_cc_exp_phy)
-husci_exp_phy_df <- do.call(rbind, husci_exp_phy)[, c(1:13, 15:19)]
-write.csv(do.call(rbind, husci_exp_phy)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/husci_exp_phy_fdr.csv", row.names = F)
-
-## plot
-husci_exp_phy_plot <- toDataFrame(husci_exp_phy_df)
-metaPlot(husci_exp_phy_plot, "HuSCI vs EXP PHY")
-ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/husci_exp_phy_fdr.pdf")
+metaPlot(husci_all_plot, "HuSCI")
+ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/husci_go_fdr.pdf")
 
 # 2. Gordon
 # based on Experimental evidence codes
-gordon_bp_exp <- funcEnrich(gordon_node, bp_exp, "fdr")
-gordon_mf_exp <- funcEnrich(gordon_node, mf_exp, "fdr")
-gordon_cc_exp <- funcEnrich(gordon_node, cc_exp, "fdr")
-gordon_exp <- list(BP = gordon_bp_exp, MF = gordon_mf_exp, CC = gordon_cc_exp)
-gordon_exp_df <- do.call(rbind, gordon_exp)[, c(1:13, 15:19)]
-# write.csv(do.call(rbind, gordon_exp)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/gordon_exp_fdr.csv", row.names = F)
+gordon_bp <- funcEnrich(gordon_node, bp_all, "fdr")
+gordon_mf <- funcEnrich(gordon_node, mf_all, "fdr")
+gordon_cc <- funcEnrich(gordon_node, cc_all, "fdr")
+gordon_go <- list(BP = gordon_bp, MF = gordon_mf, CC = gordon_cc)
+gordon_go_df <- do.call(rbind, gordon_go)[, c(1:13, 15:19)]
+write.csv(do.call(rbind, gordon_go)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/gordon_go_fdr.csv", row.names = F)
 
 ## plot
-gordon_exp_plot <- toDataFrame(gordon_exp_df)
-metaPlot(gordon_exp_plot, "gordon vs EXP")
-ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/gordon_fdr_exp.pdf")
-
-# based on Experimental evidence codes and phylogenetically-inferred  annotations
-gordon_bp_exp_phy <- funcEnrich(gordon_node, bp_exp_phy, "fdr")
-gordon_mf_exp_phy <- funcEnrich(gordon_node, mf_exp_phy, "fdr")
-gordon_cc_exp_phy <- funcEnrich(gordon_node, cc_exp_phy, "fdr")
-gordon_exp_phy <- list(BP = gordon_bp_exp_phy, MF = gordon_mf_exp_phy, CC = gordon_cc_exp_phy)
-gordon_exp_phy_df <- do.call(rbind, gordon_exp_phy)[, c(1:13, 15:19)]
-# write.csv(do.call(rbind, gordon_exp_phy)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/gordon_exp_phy_fdr.csv", row.names = F)
-
-## plot
-gordon_exp_phy_plot <- toDataFrame(gordon_exp_phy_df)
-metaPlot(gordon_exp_phy_plot, "gordon vs EXP PHY", 6)
-ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/gordon_fdr_exp_phy.pdf")
+gordon_go_plot <- toDataFrame(gordon_go_df)
+metaPlot(gordon_go_plot, "Gordon et al")
+ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/gordon_go_fdr.pdf")
 
 # 3. Stukalov
 # based on Experimental evidence codes
-stukalov_bp_exp <- funcEnrich(stukalov_node, bp_exp, "fdr")
-stukalov_mf_exp <- funcEnrich(stukalov_node, mf_exp, "fdr")
-stukalov_cc_exp <- funcEnrich(stukalov_node, cc_exp, "fdr")
-stukalov_exp <- list(BP = stukalov_bp_exp, MF = stukalov_mf_exp, CC = stukalov_cc_exp)
-stukalov_exp_df <- do.call(rbind, stukalov_exp)[, c(1:13, 15:19)]
-# write.csv(do.call(rbind, stukalov_exp)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/stukalov_exp_fdr.csv", row.names = F)
+stukalov_bp <- funcEnrich(stukalov_node, bp_all, "fdr")
+stukalov_mf <- funcEnrich(stukalov_node, mf_all, "fdr")
+stukalov_cc <- funcEnrich(stukalov_node, cc_all, "fdr")
+stukalov_go <- list(BP = stukalov_bp, MF = stukalov_mf, CC = stukalov_cc)
+stukalov_go_df <- do.call(rbind, stukalov_go)[, c(1:13, 15:19)]
+write.csv(do.call(rbind, stukalov_go)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/stukalov_go_fdr.csv", row.names = F)
 
 ## plot
-stukalov_exp_plot <- toDataFrame(stukalov_exp_df)
-metaPlot(stukalov_exp_plot, "stukalov vs EXP", 6)
-ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/stukalov_fdr_exp.pdf")
-
-# based on Experimental evidence codes and phylogenetically-inferred  annotations
-stukalov_bp_exp_phy <- funcEnrich(stukalov_node, bp_exp_phy, "fdr")
-stukalov_mf_exp_phy <- funcEnrich(stukalov_node, mf_exp_phy, "fdr")
-stukalov_cc_exp_phy <- funcEnrich(stukalov_node, cc_exp_phy, "fdr")
-stukalov_exp_phy <- list(BP = stukalov_bp_exp_phy, MF = stukalov_mf_exp_phy, CC = stukalov_cc_exp_phy)
-stukalov_exp_phy_df <- do.call(rbind, stukalov_exp_phy)[, c(1:13, 15:19)]
-# write.csv(do.call(rbind, stukalov_exp_phy)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/stukalov_exp_phy_fdr.csv", row.names = F)
-
-## plot
-stukalov_exp_phy_plot <- toDataFrame(stukalov_exp_phy_df)
-metaPlot(stukalov_exp_phy_plot, "stukalov vs EXP PHY", 5)
-ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/stukalov_fdr_exp_phy.pdf")
+stukalov_go_plot <- toDataFrame(stukalov_go_df)
+metaPlot(stukalov_go_plot, "Stukalov et al")
+ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/stukalov_go_fdr.pdf")
 
 # 4. Li
 # based on Experimental evidence codes
-li_bp_exp <- funcEnrich(li_node, bp_exp, "fdr")
-li_mf_exp <- funcEnrich(li_node, mf_exp, "fdr")
-li_cc_exp <- funcEnrich(li_node, cc_exp, "fdr")
-li_exp <- list(BP = li_bp_exp, MF = li_mf_exp, CC = li_cc_exp)
-li_exp_df <- do.call(rbind, li_exp)[, c(1:13, 15:19)]
-# write.csv(do.call(rbind, li_exp)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/li_exp_fdr.csv", row.names = F)
+li_bp <- funcEnrich(li_node, bp_all, "fdr")
+li_mf <- funcEnrich(li_node, mf_all, "fdr")
+li_cc <- funcEnrich(li_node, cc_all, "fdr")
+li_go <- list(BP = li_bp, MF = li_mf, CC = li_cc)
+li_go_df <- do.call(rbind, li_go)[, c(1:13, 15:19)]
+write.csv(do.call(rbind, li_go)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/li_go_fdr.csv", row.names = F)
 
 ## plot
-li_exp_plot <- toDataFrame(li_exp_df)
-metaPlot(li_exp_plot, "li vs EXP", 6)
-ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/li_fdr_exp.pdf")
-
-# based on Experimental evidence codes and phylogenetically-inferred  annotations
-li_bp_exp_phy <- funcEnrich(li_node, bp_exp_phy, "fdr")
-li_mf_exp_phy <- funcEnrich(li_node, mf_exp_phy, "fdr")
-li_cc_exp_phy <- funcEnrich(li_node, cc_exp_phy, "fdr")
-li_exp_phy <- list(BP = li_bp_exp_phy, MF = li_mf_exp_phy, CC = li_cc_exp_phy)
-li_exp_phy_df <- do.call(rbind, li_exp_phy)[, c(1:13, 15:19)]
-# write.csv(do.call(rbind, li_exp_phy)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/li_exp_phy_fdr.csv", row.names = F)
-
-## plot
-li_exp_phy_plot <- toDataFrame(li_exp_phy_df)
-metaPlot(li_exp_phy_plot, "li vs EXP PHY", 6)
-ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/li_fdr_exp_phy.pdf")
+li_go_plot <- toDataFrame(li_go_df)
+metaPlot(li_go_plot, "Li et al")
+ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/li_go_fdr.pdf")
 
 # 5. Nabeel
 # based on Experimental evidence codes
-nabeel_bp_exp <- funcEnrich(nabeel_node, bp_exp, "fdr")
-nabeel_mf_exp <- funcEnrich(nabeel_node, mf_exp, "fdr")
-nabeel_cc_exp <- funcEnrich(nabeel_node, cc_exp, "fdr")
-nabeel_exp <- list(BP = nabeel_bp_exp, MF = nabeel_mf_exp, CC = nabeel_cc_exp)
-nabeel_exp_df <- do.call(rbind, nabeel_exp)[, c(1:13, 15:19)]
-# write.csv(do.call(rbind, nabeel_exp)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/nabeel_exp_fdr.csv", row.names = F)
+nabeel_bp <- funcEnrich(nabeel_node, bp_all, "fdr")
+nabeel_mf <- funcEnrich(nabeel_node, mf_all, "fdr")
+nabeel_cc <- funcEnrich(nabeel_node, cc_all, "fdr")
+nabeel_go <- list(BP = nabeel_bp, MF = nabeel_mf, CC = nabeel_cc)
+nabeel_go_df <- do.call(rbind, nabeel_go)[, c(1:13, 15:19)]
+write.csv(do.call(rbind, nabeel_go)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/nabeel_go_fdr.csv", row.names = F)
 
 ## plot
-nabeel_exp_plot <- toDataFrame(nabeel_exp_df)
-metaPlot(nabeel_exp_plot, "li vs EXP", 6)
-ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/nabeel_fdr_exp.pdf")
-
-# based on Experimental evidence codes and phylogenetically-inferred  annotations
-nabeel_bp_exp_phy <- funcEnrich(nabeel_node, bp_exp_phy, "fdr")
-nabeel_mf_exp_phy <- funcEnrich(nabeel_node, mf_exp_phy, "fdr")
-nabeel_cc_exp_phy <- funcEnrich(nabeel_node, cc_exp_phy, "fdr")
-nabeel_exp_phy <- list(BP = nabeel_bp_exp_phy, MF = nabeel_mf_exp_phy, CC = nabeel_cc_exp_phy)
-nabeel_exp_phy_df <- do.call(rbind, nabeel_exp_phy)[, c(1:13, 15:19)]
-# write.csv(do.call(rbind, nabeel_exp_phy)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/nabeel_exp_phy_fdr.csv", row.names = F)
-
-## plot
-nabeel_exp_phy_plot <- toDataFrame(nabeel_exp_phy_df)
-metaPlot(nabeel_exp_phy_plot, "nabeel vs EXP PHY", 4)
-ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/nabeel_fdr_exp_phy.pdf")
+nabeel_go_plot <- toDataFrame(nabeel_go_df)
+metaPlot(nabeel_go_plot, "Nabeel et al")
+ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/nabeel_go_fdr.pdf")
 
 # 6. Laurent
 # based on Experimental evidence codes
-laurent_bp_exp <- funcEnrich(laurent_node, bp_exp, "fdr")
-laurent_mf_exp <- funcEnrich(laurent_node, mf_exp, "fdr")
-laurent_cc_exp <- funcEnrich(laurent_node, cc_exp, "fdr")
-laurent_exp <- list(BP = laurent_bp_exp, MF = laurent_mf_exp, CC = laurent_cc_exp)
-laurent_exp_df <- do.call(rbind, laurent_exp)[, c(1:13, 15:19)]
-# write.csv(do.call(rbind, laurent_exp)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/laurent_exp_fdr.csv", row.names = F)
+laurent_bp <- funcEnrich(laurent_node, bp_all, "fdr")
+laurent_mf <- funcEnrich(laurent_node, mf_all, "fdr")
+laurent_cc <- funcEnrich(laurent_node, cc_all, "fdr")
+laurent_go <- list(BP = laurent_bp, MF = laurent_mf, CC = laurent_cc)
+laurent_go_df <- do.call(rbind, laurent_go)[, c(1:13, 15:19)]
+write.csv(do.call(rbind, laurent_go)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/laurent_go_fdr.csv", row.names = F)
 
 ## plot
-laurent_exp_plot <- toDataFrame(laurent_exp_df)
-metaPlot(laurent_exp_plot, "li vs EXP", 6)
-ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/laurent_fdr_exp.pdf")
-
-# based on Experimental evidence codes and phylogenetically-inferred  annotations
-laurent_bp_exp_phy <- funcEnrich(laurent_node, bp_exp_phy, "fdr")
-laurent_mf_exp_phy <- funcEnrich(laurent_node, mf_exp_phy, "fdr")
-laurent_cc_exp_phy <- funcEnrich(laurent_node, cc_exp_phy, "fdr")
-laurent_exp_phy <- list(BP = laurent_bp_exp_phy, MF = laurent_mf_exp_phy, CC = laurent_cc_exp_phy)
-laurent_exp_phy_df <- do.call(rbind, laurent_exp_phy)[, c(1:13, 15:19)]
-# write.csv(do.call(rbind, laurent_exp_phy)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/laurent_exp_phy_fdr.csv", row.names = F)
-
-## plot
-laurent_exp_phy_plot <- toDataFrame(laurent_exp_phy_df)
-metaPlot(laurent_exp_phy_plot, "laurent vs EXP PHY", 4)
-ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/laurent_fdr_exp_phy.pdf")
+laurent_go_plot <- toDataFrame(laurent_go_df)
+metaPlot(laurent_go_plot, "Laurent et al")
+ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/laurent_go_fdr.pdf")
 
 # 7. St-Germain
 # based on Experimental evidence codes
-stgermain_bp_exp <- funcEnrich(stgermain_node, bp_exp, "fdr")
-stgermain_mf_exp <- funcEnrich(stgermain_node, mf_exp, "fdr")
-stgermain_cc_exp <- funcEnrich(stgermain_node, cc_exp, "fdr")
-stgermain_exp <- list(BP = stgermain_bp_exp, MF = stgermain_mf_exp, CC = stgermain_cc_exp)
-stgermain_exp_df <- do.call(rbind, stgermain_exp)[, c(1:13, 15:19)]
-# write.csv(do.call(rbind, stgermain_exp)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/stgermain_exp_fdr.csv", row.names = F)
+stgermain_bp <- funcEnrich(stgermain_node, bp_all, "fdr")
+stgermain_mf <- funcEnrich(stgermain_node, mf_all, "fdr")
+stgermain_cc <- funcEnrich(stgermain_node, cc_all, "fdr")
+stgermain_go <- list(BP = stgermain_bp, MF = stgermain_mf, CC = stgermain_cc)
+stgermain_go_df <- do.call(rbind, stgermain_go)[, c(1:13, 15:19)]
+write.csv(do.call(rbind, stgermain_go)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/stgermain_go_fdr.csv", row.names = F)
 
 ## plot
-stgermain_exp_plot <- toDataFrame(stgermain_exp_df)
-metaPlot(stgermain_exp_plot, "stgermain vs EXP", 5)
-ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/stgermain_fdr_exp.pdf")
-
-# based on Experimental evidence codes and phylogenetically-inferred  annotations
-stgermain_bp_exp_phy <- funcEnrich(stgermain_node, bp_exp_phy, "fdr")
-stgermain_mf_exp_phy <- funcEnrich(stgermain_node, mf_exp_phy, "fdr")
-stgermain_cc_exp_phy <- funcEnrich(stgermain_node, cc_exp_phy, "fdr")
-stgermain_exp_phy <- list(BP = stgermain_bp_exp_phy, MF = stgermain_mf_exp_phy, CC = stgermain_cc_exp_phy)
-stgermain_exp_phy_df <- do.call(rbind, stgermain_exp_phy)[, c(1:13, 15:19)]
-# write.csv(do.call(rbind, stgermain_exp_phy)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/stgermain_exp_phy_fdr.csv", row.names = F)
-
-## plot
-stgermain_exp_phy_plot <- toDataFrame(stgermain_exp_phy_df)
-metaPlot(stgermain_exp_phy_plot, "St-Germain vs EXP PHY", 4)
-ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/stgermain_fdr_exp_phy.pdf")
+stgermain_go_plot <- toDataFrame(stgermain_go_df)
+metaPlot(stgermain_go_plot, "St-Germain et al")
+ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/stgermain_go_fdr.pdf")
 
 # 8. Samavarchi
 # based on Experimental evidence codes
-samavarchi_bp_exp <- funcEnrich(samavarchi_node, bp_exp, "fdr")
-samavarchi_mf_exp <- funcEnrich(samavarchi_node, mf_exp, "fdr")
-samavarchi_cc_exp <- funcEnrich(samavarchi_node, cc_exp, "fdr")
-samavarchi_exp <- list(BP = samavarchi_bp_exp, MF = samavarchi_mf_exp, CC = samavarchi_cc_exp)
-samavarchi_exp_df <- do.call(rbind, samavarchi_exp)[, c(1:13, 15:19)]
-# write.csv(do.call(rbind, samavarchi_exp)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/samavarchi_exp_fdr.csv", row.names = F)
+samavarchi_bp <- funcEnrich(samavarchi_node, bp_all, "fdr")
+samavarchi_mf <- funcEnrich(samavarchi_node, mf_all, "fdr")
+samavarchi_cc <- funcEnrich(samavarchi_node, cc_all, "fdr")
+samavarchi_go <- list(BP = samavarchi_bp, MF = samavarchi_mf, CC = samavarchi_cc)
+samavarchi_go_df <- do.call(rbind, samavarchi_go)[, c(1:13, 15:19)]
+write.csv(do.call(rbind, samavarchi_go)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/samavarchi_go_fdr.csv", row.names = F)
 
 ## plot
-samavarchi_exp_plot <- toDataFrame(samavarchi_exp_df)
-metaPlot(samavarchi_exp_plot, "samavarchi vs EXP", 5)
-ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/samavarchi_fdr_exp.pdf")
-
-# based on Experimental evidence codes and phylogenetically-inferred  annotations
-samavarchi_bp_exp_phy <- funcEnrich(samavarchi_node, bp_exp_phy, "fdr")
-samavarchi_mf_exp_phy <- funcEnrich(samavarchi_node, mf_exp_phy, "fdr")
-samavarchi_cc_exp_phy <- funcEnrich(samavarchi_node, cc_exp_phy, "fdr")
-samavarchi_exp_phy <- list(BP = samavarchi_bp_exp_phy, MF = samavarchi_mf_exp_phy, CC = samavarchi_cc_exp_phy)
-samavarchi_exp_phy_df <- do.call(rbind, samavarchi_exp_phy)[, c(1:13, 15:19)]
-# write.csv(do.call(rbind, samavarchi_exp_phy)[, c(1:13, 15:19)], file = "~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/samavarchi_exp_phy_fdr.csv", row.names = F)
-
-## plot
-samavarchi_exp_phy_plot <- toDataFrame(samavarchi_exp_phy_df)
-metaPlot(samavarchi_exp_phy_plot, "Samavarchi vs EXP PHY", 6)
-ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/samavarchi_fdr_exp_phy.pdf")
+samavarchi_go_plot <- toDataFrame(samavarchi_go_df)
+metaPlot(samavarchi_go_plot, "Samavarchi et al")
+ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/samavarchi_go_fdr.pdf")
