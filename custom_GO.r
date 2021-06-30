@@ -207,20 +207,21 @@ ggsave("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures
 save.image("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/custom_GO_2706.RData")
 
 ######
-# exclude above, using gProfiler web server
-husci_gprofiler <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/husci_go_fdr_3006.csv", skip = 18, header = T)
-husci_gprofiler <- husci_gprofiler[, c(1:11)]
+# exclude above, using gProfiler web server, via Benny
+husci_gprofiler <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/gProfiler_hsapiens_6-30-2021_3-27-18 PM__intersections_NO_IEA.csv", skip = 17, header = T)
+husci_gprofiler <- husci_gprofiler[, c(1:10)]
 
-husci_toplot3_fdr005 <- husci_gprofiler[with(husci_gprofiler, term_size <= 1000 & term_size >= 5 & intersection_size >= 2 & adjusted_p_value <= 0.05), c("term_name", "observeRatio")]
-names(husci_toplot3_fdr005) <- c("term", "observeRatio")
-husci_toplot3_fdr01 <- husci_gprofiler[with(husci_gprofiler, term_size <= 1000 & term_size >= 5 & intersection_size >= 3), c("term_name", "observeRatio")]
-names(husci_toplot3_fdr01) <- c("term", "observeRatio")
+husci_toPlot <- data.frame(
+    term = paste0(husci_gprofiler$source, "_", husci_gprofiler[, 2]),
+    query = husci_gprofiler[, 8] / husci_gprofiler[, 7],
+    background = husci_gprofiler[, 6] / husci_gprofiler[, 9],
+    observeRatio = (husci_gprofiler[, 8] / husci_gprofiler[, 7]) / (husci_gprofiler[, 6] / husci_gprofiler[, 9])
+)
 
-husci_toplot4_fdr01 <- husci_gprofiler[with(husci_gprofiler, term_size <= 1000 & term_size >= 5 & intersection_size >= 4), c("term_name", "observeRatio")]
-names(husci_toplot4_fdr01) <- c("term", "observeRatio")
 
-pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/HuSCI_GO_gProfiler_web.pdf")
-metaPlot(husci_toplot3_fdr005, "1000 >= IS >= 3, fdr < 0.05")
-metaPlot(husci_toplot3_fdr01, "1000 >= IS >= 3, fdr < 0.1")
-# metaPlot(husci_toplot4_fdr01, "1000 >= IS >= 4, fdr < 0.1")
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/HuSCI_GO_gProfiler_Benny.pdf")
+metaPlot(husci_toPlot, "no IEA")
+metaPlot(husci_toPlot[grepl("GO", husci_toPlot$term), ], "no IEA, GO only")
+metaPlot(husci_toPlot[husci_gprofiler[, 8] > 2,], "no IEA, term_size > 2")
+metaPlot(husci_toPlot[grepl("GO", husci_toPlot$term) & husci_gprofiler[, 8] > 2, ], "no IEA, GO only\nterm_size > 2")
 dev.off()
