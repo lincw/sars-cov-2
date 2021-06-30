@@ -1,0 +1,637 @@
+---
+title: "SARS-CoV-2 genome comparison between Roth and INET"
+author: "Lin, Chung-wen"
+date: "Created 6 Nov, 2020, last compiled on `r format(Sys.time(), '%d %b, %Y')`"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+---
+# Introduction
+The reference genome used by Roth and INET is NC_045512.2 [(https://www.ncbi.nlm.nih.gov/nuccore/NC_045512)](https://www.ncbi.nlm.nih.gov/nuccore/NC_045512).
+However, the annotation used by INET is based on the published data by Aiping Wu et al., (2020) [(https://doi.org/10.1016/j.chom.2020.02.001)](https://doi.org/10.1016/j.chom.2020.02.001).
+Therefore the "ORF14" only shown in INET dataset.
+
+## Code for fasta extraction and translation
+
+  > this works for most viral cds, but the cleavage position requires manual modify.
+  > this will not work for peptide sequence extraction!
+
+```{bash eval = FALSE, purl = FALSE}
+bedtools getfasta -fi ~/Documents/INET-work/virus_network/sources/SARS2_genome/NC_045512.2.fasta -bed ~/Documents/INET-work/virus_network/sources/SARS2_genome/NC_045512.2.modified.gff -fo NC_045512.2.cds.fasta -name
+faTrans SARS2_cds.fa SARS2_pep.fa -stop
+```
+
+## loading sequence information
+```{r echo = FALSE, include = FALSE}
+library(msa)
+library(seqinr)
+library(ape)
+library(phytools)
+library(stringr)
+library(DECIPHER)
+```
+
+## CDS sequences
+```{r}
+# CDS
+sars2_orf_nc0455512 <- readDNAStringSet("~/Documents/INET-work/virus_network/sources/SARS2_genome/NC_045512.2.cds.fasta")
+sars2_orf_inet <- readDNAStringSet("~/Documents/INET-work/virus_network/text_results/SARS-CoV-2_orf.fa")
+sars2_orf_roth <- readDNAStringSet("~/Documents/INET-work/virus_network/references/Roth_fBFG/SARS2_cds.fa")
+nc_name <- names(sars2_orf_nc0455512)
+names(sars2_orf_nc0455512) <- str_split_fixed(nc_name, "::", n = 2)[, 1]
+names(sars2_orf_inet) <- c(paste0("i-nsp", c(1:10, 12:16)), "i-S", "i-ORF3a", "i-ORF3b", "i-E", "i-M", paste0("i-ORF", c("6", "7a", "7b", "8", "9b")), "i-N", "i-ORF14")
+names(sars2_orf_roth) <- c(paste0("r-nsp", c(1:10, 12:16)), "r-S-paster", "r-S-rini", "r-S-roth", "r-S-24nt-1", "r-S-24nt-2", "r-ORF3a", "r-ORF3b", "r-E", "r-E-27nt", "r-M", paste0("r-ORF", c("6", "7a", "7b", "8")), "r-N-paster", "r-N-rini", "r-N-roth", "r-ORF9b", "r-ORF9bwu", "r-ORF10wu")
+
+# peptide
+sars2_pep_nc045512 <- readAAStringSet("~/Documents/INET-work/virus_network/sources/SARS2_genome/NC_045512.2.pep.fasta")
+sars2_pep_inet <- readAAStringSet("~/Documents/INET-work/virus_network/text_results/SARS-CoV-2_peptide.fa")
+sars2_pep_roth <- readAAStringSet("~/Documents/INET-work/virus_network/references/Roth_fBFG/SARS2_pep.fa")
+names(sars2_pep_nc045512) <- c(paste0("nsp", c(1:10, 12:16)), "S", "ORF3a", "E", "M", "ORF6", "ORF7a", "ORF7b", "ORF8", "N", "ORF10")
+names(sars2_pep_inet) <- c(paste0("i-nsp", c(1:10, 12:16)), "i-S", "i-ORF3a", "i-ORF3b", "i-E", "i-M", paste0("i-ORF", c("6", "7a", "7b", "8", "9b")), "i-N", "i-ORF14")
+names(sars2_pep_roth) <- c(paste0("r-nsp", c(1:10, 12:16)), "r-S-paster", "r-S-rini", "r-S-roth", "r-S-24nt-1", "r-S-24nt-2", "r-ORF3a", "r-ORF3b", "r-E", "r-E-27nt", "r-M", paste0("r-ORF", c("6", "7a", "7b", "8")), "r-N-paster", "r-N-rini", "r-N-roth", "r-ORF9b", "r-ORF9bwu", "r-ORF10wu")
+
+dist <- function(x){
+    data <- stringDist(x, method = "levenshtein")
+    return(as.matrix(data))
+}
+```
+
+# ORF sequence alignment (CDS)
+The result was shown with the Levenshtein distance, which measuring the difference between two sequences.
+"O" means they were identical.
+
+## Non-structural proteins
+### nsp1
+```{r}
+nsp1 <- c(sars2_orf_nc0455512[2], sars2_orf_inet[1], sars2_orf_roth[1])
+# BrowseSeqs(nsp1)
+# nsp1_msa <- msa(nsp1, "ClustalW")
+# print(nsp1_msa, show = "complete", type = "upperlower", thresh = c(15, 0))
+dist(nsp1)
+```
+
+### nsp2
+```{r}
+nsp2 <- c(sars2_orf_nc0455512[3], sars2_orf_inet[2], sars2_orf_roth[2])
+# nsp2_msa <- msa(nsp2, "ClustalW")
+# print(nsp2_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp2)
+```
+
+### nsp3
+```{r}
+nsp3 <- c(sars2_orf_nc0455512[4], sars2_orf_inet[3], sars2_orf_roth[3])
+# nsp3_msa <- msa(nsp3, "ClustalW")
+# print(nsp3_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp3)
+```
+
+### nsp4
+```{r}
+nsp4 <- c(sars2_orf_nc0455512[5], sars2_orf_inet[4], sars2_orf_roth[4])
+# nsp4_msa <- msa(nsp4, "ClustalW")
+# print(nsp4_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp4)
+```
+
+### nsp5
+```{r}
+nsp5 <- c(sars2_orf_nc0455512[6], sars2_orf_inet[5], sars2_orf_roth[5])
+# nsp5_msa <- msa(nsp5, "ClustalW")
+# print(nsp5_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp5)
+```
+
+### nsp6
+```{r}
+nsp6 <- c(sars2_orf_nc0455512[7], sars2_orf_inet[6], sars2_orf_roth[6])
+# nsp6_msa <- msa(nsp6, "ClustalW")
+# print(nsp6_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp6)
+```
+
+### nsp7
+```{r}
+nsp7 <- c(sars2_orf_nc0455512[8], sars2_orf_inet[7], sars2_orf_roth[7])
+# nsp7_msa <- msa(nsp7, "ClustalW")
+# print(nsp7_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp7)
+```
+
+### nsp8
+```{r}
+nsp8 <- c(sars2_orf_nc0455512[9], sars2_orf_inet[8], sars2_orf_roth[8])
+# nsp8_msa <- msa(nsp8, "ClustalW")
+# print(nsp8_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp8)
+```
+
+### nsp9
+```{r}
+nsp9 <- c(sars2_orf_nc0455512[10], sars2_orf_inet[9], sars2_orf_roth[9])
+# nsp9_msa <- msa(nsp9, "ClustalW")
+# print(nsp9_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp9)
+```
+
+### nsp10
+```{r}
+nsp10 <- c(sars2_orf_nc0455512[11], sars2_orf_inet[10], sars2_orf_roth[10])
+# nsp10_msa <- msa(nsp10, "ClustalW")
+# print(nsp10_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp10)
+```
+
+### nsp12
+```{r}
+nsp12 <- c(sars2_orf_nc0455512[12], sars2_orf_inet[11], sars2_orf_roth[11])
+# nsp12_msa <- msa(nsp12, "ClustalW")
+# print(nsp12_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp12)
+```
+
+### nsp13
+```{r}
+nsp13 <- c(sars2_orf_nc0455512[13], sars2_orf_inet[12], sars2_orf_roth[12])
+# nsp13_msa <- msa(nsp13, "ClustalW")
+# print(nsp13_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp13)
+```
+
+### nsp14
+```{r}
+nsp14 <- c(sars2_orf_nc0455512[14], sars2_orf_inet[13], sars2_orf_roth[13])
+# nsp14_msa <- msa(nsp14, "ClustalW")
+# print(nsp14_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp14)
+```
+
+### nsp15
+```{r}
+nsp15 <- c(sars2_orf_nc0455512[15], sars2_orf_inet[14], sars2_orf_roth[14])
+# nsp15_msa <- msa(nsp15, "ClustalW")
+# print(nsp15_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp15)
+```
+
+### nsp16
+```{r}
+nsp16 <- c(sars2_orf_nc0455512[16], sars2_orf_inet[15], sars2_orf_roth[15])
+# nsp16_msa <- msa(nsp16, "ClustalW")
+# print(nsp16_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp16)
+```
+
+## Structural proteins
+### Spike protein (S)
+```{r}
+s <- c(sars2_orf_nc0455512[18], sars2_orf_inet[16], sars2_orf_roth[16:20])
+# s_msa <- msa(s, "ClustalW")
+# print(s_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(s)
+```
+
+### Envelop protein (E)
+```{r}
+e <- c(sars2_orf_nc0455512[20], sars2_orf_inet[19], sars2_orf_roth[23:24])
+# e_msa <- msa(e, "ClustalW")
+# print(e_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(e)
+```
+
+### Membrane protein (M)
+```{r}
+m <- c(sars2_orf_nc0455512[21], sars2_orf_inet[20], sars2_orf_roth[25])
+# m_msa <- msa(m, "ClustalW")
+# print(m_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(m)
+```
+
+### Nucleocapsid protein (N)
+```{r}
+n <- c(sars2_orf_nc0455512[26], sars2_orf_inet[26], sars2_orf_roth[30:32])
+# n_msa <- msa(n, "ClustalW")
+# print(n_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(n)
+```
+
+## Accessory protein
+### ORF3a
+```{r}
+orf3a <- c(sars2_orf_nc0455512[19], sars2_orf_inet[17], sars2_orf_roth[21])
+# orf3a_msa <- msa(orf3a, "ClustalW")
+# print(orf3a_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(orf3a)
+```
+
+### ORF3b
+```{r}
+orf3b <- c(sars2_orf_inet[18], sars2_orf_roth[22])
+# s_msa <- msa(orf3b, "ClustalW")
+# print(s_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(orf3b)
+```
+
+### ORF6
+```{r}
+orf6 <- c(sars2_orf_nc0455512[22], sars2_orf_inet[21], sars2_orf_roth[26])
+# orf6_msa <- msa(orf6, "ClustalW")
+# print(orf6_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(orf6)
+```
+
+### ORF7a
+```{r}
+orf7a <- c(sars2_orf_nc0455512[23], sars2_orf_inet[22], sars2_orf_roth[27])
+# orf7a_msa <- msa(orf7a, "ClustalW")
+# print(orf7a_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(orf7a)
+```
+
+### ORF7b
+```{r}
+orf7b <- c(sars2_orf_nc0455512[24], sars2_orf_inet[23], sars2_orf_roth[28])
+# orf7b_msa <- msa(orf7b, "ClustalW")
+# print(orf7b_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(orf7b)
+```
+
+### ORF8
+```{r}
+orf8 <- c(sars2_orf_nc0455512[25], sars2_orf_inet[24], sars2_orf_roth[29])
+# orf8_msa <- msa(orf8, "ClustalW")
+# print(orf8_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(orf8)
+```
+
+### ORF9b, not found in NC_045512.2!
+```{r}
+orf9b <- c(sars2_orf_inet[25], sars2_orf_roth[33:34])
+# orf9b_msa <- msa(orf9b, "ClustalW")
+# print(orf9b_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(orf9b)
+```
+
+### ORF10? ORF14?
+```{r}
+orf10 <- c(sars2_orf_nc0455512[27], sars2_orf_inet[27], sars2_orf_roth[35])
+# orf10_msa <- msa(orf10, "ClustalW")
+# print(orf10_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(orf10)
+```
+
+# Peptide sequence alignment (protein)
+The result was shown with the Levenshtein distance, which measuring the difference between two sequences.
+"O" means they were identical.
+
+## Non-structural proteins
+### nsp1
+```{r}
+nsp1 <- c(sars2_pep_nc045512[1], sars2_pep_inet[1], sars2_pep_roth[1])
+# BrowseSeqs(nsp1)
+nsp1_msa <- msa(nsp1, "ClustalW")
+msaPrettyPrint(nsp1_msa, askForOverwrite = FALSE)
+dist(nsp1)
+```
+
+### nsp2
+```{r}
+nsp2 <- c(sars2_pep_nc045512[2], sars2_pep_inet[2], sars2_pep_roth[2])
+nsp2_msa <- msa(nsp2, "ClustalW")
+msaPrettyPrint(nsp2_msa, askForOverwrite = FALSE)
+# print(nsp2_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp2)
+```
+
+### nsp3
+```{r}
+nsp3 <- c(sars2_pep_nc045512[3], sars2_pep_inet[3], sars2_pep_roth[3])
+nsp3_msa <- msa(nsp3, "ClustalW")
+msaPrettyPrint(nsp3_msa, askForOverwrite = FALSE)
+# print(nsp3_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp3)
+```
+
+### nsp4
+```{r}
+nsp4 <- c(sars2_pep_nc045512[4], sars2_pep_inet[4], sars2_pep_roth[4])
+nsp4_msa <- msa(nsp4, "ClustalW")
+msaPrettyPrint(nsp4_msa, askForOverwrite = FALSE)
+# print(nsp4_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp4)
+```
+
+### nsp5
+```{r}
+nsp5 <- c(sars2_pep_nc045512[5], sars2_pep_inet[5], sars2_pep_roth[5])
+nsp5_msa <- msa(nsp5, "ClustalW")
+msaPrettyPrint(nsp5_msa, askForOverwrite = FALSE)
+# print(nsp5_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp5)
+```
+
+### nsp6
+```{r}
+nsp6 <- c(sars2_pep_nc045512[6], sars2_pep_inet[6], sars2_pep_roth[6])
+nsp6_msa <- msa(nsp6, "ClustalW")
+msaPrettyPrint(nsp6_msa, askForOverwrite = FALSE)
+# print(nsp6_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp6)
+```
+
+### nsp7
+```{r}
+nsp7 <- c(sars2_pep_nc045512[7], sars2_pep_inet[7], sars2_pep_roth[7])
+nsp7_msa <- msa(nsp7, "ClustalW")
+msaPrettyPrint(nsp7_msa, askForOverwrite = FALSE)
+# print(nsp7_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp7)
+```
+
+### nsp8
+```{r}
+nsp8 <- c(sars2_pep_nc045512[8], sars2_pep_inet[8], sars2_pep_roth[8])
+nsp8_msa <- msa(nsp8, "ClustalW")
+msaPrettyPrint(nsp8_msa, askForOverwrite = FALSE)
+# print(nsp8_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp8)
+```
+
+### nsp9
+```{r}
+nsp9 <- c(sars2_pep_nc045512[9], sars2_pep_inet[9], sars2_pep_roth[9])
+nsp9_msa <- msa(nsp9, "ClustalW")
+msaPrettyPrint(nsp9_msa, askForOverwrite = FALSE)
+# print(nsp9_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp9)
+```
+
+### nsp10
+```{r}
+nsp10 <- c(sars2_pep_nc045512[10], sars2_pep_inet[10], sars2_pep_roth[10])
+nsp10_msa <- msa(nsp10, "ClustalW")
+msaPrettyPrint(nsp10_msa, askForOverwrite = FALSE)
+# print(nsp10_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp10)
+```
+
+### nsp12
+```{r}
+nsp12 <- c(sars2_pep_nc045512[11], sars2_pep_inet[11], sars2_pep_roth[11])
+nsp12_msa <- msa(nsp12, "ClustalW")
+msaPrettyPrint(nsp12_msa, askForOverwrite = FALSE)
+# print(nsp12_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp12)
+```
+
+### nsp13
+```{r}
+nsp13 <- c(sars2_pep_nc045512[12], sars2_pep_inet[12], sars2_pep_roth[12])
+nsp13_msa <- msa(nsp13, "ClustalW")
+msaPrettyPrint(nsp13_msa, askForOverwrite = FALSE)
+# print(nsp13_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp13)
+```
+
+### nsp14
+```{r}
+nsp14 <- c(sars2_pep_nc045512[13], sars2_pep_inet[13], sars2_pep_roth[13])
+nsp14_msa <- msa(nsp14, "ClustalW")
+msaPrettyPrint(nsp14_msa, askForOverwrite = FALSE)
+# print(nsp14_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp14)
+```
+
+### nsp15
+```{r}
+nsp15 <- c(sars2_pep_nc045512[14], sars2_pep_inet[14], sars2_pep_roth[14])
+nsp15_msa <- msa(nsp15, "ClustalW")
+msaPrettyPrint(nsp15_msa, askForOverwrite = FALSE)
+# print(nsp15_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp15)
+```
+
+### nsp16
+```{r}
+nsp16 <- c(sars2_pep_nc045512[15], sars2_pep_inet[15], sars2_pep_roth[15])
+nsp16_msa <- msa(nsp16, "ClustalW")
+msaPrettyPrint(nsp16_msa, askForOverwrite = FALSE)
+# print(nsp16_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(nsp16)
+```
+
+## Structural proteins
+### Spike protein (S)
+```{r}
+s <- c(sars2_pep_nc045512[16], sars2_pep_inet[16], sars2_pep_roth[16:20])
+s_msa <- msa(s, "ClustalW")
+msaPrettyPrint(s_msa, askForOverwrite = FALSE)
+# print(s_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(s)
+```
+
+### Envelop protein (E)
+```{r}
+e <- c(sars2_pep_nc045512[18], sars2_pep_inet[19], sars2_pep_roth[23:24])
+e_msa <- msa(e, "ClustalW")
+msaPrettyPrint(e_msa, askForOverwrite = FALSE)
+# print(e_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(e)
+```
+
+### Membrane protein (M)
+```{r}
+m <- c(sars2_pep_nc045512[19], sars2_pep_inet[20], sars2_pep_roth[25])
+m_msa <- msa(m, "ClustalW")
+msaPrettyPrint(m_msa, askForOverwrite = FALSE)
+# print(m_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(m)
+```
+
+### Nucleocapsid protein (N)
+```{r}
+n <- c(sars2_pep_nc045512[24], sars2_pep_inet[26], sars2_pep_roth[30:32])
+n_msa <- msa(n, "ClustalW")
+msaPrettyPrint(n_msa, askForOverwrite = FALSE)
+# print(n_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(n)
+```
+
+## Accessory protein
+### ORF3a
+```{r}
+orf3a <- c(sars2_pep_nc045512[17], sars2_pep_inet[17], sars2_pep_roth[21])
+orf3a_msa <- msa(orf3a, "ClustalW")
+msaPrettyPrint(orf3a_msa, askForOverwrite = FALSE)
+# print(orf3a_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(orf3a)
+```
+
+### ORF3b
+not found in SARS-CoV-2 reference genome!?
+```{r}
+orf3b <- c(sars2_pep_inet[18], sars2_pep_roth[22])
+orf3b_msa <- msa(orf3b, "ClustalW")
+msaPrettyPrint(orf3b_msa, askForOverwrite = FALSE)
+# print(s_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(orf3b)
+```
+
+### ORF6
+```{r}
+orf6 <- c(sars2_pep_nc045512[20], sars2_pep_inet[21], sars2_pep_roth[26])
+orf6_msa <- msa(orf6, "ClustalW")
+msaPrettyPrint(orf6_msa, askForOverwrite = FALSE)
+# print(orf6_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(orf6)
+```
+
+### ORF7a
+```{r}
+orf7a <- c(sars2_pep_nc045512[21], sars2_pep_inet[22], sars2_pep_roth[27])
+orf7a_msa <- msa(orf7a, "ClustalW")
+msaPrettyPrint(orf7a_msa, askForOverwrite = FALSE)
+# print(orf7a_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(orf7a)
+```
+
+### ORF7b
+```{r}
+orf7b <- c(sars2_pep_nc045512[22], sars2_pep_inet[23], sars2_pep_roth[28])
+orf7b_msa <- msa(orf7b, "ClustalW")
+msaPrettyPrint(orf7b_msa, askForOverwrite = FALSE)
+# print(orf7b_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(orf7b)
+```
+
+### ORF8
+```{r}
+orf8 <- c(sars2_pep_nc045512[23], sars2_pep_inet[24], sars2_pep_roth[29])
+orf8_msa <- msa(orf8, "ClustalW")
+msaPrettyPrint(orf8_msa, askForOverwrite = FALSE)
+# print(orf8_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(orf8)
+```
+
+### ORF9b + ORF10 + ORF14, not found in NC_045512.2!
+```{r}
+orf9b <- c(sars2_pep_inet[25], sars2_pep_roth[33:34], sars2_pep_nc045512[25], sars2_pep_inet[27], sars2_pep_roth[35])
+orf9b_msa <- msa(orf9b, "ClustalW")
+msaPrettyPrint(orf9b_msa, askForOverwrite = FALSE)
+# print(orf9b_msa, show = "complete", type = "Biostrings", thresh = c(100, 50))
+dist(orf9b)
+```
+
+## Found another more proper method
+
+  > https://www.biostars.org/p/15688/
+
+Unfortunatly this is not really fit my request.
+Therefore the forloop function is used now.
+
+```{r echo = FALSE}
+seq1 <- read.fasta("~/Documents/INET-work/virus_network/text_results/SARS-CoV-2_peptide.fa")
+seq2 <- read.fasta("~/Documents/INET-work/virus_network/references/Roth_fBFG/SARS2_pep.fa")
+seq3 <- read.fasta("~/Documents/INET-work/virus_network/sources/SARS2_genome/NC_045512.2.pep.fasta")
+```
+
+```{r eval = FALSE}
+seq1string <- toupper(c2s(seq1[[1]]))
+seq2string <- toupper(c2s(seq2[[1]]))
+# 1- 1st idea
+# sapply(seq2, function(x) pairwiseAlignment(toupper(c2s(x)), seq1string))
+
+# 2- better idea
+convert_then_align <- function(a, ref_seq){
+  seq_string <- toupper(c2s(a))
+  return(pairwiseAlignment(seq_string, ref_seq))
+}
+# sapply(seq2, convert_then_align, seq1string)
+
+# 3- after 2-
+align_from_index <- function(sequences, index.a, index.b){
+  seq1 <- toupper(c2s(sequences[index.a]))
+  seq2 <- toupper(c2s(sequences[index.b]))
+  return( pairwiseAlignment(seq1, seq2) )
+}
+# the following code is not understanding!
+# sequences <- c(seq1, seq2)
+# all_pairs <- combn(1:length(sequences), 2)
+res <- apply(all_pairs, 2, function(indices) align_from_index(sequences, indices[1], indices[2]))
+attributes(res) <- attributes(dist(1:length(sequences)))
+res <- as.matrix(res)
+```
+
+because I don't full understand the ref code, the only option is coding myself.
+```{r}
+library(pheatmap)
+seq1_list <- list()
+seq2_list <- list()
+seq3_list <- list()
+
+for (i in 1:length(seq1)) {
+    seq1_list[i] <- toupper(c2s(seq1[[i]]))
+}
+for (i in 1:length(seq2)) {
+    seq2_list[i] <- toupper(c2s(seq2[[i]]))
+}
+for (i in 1:length(seq3)) {
+    seq3_list[i] <- toupper(c2s(seq3[[i]]))
+}
+```
+
+### compare between INET and Roth
+```{r}
+score1_2 <- c()
+for (i in 1:length(seq1)) {
+    for (j in 1:length(seq2)) {
+        # align <- pairwiseAlignment(seq1[[i]], seq2[[j]])
+        score1_2 <- c(score1_2, stringDist(AAStringSet(c(seq1_list[[i]], seq2_list[[j]]))))
+    }
+}
+score1_2_matrix <- as.data.frame(matrix(score1_2, nrow = 35))
+names(score1_2_matrix) <- c(paste0("i-nsp", c(1:10, 12:16)), "i-S", "i-ORF3a", "i-ORF3b", "i-E", "i-M", paste0("i-ORF", c("6", "7a", "7b", "8", "9b")), "i-N", "i-ORF14")
+row.names(score1_2_matrix) <- c(paste0("r-nsp", c(1:10, 12:16)), "r-S-paster", "r-S-rini", "r-S-roth", "r-S-24nt-1", "r-S-24nt-2", "r-ORF3a", "r-ORF3b", "r-E", "r-E-27nt", "r-M", paste0("r-ORF", c("6", "7a", "7b", "8")), "r-N-paster", "r-N-rini", "r-N-roth", "r-ORF9b", "r-ORF9bwu", "r-ORF10wu")
+pheatmap(log(score1_2_matrix + 1, 10), cluster_col = FALSE, cluster_row = FALSE,
+         main = "Amino acid alignment between INET and Roth",
+         display_numbers = TRUE,
+         number_format = "%.0f")
+```
+
+### compare between INET and Ref
+```{r}
+score1_3 <- c()
+for (i in 1:length(seq1)) {
+    for (j in 1:length(seq3)) {
+        # align <- pairwiseAlignment(seq1[[i]], seq2[[j]])
+        score1_3 <- c(score1_3, stringDist(AAStringSet(c(seq1_list[[i]], seq3_list[[j]]))))
+    }
+}
+score1_3_matrix <- as.data.frame(matrix(score1_3, nrow = 25))
+names(score1_3_matrix) <- c(paste0("i-nsp", c(1:10, 12:16)), "i-S", "i-ORF3a", "i-ORF3b", "i-E", "i-M", paste0("i-ORF", c("6", "7a", "7b", "8", "9b")), "i-N", "i-ORF14")
+row.names(score1_3_matrix) <- c(paste0("nsp", c(1:10, 12:16)), "S", "ORF3a", "E", "M", "ORF6", "ORF7a", "ORF7b", "ORF8", "N", "ORF10")
+pheatmap(log(score1_3_matrix + 1, 10), cluster_col = FALSE, cluster_row = FALSE,
+         main = "Amino acid alignment between INET and reference genome",
+         legend_labels = "log10 (dist + 1)",
+         display_numbers = TRUE,
+         number_format = "%.0f")
+```
+
+### compare between Roth and Ref
+```{r}
+score2_3 <- c()
+for (i in 1:length(seq2)) {
+    for (j in 1:length(seq3)) {
+        # align <- pairwiseAlignment(seq1[[i]], seq2[[j]])
+        score2_3 <- c(score2_3, stringDist(AAStringSet(c(seq2_list[[i]], seq3_list[[j]]))))
+    }
+}
+score2_3_matrix <- as.data.frame(matrix(score2_3, nrow = 25))
+row.names(score2_3_matrix) <- c(paste0("nsp", c(1:10, 12:16)), "S", "ORF3a", "E", "M", "ORF6", "ORF7a", "ORF7b", "ORF8", "N", "ORF10")
+names(score2_3_matrix) <- c(paste0("r-nsp", c(1:10, 12:16)), "r-S-paster", "r-S-rini", "r-S-roth", "r-S-24nt-1", "r-S-24nt-2", "r-ORF3a", "r-ORF3b", "r-E", "r-E-27nt", "r-M", paste0("r-ORF", c("6", "7a", "7b", "8")), "r-N-paster", "r-N-rini", "r-N-roth", "r-ORF9b", "r-ORF9bwu", "r-ORF10wu")
+pheatmap(log(score2_3_matrix + 1, 10), cluster_col = FALSE, cluster_row = FALSE,
+         main = "Amino acid alignment between Roth and ref genome",
+         display_numbers = TRUE,
+         number_format = "%.0f")
+```
