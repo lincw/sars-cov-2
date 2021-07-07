@@ -42,6 +42,7 @@ write.xlsx(go_query_gene, file = "~/Documents/INET-work/virus_network/raw/go_gen
 # go_df_last <- data.frame(matrix(unlist(go_df), ncol = 15, byrow = T))
 # names(go_df_last) <- c("source","bioentity_internal_id","bioentity_label","qualifier","annotation_class","reference","evidence_type","evidence_with","aspect","bioentity_name","synonym","type","taxon","date","assigned_by","annotation_extension_class")
 
+## for reference
 # from QuickGO API
 library(httr)
 library(jsonlite)
@@ -65,4 +66,4 @@ for (i in 1:length(go)) {
 	go_gene[[names(go[i])]] <- unique(goa_human[goa_human$"GO_ID" %in% children_df, c("uniprot_id", "symbol")])
 }
 
-write.xlsx(go_gene, file = "~/Documents/INET-work/virus_network/raw/go_gene_annotation.xlsx", overwrite = T)
+# write.xlsx(go_gene, file = "~/Documents/INET-work/virus_network/raw/go_gene_annotation.xlsx", overwrite = T)
