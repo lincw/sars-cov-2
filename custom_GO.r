@@ -32,13 +32,17 @@ toDataFrame <- function(x) {
 }
 # plot
 metaPlot <- function(x, main, size = 8) {
-    x$term <- factor(x$term, levels = x$term[order(x$observeRatio)])
+    x$term <- factor(x$term, levels = x$term[order(x$intersection)])
     ggplot(x, aes(x = term, y = observeRatio)) +
-        geom_bar(stat = "identity", fill = rgb(128, 41, 227, maxColorValue = 255)) +
-        coord_flip() +
+        geom_point(data = x, aes(size = intersection), shape = 19, color = rgb(128, 41, 227, maxColorValue = 255)) +
+        geom_text(data = x, aes(label = intersection), hjust = 0.5, vjust = 0.5, color = "white", size = 3) +
+        coord_flip(clip = "off") +
+        # ylim(-5, 35) +
         labs(y = "Effect size (%)", x = "Functional term (p < 0.05)", title = main) +
         theme_bw() +
         theme(axis.text = element_text(color = "black", size = size, hjust = 0),
+            panel.border = element_blank(),
+            axis.ticks.y = element_blank(),
         axis.title = element_text(size = size, color = "black", face = "bold"))
 }
 
@@ -213,15 +217,18 @@ husci_gprofiler <- husci_gprofiler[, c(1:10)]
 
 husci_toPlot <- data.frame(
     term = paste0(husci_gprofiler$source, "_", husci_gprofiler[, 2]),
+    intersection = husci_gprofiler[, 8],
     query = husci_gprofiler[, 8] / husci_gprofiler[, 7],
     background = husci_gprofiler[, 6] / husci_gprofiler[, 9],
     observeRatio = (husci_gprofiler[, 8] / husci_gprofiler[, 7]) / (husci_gprofiler[, 6] / husci_gprofiler[, 9])
 )
 
 
-pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/HuSCI_GO_gProfiler_Benny.pdf")
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/HuSCI_GO_gProfiler_Benny_point.pdf", height = 4)
 metaPlot(husci_toPlot, "no IEA")
 metaPlot(husci_toPlot[grepl("GO", husci_toPlot$term), ], "no IEA, GO only")
-metaPlot(husci_toPlot[husci_gprofiler[, 8] > 2,], "no IEA, term_size > 2")
-metaPlot(husci_toPlot[grepl("GO", husci_toPlot$term) & husci_gprofiler[, 8] > 2, ], "no IEA, GO only\nterm_size > 2")
+metaPlot(husci_toPlot[husci_gprofiler[, 6] > 2,], "no IEA, term_size > 2")
+metaPlot(husci_toPlot[grepl("GO", husci_toPlot$term) & husci_gprofiler[, 6] > 4, ], "no IEA, GO only\nterm_size > 4")
+metaPlot(husci_toPlot[husci_gprofiler[, 6] > 4,], "no IEA, term_size > 4")
+metaPlot(husci_toPlot[grepl("GO", husci_toPlot$term) & husci_gprofiler[, 6] > 4,], "no IEA, GO only\nterm_size > 4")
 dev.off()
