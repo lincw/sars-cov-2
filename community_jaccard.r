@@ -74,7 +74,7 @@ dev.off()
 ######
 # extract heatmap from Matthias
 # custom script for GWAS hits from Matthias
-file <- "~/Documents/INET-work/virus_network/statistic_results/GWAS/GWAS_Mattias/trait_matrix.xlsx"
+file <- "~/Documents/INET-work/virus_network/statistic_results/GWAS_Mattias/GWAS_Mattias/trait_matrix.xlsx"
 data <- read.xlsx(file, sheet = "BETA_SE")
 data_fdr <- read.xlsx(file, sheet = "FDR")
 data_p <- read.xlsx(file, sheet = "pvalue")

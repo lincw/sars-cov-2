@@ -19,8 +19,8 @@ url6 <- "%22&fq=taxon_subset_closure_label:%22Homo%20sapiens%22&facet.field=aspe
 # split html into text
 go_query <- list()
 for (i in 1:length(go)) {
-	go_txt <- html_text(read_html(paste0(url5, go[[i]], url6)))
-	go_query[[names(go[i])]] <- lapply(strsplit(go_txt, "\n"), function(x) strsplit(x, "\t"))
+	go_txt <- html_text(read_html(paste0(url5, go, url6)))
+	go_output <- lapply(strsplit(go_txt, "\n"), function(x) strsplit(x, "\t"))
 }
 # convert list into data frame format for saving
 go_summary <- list()

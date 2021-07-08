@@ -124,8 +124,8 @@ col_dend <- rotate(col_dend, order = c(
 row_dend <- phtmap[[1]]
 row_dend <- rotate(row_dend, order = c(
     "IBD_UKBS",
-    "T2D_UKBS",
     "OST_UKBS", "BMIA",
+    "T2D_UKBS",
     "NEUROT_UKB",
     "HRET", "RET",
     "ADPN", "PHF",
