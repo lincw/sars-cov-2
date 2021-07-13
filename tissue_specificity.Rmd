@@ -436,13 +436,13 @@ ggsave(file = "~/Documents/INET-work/virus_network/figure_results/PPI_dorwie_per
 # 10. fisher test for infected organ
 ```{r}
 pvalue <- c()
-for (i in c(2:11)) {
+for (i in c(1:8)) {
     for (j in c(1:9)) {
-        data <- matrix(c(dorward[1, j], dorward[i, j], total[1] - dorward[1, j], total[i] - dorward[i, j]), ncol = 2)
-        print(data)
-        readline(prompt="Press [enter] to continue")
+        data <- matrix(c(dorward[11, j], dorward[i, j], total[11] - dorward[11, j], total[i] - dorward[i, j]), ncol = 2)
+        # print(data)
+        # readline(prompt="Press [enter] to continue")
         ftest <- fisher.test(data)
-        print(ftest$p.value)
+        # print(ftest$p.value)
         pvalue <- c(pvalue, ftest$p.value)
     }
 }
@@ -451,10 +451,10 @@ pv <- list(
     pvalue = data.frame(matrix(pvalue, ncol = 9, byrow = T)),
     pvalue_bonferroni = data.frame(matrix(padj_value, ncol = 9, byrow = T))
 )
-names(pv[[1]]) <- names(dorward)
-names(pv[[2]]) <- names(dorward)
-row.names(pv[[1]]) <- dorward$data[c(2:11)]
-row.names(pv[[2]]) <- dorward$data[c(2:11)]
+names(pv[[1]]) <- colnames(dorward)
+names(pv[[2]]) <- colnames(dorward)
+row.names(pv[[1]]) <- rownames(dorward)[c(1:8)]
+row.names(pv[[2]]) <- rownames(dorward)[c(1:8)]
 write.xlsx(pv, "~/Documents/INET-work/virus_network/toSummarize/infected_organ/data/pvalue.xlsx", rowNames = T, overwrite = T)
 ```
 
