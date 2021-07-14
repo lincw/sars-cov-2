@@ -39,7 +39,7 @@ stgermain_g <- graph_from_data_frame(stgermain, directed = F)
 samavarchi_g <- graph_from_data_frame(samavarchi, directed = F)
 
 ######
-# overlap calculation
+# PPIs overlap calculation
 husci_gordon <- husci_g %s% gordon_g
 husci_stukalov <- husci_g %s% stukalov_g
 husci_li <- husci_g %s% li_g
@@ -106,3 +106,16 @@ overlap <- list(
     # St-Germain
     stgermain_samavarchi = c(ecount(stgermain_g) - ecount(stgermain_samavarchi), ecount(stgermain_samavarchi), ecount(samavarchi_g) - ecount(stgermain_samavarchi))
 )
+
+######
+# proteins overlap calculation, based on HuSCI
+overlap_protein <- list(
+    vsGordon = husci$Host.protein[husci$Host.protein %in% gordon$PreyGene],
+    vsStukalov = husci$Host.protein[husci$Host.protein %in% stukalov$human],
+    vsLi = husci$Host.protein[husci$Host.protein %in% li$human],
+    vsNabeel = husci$Host.protein[husci$Host.protein %in% nabeel$PreyGene],
+    vsLaurent = husci$Host.protein[husci$Host.protein %in% laurent$human],
+    vsSt_Germain = husci$Host.protein[husci$Host.protein %in% stgermain$PreyGene],
+    vsSamavarchi = husci$Host.protein[husci$Host.protein %in% samavarchi$PreyGene]
+)
+unique(unlist(overlap_protein))
