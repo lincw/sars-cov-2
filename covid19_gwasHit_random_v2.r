@@ -50,17 +50,25 @@ huriRewireHusciMulti <- function(node, node1, node2, node3, remove.loops) {
     huri_re <- huriRewire(remove.loops)
     merged <- combineNetwork(huri_re, node)
     df <- c(df, table(V(merged)$name %in% husci_sym)["TRUE"])
+    df <- c(df, gsize(merged))
     merged <- combineNetwork(huri_re, node1)
     df <- c(df, table(V(merged)$name %in% husci_sym)["TRUE"])
+    df <- c(df, gsize(merged))
     merged <- combineNetwork(huri_re, node2)
     df <- c(df, table(V(merged)$name %in% husci_sym)["TRUE"])
+    df <- c(df, gsize(merged))
     merged <- combineNetwork(huri_re, node3)
     df <- c(df, table(V(merged)$name %in% husci_sym)["TRUE"])
+    df <- c(df, gsize(merged))
     return(df)
     # 1. viral targets from whole GWAS hits
+    # 1.1 size of the randomized network from GWAS hists
     # 2. viral targets from critical illness
+    # 2.1 size of the randomized network from critical illness
     # 3. viral targets from hospitalization
+    # 3.1 size of the randomized network from hospitalization
     # 4. viral targets from reported infection
+    # 4.1 size of the randomized network from reported infection
 }
 
 ocgRewire <- function(node) {
@@ -182,7 +190,9 @@ dev.off()
 all_re_husci <- c()
 all_re_husci <- c(all_re_husci, mcreplicate(10000, huriRewireHusciMulti(gwas_huri, ctcl_huri, hosp_huri, infct_huri, FALSE), mc.cores = detectCores()))
 all_re_husci[is.na(all_re_husci)] <- 0
-all_re_husci_df <- as.data.frame(matrix(all_re_husci, ncol = 4, byrow = T))
+all_re_husci_df <- as.data.frame(matrix(all_re_husci, ncol = 8, byrow = T))
+names(all_re_husci_df) <- c("node_allGWAS", "edge_allGWAS", "node_Critical", "edge_Critical", "node_Hospitalization", "edge_Hospitalization", "node_Infected", "edge_Infected")
+write.xlsx(all_re_husci_df, file = "~/Documents/INET-work/virus_network/statistic_results/GWAS/meta_analysis_v2.xlsx", overwrite = T)
 all_re_husci_noLoop <- c()
 all_re_husci_noLoop <- c(all_re_husci_noLoop, mcreplicate(10000, huriRewireHusciMulti(gwas_huri, ctcl_huri, hosp_huri, infct_huri, TRUE), mc.cores = detectCores()))
 all_re_husci_noLoop[is.na(all_re_husci_noLoop)] <- 0
@@ -190,80 +200,60 @@ all_re_husci_noLoop_df <- as.data.frame(matrix(all_re_husci_noLoop, ncol = 4, by
 
 inHuSCI_length <- list(
     allGWAS = gwas_all_husci_length,
-    allGWSAS_noLoop = gwas_all_husci_length,
     critical = gwas_ctcl_husci_length,
-    critical_noLoop = gwas_ctcl_husci_length,
     hospitalization = gwas_hosp_husci_length,
-    hospitalization_noLoop = gwas_hosp_husci_length,
-    infection = gwas_infct_husci_length,
-    infection_noLoop = gwas_infct_husci_length
+    infection = gwas_infct_husci_length
 )
-
-# 3.2 for critical illness, hospitalization and infection phenotype associated genes
-ctcl_re_husci <- c()
-ctcl_re_husci <- c(ctcl_re_husci, mcreplicate(10000, huriRewireHusci(ctcl_huri, FALSE), mc.cores = detectCores()))
-ctcl_re_husci[is.na(ctcl_re_husci)] <- 0
-ctcl_re_husci_noLoop <- c()
-ctcl_re_husci_noLoop <- c(ctcl_re_husci_noLoop, mcreplicate(10000, huriRewireHusci(ctcl_huri, TRUE), mc.cores = detectCores()))
-ctcl_re_husci_noLoop[is.na(ctcl_re_husci_noLoop)] <- 0
-
-hosp_re_husci <- c()
-hosp_re_husci <- c(hosp_re_husci, mcreplicate(10000, huriRewireHusci(hosp_huri, FALSE)), mc.cores = detectCores())
-hosp_re_husci[is.na(hosp_re_husci)] <- 0
-hosp_re_husci_noLoop <- c()
-hosp_re_husci_noLoop <- c(hosp_re_husci_noLoop, mcreplicate(10000, huriRewireHusci(hosp_huri, TRUE), mc.cores = detectCores()))
-hosp_re_husci_noLoop[is.na(hosp_re_husci_noLoop)] <- 0
-
-infct_re_husci <- c()
-infct_re_husci <- c(infct_re_husci, mcreplicate(10000, huriRewireHusci(infct_huri, FALSE)), mc.cores = detectCores())
-infct_re_husci[is.na(infct_re_husci)] <- 0
-infct_re_husci_noLoop <- c()
-infct_re_husci_noLoop <- c(infct_re_husci_noLoop, mcreplicate(10000, huriRewireHusci(infct_huri, TRUE), mc.cores = detectCores()))
-infct_re_husci_noLoop[is.na(infct_re_husci_noLoop)] <- 0
 
 inHuSCI_summary <- list(
-    allGWAS = as.numeric(all_re_husci),
-    allGWSAS_noLoop = as.numeric(all_re_husci_noLoop),
-    ctcl = as.numeric(ctcl_re_husci),
-    ctcl_noLoop = as.numeric(ctcl_re_husci_noLoop),
-    hosp = as.numeric(hosp_re_husci),
-    hosp_noLoop = as.numeric(hosp_re_husci_noLoop),
-    infct = as.numeric(infct_re_husci),
-    infct_noLoop = as.numeric(infct_re_husci_noLoop)
+    allGWAS = as.numeric(all_re_husci_df$node_allGWAS),
+    ctcl = as.numeric(all_re_husci_df$node_Critical),
+    hosp = as.numeric(all_re_husci_df$node_Hospitalization),
+    infct = as.numeric(all_re_husci_df$node_Infected)
 )
-write.xlsx(t(do.call(rbind, inHuSCI_summary)), file = "~/Documents/INET-work/virus_network/statistic_results/GWAS/10000_randomHuRI.xlsx")
 
 # plotting
 pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_GWAS_viral_target_v2.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
-dens_gwas <- hist(all_re_husci, breaks = 15, plot = FALSE)
-plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 20), xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
+dens_gwas <- hist(all_re_husci_df$node_allGWAS, breaks = c(0:(max(all_re_husci_df$node_allGWAS) + 1)), plot = FALSE, right = FALSE)
+plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 20), xaxt = "n", xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
 mytitle <- "COVID19 GWAS loci candidate genes\n(all candidate genes)"
 mtext(side = 3, line = 1, cex = 1, mytitle)
+axis(side = 1, at = seq(0, 20, by = 5) + 0.5, labels = seq(0, 20, by = 5))
 arrows(gwas_all_husci_length + 0.5, 0.04, gwas_all_husci_length + 0.5, 0.02, col = "#922687", lwd = 2, length = 0.1)
-text(gwas_all_husci_length - 2, 0.06, paste0("observed = ", gwas_all_husci_length, "\np = ", table(all_re_husci >= gwas_all_husci_length)["TRUE"]/10000), cex = 0.4, pos = 4)
+text(gwas_all_husci_length - 2, 0.06, paste0("observed = ", gwas_all_husci_length, "\np = ", table(all_re_husci_df$node_allGWAS >= gwas_all_husci_length)["TRUE"] / 10000), cex = 0.4, pos = 4)
 
-dens_gwas <- hist(ctcl_re_husci, breaks = 15, plot = FALSE)
-plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 20), xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
+dens_gwas <- hist(all_re_husci_df$node_Critical, c(0:(max(all_re_husci_df$node_Critical) + 1)), plot = FALSE, right = FALSE)
+plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 16), xaxt = "n", xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
 mytitle <- "COVID19 GWAS loci candidate genes\n(critical illness)"
 mtext(side = 3, line = 1, cex = 1, mytitle)
+axis(side = 1, at = seq(0, 16, by = 5) + 0.5, labels = seq(0, 16, by = 5))
 arrows(gwas_ctcl_husci_length + 0.5, 0.06, gwas_ctcl_husci_length + 0.5, 0.02, col = "#922687", lwd = 2, length = 0.1)
-text(gwas_ctcl_husci_length - 1, 0.08, paste0("observed = ", gwas_ctcl_husci_length, "\np = ", table(ctcl_re_husci >= gwas_ctcl_husci_length)["TRUE"]/10000), cex = 0.4, pos = 4)
+text(gwas_ctcl_husci_length - 1, 0.08, paste0("observed = ", gwas_ctcl_husci_length, "\np = ", table(all_re_husci_df$node_Critical >= gwas_ctcl_husci_length)["TRUE"] / 10000), cex = 0.4, pos = 4)
 
-dens_gwas <- hist(hosp_re_husci, breaks = 15, plot = FALSE)
-plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 20), xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
+dens_gwas <- hist(all_re_husci_df$edge_Critical, plot = FALSE)
+plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1 / 2), border = NA, yaxt = "n", xlim = c(5, 130), las = 1, xlab = "Number of interactions", ylab = "Frequency density", main = "", cex.sub = 0.5)
+mytitle <- "COVID19 GWAS loci candidate genes\n(critical illness)"
+mtext(side = 3, line = 1, cex = 1, mytitle)
+axis(side = 2, at = seq(0, 1400, by = 200), labels = seq(0, 0.14, by = 0.02), las = 2)
+arrows(gsize(ctcl_1st), 200, gsize(ctcl_1st), 20, col = "#922687", lwd = 2, length = 0.1)
+text(gsize(ctcl_1st) - 10, 400, paste0("observed = ", gsize(ctcl_1st), "\np = ", table(all_re_husci_df$edge_Critical >= gsize(ctcl_1st))["TRUE"] / 10000), cex = 0.4, pos = 4)
+
+dens_gwas <- hist(all_re_husci_df$node_Hospitalization, c(0:(max(all_re_husci_df$node_Hospitalization) + 1)), plot = FALSE, right = FALSE)
+plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 20), xaxt = "n", xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
 mytitle <- "COVID19 GWAS loci candidate genes\n(hospitalization)"
 mtext(side = 3, line = 1, cex = 1, mytitle)
+axis(side = 1, at = seq(0, 20, by = 5) + 0.5, labels = seq(0, 20, by = 5))
 arrows(gwas_hosp_husci_length + 0.5, 0.04, gwas_hosp_husci_length + 0.5, 0.02, col = "#922687", lwd = 2, length = 0.1)
-text(gwas_hosp_husci_length - 2, 0.06, paste0("observed = ", gwas_hosp_husci_length, "\np = ", table(hosp_re_husci >= gwas_hosp_husci_length)["TRUE"]/10000), cex = 0.4, pos = 4)
+text(gwas_hosp_husci_length - 1, 0.06, paste0("observed = ", gwas_hosp_husci_length, "\np = ", table(all_re_husci_df$node_Hospitalization >= gwas_hosp_husci_length)["TRUE"] / 10000), cex = 0.4, pos = 4)
 
-dens_gwas <- hist(infct_re_husci, breaks = 10, plot = FALSE)
-plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 10), xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
+dens_gwas <- hist(all_re_husci_df$node_Infected, c(0:(max(all_re_husci_df$node_Infected) + 1)), plot = FALSE, right = FALSE)
+plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 10), xaxt = "n", xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
 mytitle <- "COVID19 GWAS loci candidate genes\n(infection)"
 mtext(side = 3, line = 1, cex = 1, mytitle)
+axis(side = 1, at = seq(0, 11, by = 3) + 0.5, labels = seq(0, 11, by = 3))
 arrows(gwas_infct_husci_length + 0.5, 0.1, gwas_infct_husci_length + 0.5, 0.02, col = "#922687", lwd = 2, length = 0.1)
-text(gwas_infct_husci_length - 1, 0.2, paste0("observed = ", gwas_infct_husci_length, "\np = ", table(infct_re_husci >= gwas_infct_husci_length)["TRUE"]/10000), cex = 0.4, pos = 4)
-
+text(gwas_infct_husci_length - 1, 0.2, paste0("observed = ", gwas_infct_husci_length, "\np = ", table(all_re_husci_df$node_Infected >= gwas_infct_husci_length)["TRUE"] / 10000), cex = 0.4, pos = 4)
 dev.off()
 
 boxplot(inHuSCI_summary, las = 1)
