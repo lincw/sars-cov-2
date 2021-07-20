@@ -229,3 +229,31 @@ pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO
 metaPlot(husci_toPlot[husci_gprofiler[, 6] > 4,], "HuSCI functional analysis")
 # metaPlot(husci_toPlot[grepl("GO", husci_toPlot$term) & husci_gprofiler[, 6] > 4,], "no IEA, GO only\nterm_size > 4")
 dev.off()
+
+######
+# 2nd GO figure for 20 GWAS hits
+metaPlot2 <- function(x, main, size = 8, p) {
+    ggplot(x, aes(x = term2, y = observeRatio)) +
+        geom_bar(stat = "identity", fill = rgb(128, 41, 227, maxColorValue = 255)) +
+        coord_flip() +
+        labs(y = "Effect size", x = paste0("Functional term (p < ", p, ")"), title = main) +
+        theme_bw() +
+        theme(axis.text = element_text(color = "black", size = size, hjust = 0),
+        axis.title = element_text(size = size, color = "black", face = "bold"))
+}
+gwas20 <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/DY_gProfiler_hsapiens_7-20-2021_5-32-27 PM__intersections.csv", skip = 17, header = T)
+gwas20 <- gwas20[, c(1:10)]
+
+gwas20 <- data.frame(
+    term = paste0(gwas20, "_", gwas20[, 2]),
+    term2 = gwas20[, 2],
+    intersection = gwas20[, 8],
+    query = gwas20[, 8] / gwas20[, 7],
+    background = gwas20[, 6] / gwas20[, 9],
+    observeRatio = (gwas20[, 8] / gwas20[, 7]) / (gwas20[, 6] / gwas20[, 9])
+)
+gwas20$term2 <- factor(gwas20$term2, levels = rev(factor(gwas20$term2)[c(12, 9, 6, 7, 8, 11, 10, 13, 5, 4, 3, 2, 1)]))
+
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/HuSCI_GO_gProfiler_GWAS20.pdf", height = 4)
+metaPlot2(gwas20, "Viral targets from 20 GWAS hits", p = "0.1")
+dev.off()
