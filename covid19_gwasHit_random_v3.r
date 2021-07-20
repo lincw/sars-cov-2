@@ -83,19 +83,20 @@ gwas_rand_r2 <- c()
 gwas_rand_r2 <- c(gwas_rand_r2, mcreplicate(10000, huriRewireHusci(gwas_huri, FALSE), mc.cores = detectCores()))
 gwas_rand_df_r2 <- data.frame(matrix(gwas_rand_r2, ncol = 2, byrow = T))
 names(gwas_rand_df_r2) <- c("viral_target", "interactions")
-write.csv(gwas_rand_df_r2, file = "~/Documents/INET-work/virus_network/statistic_results/GWAS/10000_randomHuRI_v3_r2.csv", row.names = FALSE)
+write.csv(gwas_rand_df_r2, file = "~/Documents/INET-work/virus_network/statistic_results/GWAS/10000_randomHuRI_v3_r2_0720.csv", row.names = FALSE)
 
 # plotting
-pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_GWAS_viral_target_v3_r2.pdf", width = 3, height = 3)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_GWAS_viral_target_v3_r2_0720.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
-dens_gwas <- hist(gwas_rand_df_r2[, "viral_target"], breaks = 15, plot = FALSE)
-plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), xlim = c(0, 25), freq = FALSE, border = NA, las = 1, xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
+dens_gwas <- hist(gwas_rand_df_r2[, "viral_target"], breaks = 10, plot = FALSE, right = F)
+plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), xlim = c(0, 25), border = NA, las = 1, yaxt = "n", xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
 mytitle <- "COVID19 GWAS loci candidate genes"
 mtext(side = 3, line = 1, cex = 1, mytitle)
-arrows(gwas_all_husci_length + 0.5, 0.03, gwas_all_husci_length + 0.5, 0.01, col = "#922687", lwd = 2, length = 0.1)
-text(gwas_all_husci_length - 2, 0.05, paste0("observed = 20 \np = ", table(gwas_rand_df_r2[, "viral_target"] >= 20)["TRUE"]/10000), cex = 0.4, pos = 4)
+axis(side = 2, at = seq(0, 2500, by = 500), labels = seq(0, 0.25, by = 0.05), las = 2)
+arrows(gwas_all_husci_length, 500, gwas_all_husci_length, 10, col = "#922687", lwd = 2, length = 0.1)
+text(gwas_all_husci_length - 2, 700, paste0("observed = 20 \np = ", table(gwas_rand_df_r2[, "viral_target"] >= 20)["TRUE"]/10000), cex = 0.4, pos = 4)
 
-dens_gwas <- hist(gwas_rand_df_r2[, "interactions"], breaks = 25, plot = FALSE)
+dens_gwas <- hist(gwas_rand_df_r2[, "interactions"], breaks = 35, plot = FALSE)
 plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, xlim = c(200, 1200), yaxt = "n", xlab = "Number of interactions", ylab = "Frequency density", main = "", cex.sub = 0.5)
 mytitle <- "COVID19 GWAS loci candidate genes"
 mtext(side = 3, line = 1, cex = 1, mytitle)
@@ -104,3 +105,27 @@ arrows(gsize(gwas_all_final) + 0.5, 200, gsize(gwas_all_final) + 0.5, 20, col = 
 text(gsize(gwas_all_final) - 200, 400, paste0("observed = ", gsize(gwas_all_final), "\np < 0.0001"), cex = 0.4, pos = 4)
 
 dev.off()
+
+######
+# according to the raw data on the supplementary code (folder 05)
+all_0720 <- read.xlsx("/Volumes/GoogleDrive/My Drive/Paper_VirHostome_CoV2/05_Source Data/Source Data permutation analyses.xlsx")
+# plotting
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_GWAS_viral_target_v3_r2_fig4.pdf", width = 3, height = 3)
+par(mgp = c(2, 0.7, 0), ps = 8)
+dens_gwas <- hist(as.numeric(all_0720$X9[c(3:10002)]), breaks = 10, plot = FALSE, right = F)
+plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1 / 2), xlim = c(0, 25), border = NA, las = 1, yaxt = "n", xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
+mytitle <- "COVID19 GWAS loci candidate genes"
+mtext(side = 3, line = 1, cex = 1, mytitle)
+axis(side = 2, at = seq(0, 2500, by = 500), labels = seq(0, 0.25, by = 0.05), las = 2)
+arrows(gwas_all_husci_length, 500, gwas_all_husci_length, 10, col = "#922687", lwd = 2, length = 0.1)
+text(gwas_all_husci_length - 2, 700, paste0("observed = 20 \np = ", table(gwas_rand_df_r2[, "viral_target"] >= 20)["TRUE"] / 10000), cex = 0.4, pos = 4)
+
+dens_gwas <- hist(as.numeric(all_0720$X8[c(3:10002)]), breaks = 25, plot = FALSE, right = F)
+plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1 / 2), border = NA, las = 1, xlim = c(200, 1200), yaxt = "n", xlab = "Number of interactions", ylab = "Frequency density", main = "", cex.sub = 0.5)
+mytitle <- "COVID19 GWAS loci candidate genes"
+mtext(side = 3, line = 1, cex = 1, mytitle)
+axis(side = 2, at = seq(0, 1400, by = 200), labels = seq(0, 0.14, by = 0.02), las = 2)
+arrows(gsize(gwas_all_final) + 0.5, 200, gsize(gwas_all_final) + 0.5, 20, col = "#922687", lwd = 2, length = 0.1)
+text(gsize(gwas_all_final) - 200, 400, paste0("observed = ", gsize(gwas_all_final), "\np < 0.0001"), cex = 0.4, pos = 4)
+dev.off()
+
