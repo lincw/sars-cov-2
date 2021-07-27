@@ -257,3 +257,19 @@ gwas20$term2 <- factor(gwas20$term2, levels = rev(factor(gwas20$term2)[c(12, 9, 
 pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/HuSCI_GO_gProfiler_GWAS20.pdf", height = 4)
 metaPlot2(gwas20, "Viral targets from 20 GWAS hits", p = "0.1")
 dev.off()
+
+gwas20_husci <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/DY_gProfiler_hsapiens_7-20-2021_5-32-27 PM__intersections_HuSCI_BG.csv", skip = 17, header = T)
+gwas20_husci <- gwas20_husci[, c(1:10)]
+gwas20_husci <- data.frame(
+    term = paste0(gwas20_husci, "_", gwas20_husci[, 2]),
+    term2 = gwas20_husci[, 2],
+    intersection = gwas20_husci[, 8],
+    query = gwas20_husci[, 8] / gwas20_husci[, 7],
+    background = gwas20_husci[, 6] / gwas20_husci[, 9],
+    observeRatio = (gwas20_husci[, 8] / gwas20_husci[, 7]) / (gwas20_husci[, 6] / gwas20_husci[, 9])
+)
+gwas20_husci$term2 <- factor(gwas20_husci$term2, levels = rev(factor(gwas20_husci$term2)[c(5,7,11,9,8,10,6,2,1,3,4)]))
+
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/HuSCI_GO_gProfiler_GWAS20_husci.pdf", height = 4)
+metaPlot2(gwas20_husci, "Viral targets from 20 GWAS hits\n(background: HuSCI n = 171)", p = "0.1")
+dev.off()
