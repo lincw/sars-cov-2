@@ -138,3 +138,11 @@ if(sum(dens_gwas$density) != 1) {
 arrows(gwas_all_stukalov_length, 0.03, gwas_all_stukalov_length, 0, col = "#922687", lwd = 2, length = 0.1)
 text(gwas_all_stukalov_length, 0.04, paste0("observed = 2 \np = ", table(gwas_rand_df_r2[, "Stukalov_viral_target"] >= 2)["TRUE"]/10000), cex = 0.4, pos = 4)
 dev.off()
+
+df <- data.frame(HuRI = V(huri_g)$name, inGWASsubnetwork = V(huri_g)$name %in% gwas$name, inHuSCI = V(huri_g)$name %in% husci_sym, inGordon = V(huri_g)$name %in% gordon_sym, inGordoninGWAS = V(huri_g)$name %in% gordon_sym[gordon_sym %in% gwas$name], inStukalov = V(huri_g)$name %in% stukalov_sym, inStukalovinGWAS = V(huri_g)$name %in% stukalov_sym[stukalov_sym %in% gwas$name])
+df_raw <- list(HuSCI = husci_sym, Gordon = gordon_sym, Stukalov = stukalov_sym)
+attributes(df_raw) <- list(names = names(df_raw), row.names = 1:max(length(husci_sym), length(gordon_sym), length(stukalov_sym)), class = 'data.frame') # ref: https://stackoverflow.com/questions/7196450/create-a-data-frame-of-unequal-lengths
+write.xlsx(df, file = "~/Documents/INET-work/virus_network/statistic_results/GWAS/3dataset_df.xlsx", quote = TRUE, overwrite = TRUE)
+write.table(husci_sym, file = "/tmp/husci_sym.tsv", sep = "\t", row.names = F, quote = F)
+write.table(gordon_sym, file = "/tmp/gordon_sym.tsv", sep = "\t", row.names = F, quote = F)
+write.table(stukalov_sym, file = "/tmp/stukalov_sym.tsv", sep = "\t", row.names = F, quote = F)
