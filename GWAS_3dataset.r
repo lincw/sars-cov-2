@@ -11,6 +11,7 @@ library(rethinking)
 library(gprofiler2)
 library(gplots)
 library(openxlsx)
+library(plotrix) # add table to plot
 
 source("combineNetwork.r")
 
@@ -146,3 +147,33 @@ write.xlsx(df, file = "~/Documents/INET-work/virus_network/statistic_results/GWA
 write.table(husci_sym, file = "/tmp/husci_sym.tsv", sep = "\t", row.names = F, quote = F)
 write.table(gordon_sym, file = "/tmp/gordon_sym.tsv", sep = "\t", row.names = F, quote = F)
 write.table(stukalov_sym, file = "/tmp/stukalov_sym.tsv", sep = "\t", row.names = F, quote = F)
+
+######
+# display degree of viral targets in HuRI
+husci_deg <- data.frame(degree(huri_g, v = husci_huri))
+names(husci_deg) <- "degree"
+gordon_deg <- data.frame(degree(huri_g, v = gordon_huri))
+names(gordon_deg) <- "degree"
+stukalov_deg <- data.frame(degree(huri_g, v = stukalov_huri))
+names(stukalov_deg) <- "degree"
+
+hist(husci_deg$degree, xlab = "degree", main = "Degree of HuSCI proteins in HuRI")
+addtable2plot(100, 50, summary(husci_deg), vlines = TRUE, bty = "l", cex = 2)
+
+hist(gordon_deg$degree, xlab = "degree", main = "Degree of Gordon proteins in HuRI")
+addtable2plot(150, 50, summary(gordon_deg), vlines = TRUE, bty = "l", cex = 2)
+
+hist(stukalov_deg$degree, xlab = "degree", main = "Degree of Stukalov proteins in HuRI")
+addtable2plot(70, 100, summary(stukalov_deg), vlines = TRUE, bty = "l", cex = 2)
+
+wb <- createWorkbook()
+addWorksheet(wb, "HuSCI")
+writeData(wb, "HuSCI", husci_deg, rowNames = TRUE)
+
+addWorksheet(wb, "Gordon et al")
+writeData(wb, "Gordon et al", gordon_deg, rowNames = TRUE)
+
+addWorksheet(wb, "Stukalov et al")
+writeData(wb, "Stukalov et al", stukalov_deg, rowNames = TRUE)
+
+saveWorkbook(wb, "~/Documents/INET-work/virus_network/statistic_results/GWAS/3dataset_degree_HuRI.xlsx", overwrite = TRUE)
