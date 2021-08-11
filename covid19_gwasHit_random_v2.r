@@ -1,6 +1,7 @@
 # COVID-19 GWAS hit analysis
 # Lin Chung-win
-## v2: this is very wired! One typo from Pascal makes me unable to replicate the analysis?!
+# 11.08.2021
+# result saved as "~/INET/GWAS_3data_HuRI.RData"
 
 ######
 # load package
@@ -12,13 +13,6 @@ library(linkcomm)
 library(gplots)
 # functions
 source("~/Documents/INET-work/virus_network/src/plotOCGGraph.r")
-
-go2check <- function(x, organism) {
-    goquery <- gost(query = x, organism = organism, correction_method = "bonferroni", evcodes = T)
-    goquery$result$inCommunity <- paste0( goquery$meta$query_metadata$queries$query_1, collapse = ",")
-    goquery$result$annotatedInCommunity <- paste0(goquery$meta$genes_metadata$query$query_1$ensgs, collapse = ",")
-    return(goquery$result)
-}
 
 check <- function(x) {
     value <- table(V(x)$name %in% husci_sym)[2]
@@ -38,65 +32,59 @@ huriRewire <- function(remove.loops = FALSE, ...) {
     return(huri_sim)
 }
 
-huriRewireHusci <- function(node, remove.loops) {
-    huri_re <- huriRewire(remove.loops)
-    merged <- combineNetwork(huri_re, node)
+huriRewireHusci <- function(x, node, remove.loops) {
+    merged <- combineNetwork(x, node)
     merged_inHuSCI <- table(V(merged)$name %in% husci_sym)["TRUE"]
     return(merged_inHuSCI)
 }
 
-huriRewireHusciMulti <- function(node, node1, node2, node3, remove.loops) {
+huriRewireMulti <- function(gwas, ctcl, hosp, infct, husci, gordon, stukalov, remove.loops = FALSE) {
     df <- c()
-    huri_re <- huriRewire(remove.loops)
-    merged <- combineNetwork(huri_re, node)
-    df <- c(df, table(V(merged)$name %in% husci_sym)["TRUE"])
+    huri_re <- huriRewire(remove.loops) # rewire huri
+    merged <- combineNetwork(huri_re, gwas) # get GWAS+1 subnetwork
+    df <- c(df, table(V(merged)$name %in% husci)["TRUE"]) # get viral targets from HuSCI in GWAS+1 subnetwork
+    df <- c(df, table(V(merged)$name %in% gordon)["TRUE"]) # get viral targets from Gordon in GWAS+1 subnetwork
+    df <- c(df, table(V(merged)$name %in% stukalov)["TRUE"]) # get viral targets from Stukalov in GWAS+1 subnetwork
+    df <- c(df, gsize(merged)) # get network size of GWAS+1 subnetwork
+
+    merged <- combineNetwork(huri_re, ctcl) # get GWAS+1 subnetwork only from critical illness candidates
+    df <- c(df, table(V(merged)$name %in% husci)["TRUE"])
+    df <- c(df, table(V(merged)$name %in% gordon)["TRUE"])
+    df <- c(df, table(V(merged)$name %in% stukalov)["TRUE"])
     df <- c(df, gsize(merged))
-    merged <- combineNetwork(huri_re, node1)
-    df <- c(df, table(V(merged)$name %in% husci_sym)["TRUE"])
+
+    merged <- combineNetwork(huri_re, hosp) # get GWAS+1 subnetwork only from hospitalized candidates
+    df <- c(df, table(V(merged)$name %in% husci)["TRUE"])
+    df <- c(df, table(V(merged)$name %in% gordon)["TRUE"])
+    df <- c(df, table(V(merged)$name %in% stukalov)["TRUE"])
     df <- c(df, gsize(merged))
-    merged <- combineNetwork(huri_re, node2)
-    df <- c(df, table(V(merged)$name %in% husci_sym)["TRUE"])
-    df <- c(df, gsize(merged))
-    merged <- combineNetwork(huri_re, node3)
-    df <- c(df, table(V(merged)$name %in% husci_sym)["TRUE"])
+
+    merged <- combineNetwork(huri_re, infct) # get GWAS+1 subnetwork only from reported infection candidates
+    df <- c(df, table(V(merged)$name %in% husci)["TRUE"])
+    df <- c(df, table(V(merged)$name %in% gordon)["TRUE"])
+    df <- c(df, table(V(merged)$name %in% stukalov)["TRUE"])
     df <- c(df, gsize(merged))
     return(df)
-    # 1. viral targets from whole GWAS hits
-    # 1.1 size of the randomized network from GWAS hists
-    # 2. viral targets from critical illness
-    # 2.1 size of the randomized network from critical illness
-    # 3. viral targets from hospitalization
-    # 3.1 size of the randomized network from hospitalization
-    # 4. viral targets from reported infection
-    # 4.1 size of the randomized network from reported infection
+}
+plotHist <- function(value, title, phenotype, length, y1, y2) {
+    med <- median(value)
+    dens_gwas <- hist(value, breaks = c(0:(max(value) + 1)), plot = FALSE, right = FALSE)
+    plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 20), xaxt = "n", xlab = "Number of viral targets", ylab = "Frequency", main = "", cex.sub = 0.5)
+    mytitle <- paste0("COVID19 GWAS subnetwork\n(", phenotype, ")\nviral targets in ", title)
+    mtext(side = 3, line = 1, cex = 1, mytitle)
+    mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from HuRI")
+    axis(side = 1, at = seq(0, 20, by = 5) + 0.5, labels = seq(0, 20, by = 5))
+    arrows(length + 0.5, y1, length + 0.5, 0, col = "#922687", lwd = 2, length = 0.1)
+    text(med + 2, max(dens_gwas$counts / 10000), paste0("median = ", med), col = "grey", cex = 0.5)
+    text(length - 2, y2, paste0("observed = ", length, "\np = ", table(value >= length)["TRUE"] / 10000), cex = 0.4, pos = 4)
 }
 
-ocgRewire <- function(node) {
-    rewire <- huriRewire()
-    combine <- combineNetwork(rewire, node)
-    strong <- components(combine, mode = "strong")
-    strong1 <- induced_subgraph(combine, names(strong$membership[strong$membership == 1]))
-    strong_ocg <- getOCG.clusters(as_data_frame(strong1), init.class.sys = 3, cent.class.sys = 0)
-    return(strong_ocg)
-}
-ocgRewireRatio <- function(node) {
-    df <- c()
-    strong_ocg <- ocgRewire(node)
-    data <- as.numeric(sort(strong_ocg$clustsizes, decreasing = TRUE))
-    df <- c(df, data)
-    if(data[2] > 4) {
-        df <- c((data[1] / data[2]), df)
-    } else {
-        df <- c("NA", df)
-    }
-    return(df)
-}
 # edit plot parameters
 trace("plot.igraph", edit = T)
 ######
 # load dataset
 huri <- read.csv("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_Tong_withSymbol.csv", header = T)
-gwas <- read.xlsx("~/Documents/INET-work/virus_network/statistic_results/GWAS/COVID_GWAS hits_v2.xlsx")
+gwas <- read.xlsx("~/Documents/INET-work/virus_network/statistic_results/GWAS/COVID_GWAS hits_v2.xlsx") # ref: Mapping the human genetic architecture of COVID-19 (url: https://doi.org/10.1038/s41586-021-03767-x)
 husci <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/binary_node_1126.csv", header = TRUE)
 gwas_2 <- read.xlsx("~/Documents/INET-work/virus_network/statistic_results/GWAS/COVID_GWAS_hit_inHUSCI_v2.xlsx") # to filter hits with high degree
     # the gwas_2 was generated after 1st analysis
@@ -106,6 +94,11 @@ gwas_ortholog <- read.xlsx(gwas_file, sheet = "Ortholog")
 gwas_ctcl <- read.xlsx(gwas_file, sheet = "critical")
 gwas_hosp <- read.xlsx(gwas_file, sheet = "hospitalization")
 gwas_infct <- read.xlsx(gwas_file, sheet = "infection")
+
+# add Gordon and Stukalov data
+gordon <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Gordon")
+stukalov <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Stukalov")
+
 ######
 # 1. HuRI graph generation
 huri_symbol <- huri[, c(5:6)]
@@ -117,10 +110,16 @@ husci_sym <- husci[husci$group == "human", "node"]
 husci_huri <- V(huri_g)$name[V(huri_g)$name %in% husci_sym] # HuSCI in HuRI whole
 gwas_huri <- gwas$All.LD[gwas$All.LD %in% V(huri_g)$name] # GWAS hit in HuRI
 
+# Gordon and Stukalov in HuRI
+gordon_sym <- unique(gordon$PreyGene)
+gordon_huri <- V(huri_g)$name[V(huri_g)$name %in% gordon_sym]
+
+stukalov_sym <- unique(stukalov$human)
+stukalov_huri <- V(huri_g)$name[V(huri_g)$name %in% stukalov_sym]
+
 ######
 # 2. interactor of GWAS hit
 gwas_hit_1st <- make_ego_graph(huri_g, nodes = sort(gwas$All.LD[gwas$All.LD %in% V(huri_g)$name]), order = 1, mode = "all") #17 of 42 in HuRI
-gwas_hit_1st_noLoop <- make_ego_graph(huri_g_noloop, nodes = sort(gwas$All.LD[gwas$All.LD %in% V(huri_g)$name]), order = 1, mode = "all") #17 of 42 in HuRI
 
 # 2.1 interactors of GWAS hits with critical illness phenotypes
 ctcl <- gwas[, 2][gwas[, 5] == 1]
@@ -131,6 +130,11 @@ ctcl_1st_noLoop <- simplify(ctcl_1st)
 gwas_ctcl_husci <- V(ctcl_1st)$name[V(ctcl_1st)$name %in% husci_sym]
 gwas_ctcl_husci_length <- length(gwas_ctcl_husci)
 
+gwas_ctcl_gordon <- V(ctcl_1st)$name[V(ctcl_1st)$name %in% gordon_sym]
+gwas_ctcl_gordon_length <- length(gwas_ctcl_gordon)
+gwas_ctcl_stukalov <- V(ctcl_1st)$name[V(ctcl_1st)$name %in% stukalov_sym]
+gwas_ctcl_stukalov_length <- length(gwas_ctcl_stukalov)
+
 hosp <- gwas[, 2][gwas[, 6] == 1]
 hosp <- unique(hosp[!is.na(hosp)])
 hosp_huri <- hosp[hosp %in% V(huri_g)$name]
@@ -139,6 +143,11 @@ hosp_1st_noLoop <- simplify(hosp_1st)
 gwas_hosp_husci <- V(hosp_1st)$name[V(hosp_1st)$name %in% husci_sym]
 gwas_hosp_husci_length <- length(gwas_hosp_husci)
 
+gwas_hosp_gordon <- V(hosp_1st)$name[V(hosp_1st)$name %in% gordon_sym]
+gwas_hosp_gordon_length <- length(gwas_hosp_gordon)
+gwas_hosp_stukalov <- V(hosp_1st)$name[V(hosp_1st)$name %in% stukalov_sym]
+gwas_hosp_stukalov_length <- length(gwas_hosp_stukalov)
+
 infct <- gwas[, 2][gwas[, 7] == 1]
 infct <- unique(infct[!is.na(infct)])
 infct_huri <- infct[infct %in% V(huri_g)$name]
@@ -146,6 +155,11 @@ infct_1st <- combineNetwork(huri_g, infct_huri)
 infct_1st_noLoop <- simplify(infct_1st)
 gwas_infct_husci <- V(infct_1st)$name[V(infct_1st)$name %in% husci_sym]
 gwas_infct_husci_length <- length(gwas_infct_husci)
+
+gwas_infct_gordon <- V(infct_1st)$name[V(infct_1st)$name %in% gordon_sym]
+gwas_infct_gordon_length <- length(gwas_infct_gordon)
+gwas_infct_stukalov <- V(infct_1st)$name[V(infct_1st)$name %in% stukalov_sym]
+gwas_infct_stukalov_length <- length(gwas_infct_stukalov)
 
 overlap_gwas <- list(
     ctcl = ctcl,
@@ -178,6 +192,12 @@ gwas_all_final <- simplify(induced_subgraph(huri_g, names(V(gwas_all_g_merge))),
 gwas_all_final_noLoop <- simplify(gwas_all_final)
 gwas_all_husci <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% husci_sym] # 11 viral targets
 gwas_all_husci_length <- length(gwas_all_husci)
+
+gwas_all_gordon <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% gordon_sym] # 4 viral targets
+gwas_all_gordon_length <- length(gwas_all_gordon)
+gwas_all_stukalov <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% stukalov_sym] # 9 viral targets
+gwas_all_stukalov_length <- length(gwas_all_stukalov)
+
 # visualization of gwas subnetwork
 bd <- ifelse(V(gwas_all_final)$name %in% husci_sym, "orange", NA)
 label <- ifelse(V(gwas_all_final)$name %in% c(husci_sym, gwas_huri), V(gwas_all_final)$name, NA)
@@ -186,81 +206,83 @@ pdf("/tmp/GWAS_subnetwork.pdf")
 plot(gwas_all_final, vertex.frame.color = bd, vertex.size = 3, vertex.label.dist = 1, vertex.label.color = "black", vertex.label = label, vertex.color = color, vertex.frame.width = 2)
 write_graph(gwas_all_final, "/tmp/GWAS_subnetwork.gml", format = "gml")
 dev.off()
-# 3.1. do statistical analysis for all 17 GWAS hit candidate genes
-all_re_husci <- c()
-all_re_husci <- c(all_re_husci, mcreplicate(10000, huriRewireHusciMulti(gwas_huri, ctcl_huri, hosp_huri, infct_huri, FALSE), mc.cores = detectCores()))
-all_re_husci[is.na(all_re_husci)] <- 0
-all_re_husci_df <- as.data.frame(matrix(all_re_husci, ncol = 8, byrow = T))
-names(all_re_husci_df) <- c("node_allGWAS", "edge_allGWAS", "node_Critical", "edge_Critical", "node_Hospitalization", "edge_Hospitalization", "node_Infected", "edge_Infected")
-write.xlsx(all_re_husci_df, file = "~/Documents/INET-work/virus_network/statistic_results/GWAS/meta_analysis_v2.xlsx", overwrite = T)
-all_re_husci_noLoop <- c()
-all_re_husci_noLoop <- c(all_re_husci_noLoop, mcreplicate(10000, huriRewireHusciMulti(gwas_huri, ctcl_huri, hosp_huri, infct_huri, TRUE), mc.cores = detectCores()))
-all_re_husci_noLoop[is.na(all_re_husci_noLoop)] <- 0
-all_re_husci_noLoop_df <- as.data.frame(matrix(all_re_husci_noLoop, ncol = 4, byrow = T))
+# 3.1. do statistical analysis for all 17 GWAS hit candidate genes # time consuming
+# huri_list <- list()
+# for (i in 1:10000) {
+#     huri_list[[i]] <- huriRewire()
+# }
 
-inHuSCI_length <- list(
-    allGWAS = gwas_all_husci_length,
-    critical = gwas_ctcl_husci_length,
-    hospitalization = gwas_hosp_husci_length,
-    infection = gwas_infct_husci_length
-)
+# HuSCI, Gordon and Stukalov
+all_re <- c()
+all_re <- c(all_re, mcreplicate(10000, huriRewireMulti(gwas_huri, ctcl_huri, hosp_huri, infct_huri, husci_sym, gordon_sym, stukalov_sym), mc.cores = detectCores()))
 
-inHuSCI_summary <- list(
-    allGWAS = as.numeric(all_re_husci_df$node_allGWAS),
-    ctcl = as.numeric(all_re_husci_df$node_Critical),
-    hosp = as.numeric(all_re_husci_df$node_Hospitalization),
-    infct = as.numeric(all_re_husci_df$node_Infected)
+all_re[is.na(all_re)] <- 0
+all_re_df <- data.frame(matrix(all_re, ncol = 16, byrow = T))
+names(all_re_df) <- c(
+    "allGWAS_viral_target_inHuSCI",
+    "allGWAS_viral_target_inGordon",
+    "allGWAS_viral_target_inStukalov",
+    "allGWAS_subnetworkSize",
+    "ctclGWAS_viral_target_inHuSCI",
+    "ctclGWAS_viral_target_inGordon",
+    "ctclGWAS_viral_target_inStukalov",
+    "ctclGWAS_subnetworkSize",
+    "hospGWAS_viral_target_inHuSCI",
+    "hospGWAS_viral_target_inGordon",
+    "hospGWAS_viral_target_inStukalov",
+    "hospGWAS_subnetworkSize",
+    "infctGWAS_viral_target_inHuSCI",
+    "infctGWAS_viral_target_inGordon",
+    "infctGWAS_viral_target_inStukalov",
+    "infctGWAS_subnetworkSize"
 )
+write.xlsx(all_re_df, file = "~/Documents/INET-work/virus_network/statistic_results/GWAS/meta_analysis_v2_3dataset.xlsx", overwrite = T)
 
 # plotting
-pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_GWAS_viral_target_v2.pdf", width = 3, height = 3)
+pdf("~/Documents/INET-work/virus_network/figure_results/GWAS/GWASv2_3dataset_viral_target.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
-dens_gwas <- hist(all_re_husci_df$node_allGWAS, breaks = c(0:(max(all_re_husci_df$node_allGWAS) + 1)), plot = FALSE, right = FALSE)
-plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 20), xaxt = "n", xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
-mytitle <- "COVID19 GWAS loci candidate genes\n(all candidate genes)"
-mtext(side = 3, line = 1, cex = 1, mytitle)
-axis(side = 1, at = seq(0, 20, by = 5) + 0.5, labels = seq(0, 20, by = 5))
-arrows(gwas_all_husci_length + 0.5, 0.04, gwas_all_husci_length + 0.5, 0.02, col = "#922687", lwd = 2, length = 0.1)
-text(gwas_all_husci_length - 2, 0.06, paste0("observed = ", gwas_all_husci_length, "\np = ", table(all_re_husci_df$node_allGWAS >= gwas_all_husci_length)["TRUE"] / 10000), cex = 0.4, pos = 4)
+# HuSCI in GWAS+1 all
+plotHist(all_re_df$allGWAS_viral_target_inHuSCI, "HuSCI", "all 17 genes and 1st interactors", gwas_all_husci_length, 0.03, 0.05)
 
-dens_gwas <- hist(all_re_husci_df$node_Critical, c(0:(max(all_re_husci_df$node_Critical) + 1)), plot = FALSE, right = FALSE)
-plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 16), xaxt = "n", xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
-mytitle <- "COVID19 GWAS loci candidate genes\n(critical illness)"
-mtext(side = 3, line = 1, cex = 1, mytitle)
-axis(side = 1, at = seq(0, 16, by = 5) + 0.5, labels = seq(0, 16, by = 5))
-arrows(gwas_ctcl_husci_length + 0.5, 0.06, gwas_ctcl_husci_length + 0.5, 0.02, col = "#922687", lwd = 2, length = 0.1)
-text(gwas_ctcl_husci_length - 1, 0.08, paste0("observed = ", gwas_ctcl_husci_length, "\np = ", table(all_re_husci_df$node_Critical >= gwas_ctcl_husci_length)["TRUE"] / 10000), cex = 0.4, pos = 4)
+# Gordon in GWAS+1 all
+plotHist(all_re_df$allGWAS_viral_target_inGordon, "Gordon et al", "all 17 genes and 1st interactors", gwas_all_gordon_length, 0.03, 0.05)
 
-dens_gwas <- hist(all_re_husci_df$edge_Critical, plot = FALSE)
-plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1 / 2), border = NA, yaxt = "n", xlim = c(5, 130), las = 1, xlab = "Number of interactions", ylab = "Frequency density", main = "", cex.sub = 0.5)
-mytitle <- "COVID19 GWAS loci candidate genes\n(critical illness)"
-mtext(side = 3, line = 1, cex = 1, mytitle)
-axis(side = 2, at = seq(0, 1400, by = 200), labels = seq(0, 0.14, by = 0.02), las = 2)
-arrows(gsize(ctcl_1st), 200, gsize(ctcl_1st), 20, col = "#922687", lwd = 2, length = 0.1)
-text(gsize(ctcl_1st) - 10, 400, paste0("observed = ", gsize(ctcl_1st), "\np = ", table(all_re_husci_df$edge_Critical >= gsize(ctcl_1st))["TRUE"] / 10000), cex = 0.4, pos = 4)
+# Stukalov in GWAS+1 all
+plotHist(all_re_df$allGWAS_viral_target_inStukalov, "Stukalov et al", "all 17 genes and 1st interactors", gwas_all_stukalov_length, 0.03, 0.05)
 
-dens_gwas <- hist(all_re_husci_df$node_Hospitalization, c(0:(max(all_re_husci_df$node_Hospitalization) + 1)), plot = FALSE, right = FALSE)
-plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 20), xaxt = "n", xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
-mytitle <- "COVID19 GWAS loci candidate genes\n(hospitalization)"
-mtext(side = 3, line = 1, cex = 1, mytitle)
-axis(side = 1, at = seq(0, 20, by = 5) + 0.5, labels = seq(0, 20, by = 5))
-arrows(gwas_hosp_husci_length + 0.5, 0.04, gwas_hosp_husci_length + 0.5, 0.02, col = "#922687", lwd = 2, length = 0.1)
-text(gwas_hosp_husci_length - 1, 0.06, paste0("observed = ", gwas_hosp_husci_length, "\np = ", table(all_re_husci_df$node_Hospitalization >= gwas_hosp_husci_length)["TRUE"] / 10000), cex = 0.4, pos = 4)
+# HuSCI in critical illness GWAS+1
+plotHist(all_re_df$ctclGWAS_viral_target_inHuSCI, "HuSCI", "critical illness, 10 genes and 1st interactors", gwas_ctcl_husci_length, 0.03, 0.05)
 
-dens_gwas <- hist(all_re_husci_df$node_Infected, c(0:(max(all_re_husci_df$node_Infected) + 1)), plot = FALSE, right = FALSE)
-plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 10), xaxt = "n", xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
-mytitle <- "COVID19 GWAS loci candidate genes\n(infection)"
-mtext(side = 3, line = 1, cex = 1, mytitle)
-axis(side = 1, at = seq(0, 11, by = 3) + 0.5, labels = seq(0, 11, by = 3))
-arrows(gwas_infct_husci_length + 0.5, 0.1, gwas_infct_husci_length + 0.5, 0.02, col = "#922687", lwd = 2, length = 0.1)
-text(gwas_infct_husci_length - 1, 0.2, paste0("observed = ", gwas_infct_husci_length, "\np = ", table(all_re_husci_df$node_Infected >= gwas_infct_husci_length)["TRUE"] / 10000), cex = 0.4, pos = 4)
+# Gordon in critical illness GWAS+1
+plotHist(all_re_df$ctclGWAS_viral_target_inGordon, "Gordon et al", "critical illness, 10 genes and 1st interactors", gwas_ctcl_gordon_length, 0.04, 0.06)
+
+# Stukalov in critical illness GWAS+1
+plotHist(all_re_df$ctclGWAS_viral_target_inStukalov, "Stukalov et al", "critical illness, 10 genes and 1st interactors", gwas_ctcl_stukalov_length, 0.03, 0.05)
+
+# HuSCI in hospitalization GWAS+1
+plotHist(all_re_df$hospGWAS_viral_target_inHuSCI, "HuSCI", "hospitalization, 13 genes and 1st interactors", gwas_hosp_husci_length, 0.03, 0.05)
+
+# Gordon in hospitalization GWAS+1
+plotHist(all_re_df$hospGWAS_viral_target_inGordon, "Gordon et al", "hospitalization, 13 genes and 1st interactors", gwas_hosp_stukalov_length, 0.03, 0.05)
+
+# Stukalov in hospitalization GWAS+1
+plotHist(all_re_df$hospGWAS_viral_target_inStukalov, "Stukalov et al", "hospitalization, 13 genes and 1st interactors", gwas_hosp_stukalov_length, 0.03, 0.05)
+
+# HuSCI in reported infection GWAS+1
+plotHist(all_re_df$infctGWAS_viral_target_inHuSCI, "HuSCI", "reported infection, 6 genes and 1st interactors", gwas_infct_husci_length, 0.04, 0.06)
+
+# Gordon in reported infection GWAS+1
+plotHist(all_re_df$infctGWAS_viral_target_inGordon, "Gordon et al", "reported infection, 6 genes and 1st interactors", gwas_infct_gordon_length, 0.05, 0.07)
+
+# Stukalov in reported infection GWAS+1
+plotHist(all_re_df$infctGWAS_viral_target_inStukalov, "Stukalov et al", "reported infection, 6 genes and 1st interactors", gwas_infct_stukalov_length, 0.05, 0.07)
 dev.off()
 
 boxplot(inHuSCI_summary, las = 1)
 pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_GWAS_viral_target_v2_left_closed.pdf", width = 4, height = 4)
 for (i in seq(1, length(inHuSCI_summary), by = 2)) {
     dens_gwas <- hist(inHuSCI_summary[[i]], breaks = seq(0, max(inHuSCI_summary[[i]]), by = 1), plot = FALSE, right = TRUE)
-    plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, max(inHuSCI_summary[[i]])), xaxt = "n", xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
+    plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, max(inHuSCI_summary[[i]])), xaxt = "n", xlab = "Number of viral targets", ylab = "Frequency", main = "", cex.sub = 0.5)
     lines(dens_gwas$mids, dens_gwas$density, col = "darkgrey", lwd = 3)
     mytitle <- paste0("COVID19 GWAS loci candidate genes\n", names(inHuSCI_summary[i]))
     mtext(side = 3, line = 1, cex = 1, mytitle)
@@ -273,7 +295,7 @@ dev.off()
 pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_GWAS_viral_target_v2_right_closed.pdf", width = 4, height = 4)
 for (i in seq(1, length(inHuSCI_summary), by = 2)) {
     dens_gwas <- hist(inHuSCI_summary[[i]], breaks = seq(0, max(inHuSCI_summary[[i]]), by = 1), plot = FALSE, right = FALSE)
-    plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, max(inHuSCI_summary[[i]])), xaxt = "n", xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
+    plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, max(inHuSCI_summary[[i]])), xaxt = "n", xlab = "Number of viral targets", ylab = "Frequency", main = "", cex.sub = 0.5)
     lines(dens_gwas$mids, dens_gwas$density, col = "darkgrey", lwd = 3)
     mytitle <- paste0("COVID19 GWAS loci candidate genes\n", names(inHuSCI_summary[i]))
     mtext(side = 3, line = 1, cex = 1, mytitle)
@@ -368,7 +390,7 @@ points(gwas_all_ocg_dif, 1, pch = 19, col = "red", cex = 1.5)
 pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/random_GWAS_commuRatio_v2.pdf", width = 3, height = 3)
 dens <- hist(all_ocg_sum, breaks = 15, plot = FALSE)
 par(mgp = c(2, 0.7, 0), ps = 8)
-plot(dens, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 20), xlab = "Ratio of communities", ylab = "Frequency density", main = "", cex.sub = 0.5)
+plot(dens, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 20), xlab = "Ratio of communities", ylab = "Frequency", main = "", cex.sub = 0.5)
 arrows(gwas_all_ocg_dif + 0.5, 0.1, gwas_all_ocg_dif + 0.5, 0.02, col = "#922687", lwd = 2, length = 0.1)
 text(gwas_all_ocg_dif - 2, 0.12, paste0("observed = ", gwas_all_ocg_dif, "\np = ", table(all_ocg_sum >= gwas_all_ocg_dif)["TRUE"]/1000, "/", table(all_ocg_sum >= gwas_all_ocg_dif)["FALSE"]/1000), cex = 0.4, pos = 4)
 dev.off()
@@ -399,3 +421,7 @@ plot(gwas_all_final, vertex.size = 3, vertex.label = NA)
 plot(ctcl_network, vertex.size = 3, vertex.label = NA)
 plot(hosp_network, vertex.size = 3, vertex.label = NA)
 plot(infct_network, vertex.size = 3, vertex.label = NA)
+
+######
+# save result
+save.image("~/Documents/INET-work/virus_network/statistic_results/GWAS/GWAS_3data_HuRI.RData")

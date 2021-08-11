@@ -35,6 +35,17 @@ huriRewireDataset <- function(node, remove.loops) {
     return(count)
 }
 
+plotHist <- function(value, title, phenotype, length, xmax, y1, y2) {
+    dens_gwas <- hist(value, breaks = c(0:(max(value) + 1)), plot = FALSE, right = F)
+    plot(dens_gwas, xlim = c(0, 25), col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, xaxt = "n", freq = FALSE, xlab = "Number of viral targets", ylab = "Frequency", main = "", cex.sub = 0.5)
+    mytitle <- paste0("COVID19 GWAS subnetwork\n(", phenotype, ")\nviral targets in ", title)
+    mtext(side = 3, line = 1, cex = 1, mytitle)
+    mtext(side = 3, line = 0.2, cex = .8, "subnetwork extracted from HuRI")
+    axis(side = 1, at = seq(0, 24, by = 5) + 0.5, labels = seq(0, 24, by = 5))
+    arrows(length, y1, length, 0, col = "#922687", lwd = 2, length = 0.1)
+    text(median(value) + 4, max(dens_gwas$counts / 10000), paste0("median = ", median(value)), col = "grey", cex = 0.5)
+    text(length - 2, y2, paste0("observed = ", length, "\np = ", table(gwas_rand_df_r2[, "HuSCI_viral_target"] >= length)["TRUE"]/10000), cex = 0.4, pos = 4)
+}
 ######
 # load dataset
 huri <- read.xlsx("../data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "HuRI")
@@ -95,49 +106,18 @@ gwas_rand_r2[is.na(gwas_rand_r2)] <- 0
 gwas_rand_df_r2 <- data.frame(matrix(gwas_rand_r2, ncol = 4, byrow = T))
 names(gwas_rand_df_r2) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukalov_viral_target", "interactions")
 
-sign_husci <-
 ######
 # plot
 pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/GWAS_3dataset.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 # HuSCI viral target in GWAS subnetwork
-dens_gwas <- hist(gwas_rand_df_r2$HuSCI_viral_target, plot = FALSE, right = F)
-plot(dens_gwas, xlim = c(0, 25), col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, yaxt = ifelse(sum(dens_gwas$density) != 1, "n", "s"), freq = ifelse(sum(dens_gwas$density) != 1, TRUE, FALSE), xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
-mytitle <- "Subnetwork of COVID19 GWAS"
-mysubtitle <- "# HuSCI viral targets"
-mtext(side = 3, line = 1, cex = 1, mytitle)
-mtext(side = 3, line = 0.5, cex = .7, mysubtitle)
-if(sum(dens_gwas$density) != 1) {
-    axis(side = 2, at = seq(0, 2500, 500), labels = seq(0, 2500, 500)/10000, las = 1)
-} else {
-    next
-}
-arrows(gwas_all_husci_length, 300, gwas_all_husci_length, 0, col = "#922687", lwd = 2, length = 0.1)
-text(gwas_all_husci_length, 400, paste0("observed = 20 \np = ", table(gwas_rand_df_r2[, "HuSCI_viral_target"] >= 20)["TRUE"]/10000), cex = 0.4, pos = 4)
+plotHist(gwas_rand_df_r2$HuSCI_viral_target, "HuSCI", "criticall illness, 5 genes and 1st interactors", gwas_all_husci_length, 20, 0.03, 0.05)
+
 # Gordon viral target in GWAS subnetwork
-dens_gwas <- hist(gwas_rand_df_r2$Gordon_viral_target, plot = FALSE, right = F)
-plot(dens_gwas, xlim = c(0, 25), col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, yaxt = ifelse(sum(dens_gwas$density) != 1, "n", "s"), freq = ifelse(sum(dens_gwas$density) != 1, TRUE, FALSE), xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
-mytitle <- "Subnetwork of COVID19 GWAS"
-mysubtitle <- "# Gordon et al. viral targets"
-mtext(side = 3, line = 1, cex = 1, mytitle)
-mtext(side = 3, line = 0.5, cex = .7, mysubtitle)
-if(sum(dens_gwas$density) != 1) {
-    axis(side = 2, at = seq(0, 2500, 500), labels = seq(0, 2500, 500)/10000, las = 1)
-}
-arrows(gwas_all_gordon_length, 0.03, gwas_all_gordon_length, 0, col = "#922687", lwd = 2, length = 0.1)
-text(gwas_all_gordon_length, 0.04, paste0("observed = 7 \np = ", table(gwas_rand_df_r2[, "Gordon_viral_target"] >= 7)["TRUE"]/10000), cex = 0.4, pos = 4)
+plotHist(gwas_rand_df_r2$Gordon_viral_target, "Gordon et al", "criticall illness, 5 genes and 1st interactors",gwas_all_gordon_length, 20, 0.03, 0.05)
+
 # Stukalov viral target in GWAS subnetwork
-dens_gwas <- hist(gwas_rand_df_r2$Stukalov_viral_target, plot = FALSE, right = F)
-plot(dens_gwas, xlim = c(0, 25), col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, yaxt = ifelse(sum(dens_gwas$density) != 1, "n", "s"), freq = ifelse(sum(dens_gwas$density) != 1, TRUE, FALSE), xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
-mytitle <- "Subnetwork of COVID19 GWAS"
-mysubtitle <- "# Stukalov et al. viral targets"
-mtext(side = 3, line = 1, cex = 1, mytitle)
-mtext(side = 3, line = 0.5, cex = .7, mysubtitle)
-if(sum(dens_gwas$density) != 1) {
-    axis(side = 2, at = seq(0, 2500, 500), labels = seq(0, 2500, 500)/10000, las = 1)
-}
-arrows(gwas_all_stukalov_length, 0.03, gwas_all_stukalov_length, 0, col = "#922687", lwd = 2, length = 0.1)
-text(gwas_all_stukalov_length, 0.04, paste0("observed = 2 \np = ", table(gwas_rand_df_r2[, "Stukalov_viral_target"] >= 2)["TRUE"]/10000), cex = 0.4, pos = 4)
+plotHist(gwas_rand_df_r2$Stukalov_viral_target, "Stukalov et al", "criticall illness, 5 genes and 1st interactors",gwas_all_stukalov_length, 20, 0.03, 0.05)
 dev.off()
 
 df <- data.frame(HuRI = V(huri_g)$name, inGWASsubnetwork = V(huri_g)$name %in% gwas$name, inHuSCI = V(huri_g)$name %in% husci_sym, inGordon = V(huri_g)$name %in% gordon_sym, inGordoninGWAS = V(huri_g)$name %in% gordon_sym[gordon_sym %in% gwas$name], inStukalov = V(huri_g)$name %in% stukalov_sym, inStukalovinGWAS = V(huri_g)$name %in% stukalov_sym[stukalov_sym %in% gwas$name])
@@ -177,3 +157,7 @@ addWorksheet(wb, "Stukalov et al")
 writeData(wb, "Stukalov et al", stukalov_deg, rowNames = TRUE)
 
 saveWorkbook(wb, "~/Documents/INET-work/virus_network/statistic_results/GWAS/3dataset_degree_HuRI.xlsx", overwrite = TRUE)
+
+######
+# save workarea data
+save.image("~/Documents/INET-work/virus_network/statistic_results/GWAS/3dataset_degree_HuRI.RData")
