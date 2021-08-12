@@ -48,10 +48,11 @@ plotHist <- function(value, title, phenotype, length, xmax, y1, y2) {
 # load dataset
 bioplex <- read.delim("../data/extended_table/BioPlex.3.0_edge.tsv", header = T)
 husci <- read.csv("../data/HuSCI_node.csv", header = TRUE)
-gwas <- read.csv("../data/GWAS_hits.csv", header = T)
+gwas <- read.csv("~/Documents/INET-work/virus_network/references/GWAS/Genetic\ mechanisms\ of\ critical\ illness\ in\ COVID-19/table1.csv", header = T)
 gordon <- read.xlsx("../data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Gordon")
 stukalov <- read.xlsx("../data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Stukalov")
 
+gwas <- c(gwas$Locus[c(1:4, 6:8)], "OAS1", "OAS2", "OAS3")
 ######
 # 1. BioPlex graph generation
 bioplex_symbol <- bioplex[, c(5:6)]
@@ -62,8 +63,7 @@ husci_sym <- husci$node
 husci_bioplex <- V(bioplex_g)$name[V(bioplex_g)$name %in% husci_sym] # HuSCI in BioPlex whole, V:132
 
 # GWAS hit in BioPlex
-gwas_bioplex <- gwas$name[!is.na(gwas$ctl == 1)]
-gwas_bioplex <- gwas_bioplex[gwas_bioplex %in% V(bioplex_g)$name] # V:4
+gwas_bioplex <- gwas[gwas %in% V(bioplex_g)$name] # V:7
 # Gordon and Stukalov in BioPlex
 gordon_sym <- unique(gordon$PreyGene)
 gordon_bioplex <- V(bioplex_g)$name[V(bioplex_g)$name %in% gordon_sym] # V:346
@@ -110,13 +110,13 @@ names(gwas_rand_df_r2) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukal
 pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/GWAS_3dataset_bioPlex.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 # HuSCI viral target in GWAS subnetwork
-plotHist(gwas_rand_df_r2$HuSCI_viral_target, "HuSCI", "criticall illness, 4 genes and 1st interactors", gwas_all_husci_length, 20, 0.05, 0.07)
+plotHist(gwas_rand_df_r2$HuSCI_viral_target, "HuSCI", "criticall illness, 7 genes and 1st interactors", gwas_all_husci_length, 20, 0.05, 0.07)
 
 # Gordon viral target in GWAS subnetwork
-plotHist(gwas_rand_df_r2$Gordon_viral_target, "Gordon et al", "criticall illness, 4 genes and 1st interactors",gwas_all_gordon_length, 20, 0.03, 0.05)
+plotHist(gwas_rand_df_r2$Gordon_viral_target, "Gordon et al", "criticall illness, 7 genes and 1st interactors",gwas_all_gordon_length, 20, 0.03, 0.05)
 
 # Stukalov viral target in GWAS subnetwork
-plotHist(gwas_rand_df_r2$Stukalov_viral_target, "Stukalov et al", "criticall illness, 4 genes and 1st interactors",gwas_all_stukalov_length, 20, 0.03, 0.05)
+plotHist(gwas_rand_df_r2$Stukalov_viral_target, "Stukalov et al", "criticall illness, 7 genes and 1st interactors",gwas_all_stukalov_length, 20, 0.03, 0.05)
 dev.off()
 
 ######
