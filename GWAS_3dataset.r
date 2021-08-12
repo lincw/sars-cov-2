@@ -41,10 +41,10 @@ plotHist <- function(value, title, phenotype, length, xmax, y1, y2) {
     mytitle <- paste0("COVID19 GWAS subnetwork\n(", phenotype, ")\nviral targets in ", title)
     mtext(side = 3, line = 1, cex = 1, mytitle)
     mtext(side = 3, line = 0.2, cex = .8, "subnetwork extracted from HuRI")
-    axis(side = 1, at = seq(0, 24, by = 5) + 0.5, labels = seq(0, 24, by = 5))
-    arrows(length, y1, length, 0, col = "#922687", lwd = 2, length = 0.1)
+    axis(side = 1, at = seq(0, xmax, by = 5) + 0.5, labels = seq(0, xmax, by = 5))
+    arrows(length + 0.5, y1, length + 0.5, 0, col = "#922687", lwd = 2, length = 0.1)
     text(median(value) + 4, max(dens_gwas$counts / 10000), paste0("median = ", median(value)), col = "grey", cex = 0.5)
-    text(length - 2, y2, paste0("observed = ", length, "\np = ", table(gwas_rand_df_r2[, "HuSCI_viral_target"] >= length)["TRUE"]/10000), cex = 0.4, pos = 4)
+    text(length - 2, y2, paste0("observed = ", length, "\np = ", table(value >= length)["TRUE"]/10000), cex = 0.4, pos = 4)
 }
 ######
 # load dataset
@@ -120,14 +120,6 @@ plotHist(gwas_rand_df_r2$Gordon_viral_target, "Gordon et al", "criticall illness
 plotHist(gwas_rand_df_r2$Stukalov_viral_target, "Stukalov et al", "criticall illness, 5 genes and 1st interactors",gwas_all_stukalov_length, 20, 0.03, 0.05)
 dev.off()
 
-df <- data.frame(HuRI = V(huri_g)$name, inGWASsubnetwork = V(huri_g)$name %in% gwas$name, inHuSCI = V(huri_g)$name %in% husci_sym, inGordon = V(huri_g)$name %in% gordon_sym, inGordoninGWAS = V(huri_g)$name %in% gordon_sym[gordon_sym %in% gwas$name], inStukalov = V(huri_g)$name %in% stukalov_sym, inStukalovinGWAS = V(huri_g)$name %in% stukalov_sym[stukalov_sym %in% gwas$name])
-df_raw <- list(HuSCI = husci_sym, Gordon = gordon_sym, Stukalov = stukalov_sym)
-attributes(df_raw) <- list(names = names(df_raw), row.names = 1:max(length(husci_sym), length(gordon_sym), length(stukalov_sym)), class = 'data.frame') # ref: https://stackoverflow.com/questions/7196450/create-a-data-frame-of-unequal-lengths
-write.xlsx(df, file = "~/Documents/INET-work/virus_network/statistic_results/GWAS/3dataset_df.xlsx", quote = TRUE, overwrite = TRUE)
-write.table(husci_sym, file = "/tmp/husci_sym.tsv", sep = "\t", row.names = F, quote = F)
-write.table(gordon_sym, file = "/tmp/gordon_sym.tsv", sep = "\t", row.names = F, quote = F)
-write.table(stukalov_sym, file = "/tmp/stukalov_sym.tsv", sep = "\t", row.names = F, quote = F)
-
 ######
 # display degree of viral targets in HuRI
 husci_deg <- data.frame(degree(huri_g, v = husci_huri))
@@ -160,4 +152,4 @@ saveWorkbook(wb, "~/Documents/INET-work/virus_network/statistic_results/GWAS/3da
 
 ######
 # save workarea data
-save.image("~/Documents/INET-work/virus_network/statistic_results/GWAS/3dataset_degree_HuRI.RData")
+save.image("~/Documents/INET-work/virus_network/statistic_results/GWAS/GWAS_3dataset.RData")
