@@ -22,8 +22,8 @@ bioplexRewire <- function(remove.loops = FALSE, ...) {
 }
 bioplexRewireDataset <- function(node, remove.loops = FALSE) {
     count <- c()
-    huri_re <- bioplexRewire(remove.loops)
-    merged <- combineNetwork(huri_re, node)
+    re <- bioplexRewire(remove.loops)
+    merged <- combineNetwork(re, node)
     # merged_inHuSCI
     count <- c(count, as.numeric(table(V(merged)$name %in% husci_sym)["TRUE"]))
     # merged_inGordon
@@ -38,7 +38,7 @@ plotHist <- function(value, title, phenotype, length, xmax, y1, y2) {
     plot(dens_gwas, xlim = c(0, xmax), col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, xaxt = "n", freq = FALSE, xlab = "Number of viral targets", ylab = "Frequency", main = "", cex.sub = 0.5)
     mytitle <- paste0("COVID19 GWAS subnetwork\n(", phenotype, ")\nviral targets in ", title)
     mtext(side = 3, line = 1, cex = 1, mytitle)
-    mtext(side = 3, line = 0.2, cex = .8, "subnetwork extracted from HuRI")
+    mtext(side = 3, line = 0.2, cex = .8, "subnetwork extracted from BioPlex3.0")
     axis(side = 1, at = seq(0, xmax, by = 5) + 0.5, labels = seq(0, xmax, by = 5))
     arrows(length + 0.5, y1, length + 0.5, 0, col = "#922687", lwd = 2, length = 0.1)
     text(median(value) + 4, max(dens_gwas$counts / 10000), paste0("median = ", median(value)), col = "grey", cex = 0.5)

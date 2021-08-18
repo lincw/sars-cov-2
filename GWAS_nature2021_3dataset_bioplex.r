@@ -173,38 +173,44 @@ names(gwas_rand_df_r2) <- c(
     "infctGWAS_viral_target_inStukalov",
     "infctGWAS_subnetworkSize"
 )
+all_re_df_plot <- gwas_rand_df_r2[, c(1:3, 5:7, 9:11, 13:15)]
+all_length <- c(
+    gwas_all_husci_length,
+    gwas_all_gordon_length,
+    gwas_all_stukalov_length,
+    gwas_ctcl_husci_length,
+    gwas_ctcl_gordon_length,
+    gwas_ctcl_stukalov_length,
+    gwas_hosp_husci_length,
+    gwas_hosp_gordon_length,
+    gwas_hosp_stukalov_length,
+    gwas_infct_husci_length,
+    gwas_infct_gordon_length,
+    gwas_infct_stukalov_length
+)
+title <- rep(c("HuSCI", "Gordon et al", "Stukalov et al"), 4)
+phenotype <- rep(c(
+    "all 24 genes and 1st interactors",
+    "critical illness, 10 genes and 1st interactors",
+    "hospitalization, 17 genes and 1st interactors",
+    "reported infection, 10 genes and 1st interactors"
+    ), each = 3)
+xmax <- c(20, 25, 45, 15, 20, 30, 15, 20, 30, 15, 20, 30)
 
 ######
-# plot
+# plotting
 pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/GWASv2_3dataset_BioPlex3.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
-# HuSCI in GWAS+1 all
-plotHist(gwas_rand_df_r2$allGWAS_viral_target_inHuSCI, "HuSCI", "all 24 genes and 1st interactors", gwas_all_husci_length, 20, 0.03, 0.05)
-# Gordon in GWAS+1 all
-plotHist(gwas_rand_df_r2$allGWAS_viral_target_inGordon, "Gordon et al", "all 24 genes and 1st interactors", gwas_all_gordon_length, 25, 0.03, 0.05)
-# Stukalov in GWAS+1 all
-plotHist(gwas_rand_df_r2$allGWAS_viral_target_inStukalov, "Stukalov et al", "all 24 genes and 1st interactors", gwas_all_stukalov_length, 45, 0.03, 0.05)
-
-# HuSCI in GWAS+1 critical illness
-plotHist(gwas_rand_df_r2$ctclGWAS_viral_target_inHuSCI, "HuSCI", "critical illness, 10 genes and 1st interactors", gwas_ctcl_husci_length, 15, 0.03, 0.05)
-# Gordon in GWAS+1 critical illness
-plotHist(gwas_rand_df_r2$ctclGWAS_viral_target_inGordon, "Gordon et al", "critical illness, 10 genes and 1st interactors", gwas_ctcl_gordon_length, 20, 0.03, 0.05)
-# Stukalov in GWAS+1 critical illness
-plotHist(gwas_rand_df_r2$ctclGWAS_viral_target_inStukalov, "Stukalov et al", "critical illness, 10 genes and 1st interactors", gwas_ctcl_stukalov_length, 30, 0.03, 0.05)
-
-# HuSCI in GWAS+1 hospitalization
-plotHist(gwas_rand_df_r2$hospGWAS_viral_target_inHuSCI, "HuSCI", "hospitalization, 17 genes and 1st interactors", gwas_hosp_husci_length, 15, 0.03, 0.05)
-# Gordon in GWAS+1 hospitalization
-plotHist(gwas_rand_df_r2$hospGWAS_viral_target_inGordon, "Gordon et al", "hospitalization, 17 genes and 1st interactors", gwas_hosp_gordon_length, 20, 0.03, 0.05)
-# Stukalov in GWAS+1 hospitalization
-plotHist(gwas_rand_df_r2$hospGWAS_viral_target_inStukalov, "Stukalov et al", "hospitalization, 17 genes and 1st interactors", gwas_hosp_stukalov_length, 30, 0.03, 0.05)
-
-# HuSCI in GWAS+1 reported infection
-plotHist(gwas_rand_df_r2$infctGWAS_viral_target_inHuSCI, "HuSCI", "reported infection, 10 genes and 1st interactors", gwas_infct_husci_length, 15, 0.03, 0.05)
-# Gordon in GWAS+1 reported infection
-plotHist(gwas_rand_df_r2$infctGWAS_viral_target_inGordon, "Gordon et al", "reported infection, 10 genes and 1st interactors", gwas_infct_gordon_length, 20, 0.03, 0.05)
-# Stukalov in GWAS+1 reported infection
-plotHist(gwas_rand_df_r2$infctGWAS_viral_target_inStukalov, "Stukalov et al", "reported infection, 10 genes and 1st interactor", gwas_infct_stukalov_length, 30, 0.03, 0.05)
+for (i in 1:12) {
+    plotHist(
+        all_re_df_plot[, i],
+        title[i],
+        phenotype[i],
+        all_length[i],
+        xmax[i],
+        0.03, 0.05
+        )
+}
 dev.off()
 
 dens_gwas <- hist(gwas_rand_df_r2$HuSCI_viral_target, plot = FALSE, right = F)
