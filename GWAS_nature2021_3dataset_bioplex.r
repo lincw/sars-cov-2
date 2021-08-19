@@ -199,7 +199,7 @@ xmax <- c(20, 25, 45, 15, 20, 30, 15, 20, 30, 15, 20, 30)
 
 ######
 # plotting
-pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/GWASv2_3dataset_BioPlex3.pdf", width = 3, height = 3)
+pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021_3dataset_BioPlex3.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 for (i in 1:12) {
     plotHist(
@@ -211,6 +211,14 @@ for (i in 1:12) {
         0.03, 0.05
         )
 }
+dens_gwas <- hist(gwas_rand_df_r2[, 4], breaks = 20, plot = FALSE, right = FALSE)
+plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, yaxt = "n", xlab = "Number of interactions", main = "", cex.sub = 0.5)
+mtext(side = 3, line = 1, cex = 1, "COVID19 GWAS subnetwork")
+mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from BioPlex3.0")
+axis(side = 2, at = seq(0, 1400, by = 200), labels = seq(0, 0.14, by = 0.02), las = 1)
+arrows(gsize(gwas_all_final), 200, gsize(gwas_all_final), 0, col = "#922687", lwd = 2, length = 0.1)
+text(median(gwas_rand_df_r2[, 4]) + 100, max(dens_gwas$counts), paste0("median = ", median(gwas_rand_df_r2[, 4])), col = "grey", cex = 0.5)
+text(gsize(gwas_all_final) - 50, 350, paste0("observed = ", gsize(gwas_all_final), "\np = ", table(gwas_rand_df_r2[, 4] >= gsize(gwas_all_final))["TRUE"]/10000), cex = 0.4, pos = 4)
 dev.off()
 
 dens_gwas <- hist(gwas_rand_df_r2$HuSCI_viral_target, plot = FALSE, right = F)
@@ -292,4 +300,4 @@ saveWorkbook(wb, "~/Documents/INET-work/virus_network/statistic_results/GWAS/3da
 
 ######
 # save workarea data
-save.image("~/Documents/INET-work/virus_network/statistic_results/3dataset_degree_BioPlex.RData")
+save.image("~/Documents/INET-work/virus_network/statistic_results/GWAS/3dataset_degree_BioPlex_18082021.RData")

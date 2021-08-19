@@ -244,7 +244,7 @@ phenotype <- rep(c(
 y1 <- c(0.03, 0.03, 0.03, 0.03, 0.04, 0.03, 0.03, 0.03, 0.03, 0.04, 0.05, 0.05)
 y2 <- c(0.05, 0.05, 0.05, 0.05, 0.06, 0.05, 0.05, 0.05, 0.05, 0.06, 0.07, 0.07)
 # plotting
-pdf("~/Documents/INET-work/virus_network/figure_results/GWAS/GWASv2_3dataset_viral_target.pdf", width = 3, height = 3)
+pdf("~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021_3dataset_HuRI.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 for (i in 1:12) {
     plotHist(
@@ -255,6 +255,16 @@ for (i in 1:12) {
         y1[i], y2[i]
         )
 }
+
+# interaction
+dens_gwas <- hist(all_re_df[, 4], breaks = 20, plot = FALSE, right = FALSE)
+plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, yaxt = "n", xlab = "Number of interactions", main = "", cex.sub = 0.5)
+mtext(side = 3, line = 1, cex = 1, "COVID19 GWAS subnetwork")
+mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from HuRI")
+axis(side = 2, at = seq(0, 1000, by = 200), labels = seq(0, 0.1, by = 0.02), las = 1)
+arrows(gsize(gwas_all_final), 200, gsize(gwas_all_final), 0, col = "#922687", lwd = 2, length = 0.1)
+text(median(all_re_df[, 4]) + 30, max(dens_gwas$counts), paste0("median = ", median(all_re_df[, 4])), col = "grey", cex = 0.5)
+text(gsize(gwas_all_final) - 50, 350, paste0("observed = ", gsize(gwas_all_final), "\np = ", table(all_re_df[, 4] >= gsize(gwas_all_final))["TRUE"]/10000), cex = 0.4, pos = 4)
 dev.off()
 
 boxplot(inHuSCI_summary, las = 1)

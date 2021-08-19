@@ -108,7 +108,7 @@ names(gwas_rand_df_r2) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukal
 
 ######
 # plot
-pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/GWAS_3dataset.pdf", width = 3, height = 3)
+pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2020_3dataset_HuRI.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 # HuSCI viral target in GWAS subnetwork
 plotHist(gwas_rand_df_r2$HuSCI_viral_target, "HuSCI", "criticall illness, 5 genes and 1st interactors", gwas_all_husci_length, 20, 0.03, 0.05)
@@ -118,6 +118,16 @@ plotHist(gwas_rand_df_r2$Gordon_viral_target, "Gordon et al", "criticall illness
 
 # Stukalov viral target in GWAS subnetwork
 plotHist(gwas_rand_df_r2$Stukalov_viral_target, "Stukalov et al", "criticall illness, 5 genes and 1st interactors",gwas_all_stukalov_length, 20, 0.03, 0.05)
+
+# interaction
+dens_gwas <- hist(gwas_rand_df_r2[, 4], breaks = 20, plot = FALSE, right = FALSE)
+plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, xlim = c(200, 1200), las = 1, yaxt = "n", xlab = "Number of interactions", main = "", cex.sub = 0.5)
+mtext(side = 3, line = 1, cex = 1, "COVID19 GWAS subnetwork")
+mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from HuRI")
+axis(side = 2, at = seq(0, 1400, by = 200), labels = seq(0, 0.14, by = 0.02), las = 1)
+arrows(gsize(gwas_all_final), 200, gsize(gwas_all_final), 0, col = "#922687", lwd = 2, length = 0.1)
+text(median(gwas_rand_df_r2[, 4]) + 100, max(dens_gwas$counts), paste0("median = ", median(gwas_rand_df_r2[, 4])), col = "grey", cex = 0.5)
+text(gsize(gwas_all_final) - 200, 350, paste0("observed = ", gsize(gwas_all_final), "\np < 0.0001"), cex = 0.4, pos = 4)
 dev.off()
 
 ######
