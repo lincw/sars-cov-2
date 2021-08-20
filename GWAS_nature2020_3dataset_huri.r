@@ -32,6 +32,7 @@ huriRewireDataset <- function(node, remove.loops) {
     # merged_inStukalov
     count <- c(count, as.numeric(table(V(merged)$name %in% stukalov_sym)["TRUE"]))
     count <- c(count, gsize(merged))
+    count <- c(count, mean_distance(merged))
     return(count)
 }
 
@@ -85,6 +86,7 @@ gwas_all_df <- do.call(rbind, gwas_all_list_df)
 gwas_all_g_merge <- graph_from_data_frame(gwas_all_df, directed = FALSE)
 # to have interaction between 1st interactors
 gwas_all_final <- simplify(induced_subgraph(huri_g, names(V(gwas_all_g_merge))), remove.loops = F)
+gwas_mean_dist <- mean_distance(gwas_all_final)
 
 # GWAS hit in HuSCI
 gwas_all_husci <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% husci_sym]
@@ -103,8 +105,8 @@ gwas_all_stukalov_length <- length(gwas_all_stukalov)
 gwas_rand_r2 <- c()
 gwas_rand_r2 <- c(gwas_rand_r2, mcreplicate(10000, huriRewireDataset(gwas_huri, FALSE), mc.cores = detectCores()))
 gwas_rand_r2[is.na(gwas_rand_r2)] <- 0
-gwas_rand_df_r2 <- data.frame(matrix(gwas_rand_r2, ncol = 4, byrow = T))
-names(gwas_rand_df_r2) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukalov_viral_target", "interactions")
+gwas_rand_df_r2 <- data.frame(matrix(gwas_rand_r2, ncol = 5, byrow = T))
+names(gwas_rand_df_r2) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukalov_viral_target", "interactions", "mean_distance")
 
 ######
 # plot
@@ -128,6 +130,17 @@ axis(side = 2, at = seq(0, 1400, by = 200), labels = seq(0, 0.14, by = 0.02), la
 arrows(gsize(gwas_all_final), 200, gsize(gwas_all_final), 0, col = "#922687", lwd = 2, length = 0.1)
 text(median(gwas_rand_df_r2[, 4]) + 100, max(dens_gwas$counts), paste0("median = ", median(gwas_rand_df_r2[, 4])), col = "grey", cex = 0.5)
 text(gsize(gwas_all_final) - 200, 350, paste0("observed = ", gsize(gwas_all_final), "\np < 0.0001"), cex = 0.4, pos = 4)
+
+# mean distance
+dens_gwas <- hist(gwas_rand_df_r2[, 5], plot = FALSE, right = FALSE)
+plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), xlim = c(2, 6), border = NA, las = 1, yaxt = "n", xlab = "Average shortest path", main = "", cex.sub = 0.5)
+mtext(side = 3, line = 1, cex = 1, "COVID19 GWAS subnetwork")
+mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from HuRI")
+axis(side = 2, at = seq(0, 3000, by = 500), labels = seq(0, 0.3, by = 0.05), las = 1)
+arrows(gwas_mean_dist, 500, gwas_mean_dist, 0, col = "#922687", lwd = 2, length = 0.1)
+text(median(gwas_rand_df_r2[, 5]) + 0.4, max(dens_gwas$counts), paste0("median = ", round(median(gwas_rand_df_r2[, 5]), 2)), col = "grey", cex = 0.5)
+text(round(gwas_mean_dist, 2), 600, paste0("observed = ", round(gwas_mean_dist, 2), "\np = 1"), cex = 0.4, pos = 4)
+
 dev.off()
 
 ######
