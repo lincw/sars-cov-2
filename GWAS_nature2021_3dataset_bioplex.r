@@ -5,7 +5,6 @@
 # Lin Chung-wen
 # Date: 11.08.2021
 
-setwd("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/src")
 ######
 # load package
 library(igraph)
@@ -15,7 +14,7 @@ library(gplots)
 library(openxlsx)
 library(plotrix) # add table to plot
 
-source("combineNetwork.r")
+source("~/Documents/INET-work/virus_network/src/combineNetwork.r")
 
 bioplexRewire <- function(remove.loops = FALSE, ...) {
     bioplex_re <- rewire(bioplex_g, keeping_degseq(niter = gsize(bioplex_g) * 10))
@@ -65,11 +64,11 @@ plotHist <- function(value, title, phenotype, length, xmax, y1, y2) {
 }
 ######
 # load dataset
-bioplex <- read.delim("../data/extended_table/BioPlex.3.0_edge.tsv", header = T)
-husci <- read.csv("../data/HuSCI_node.csv", header = TRUE)
+bioplex <- read.delim("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/BioPlex.3.0_edge.tsv", header = T)
+husci <- read.csv("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/HuSCI_node.csv", header = TRUE)
 gwas <- read.xlsx("~/Documents/INET-work/virus_network/statistic_results/GWAS/COVID_GWAS_hit_inHUSCI_v2.xlsx")
-gordon <- read.xlsx("../data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Gordon")
-stukalov <- read.xlsx("../data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Stukalov")
+gordon <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Gordon")
+stukalov <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Stukalov")
 
 ######
 # 1. BioPlex graph generation
@@ -199,7 +198,7 @@ xmax <- c(20, 25, 45, 15, 20, 30, 15, 20, 30, 15, 20, 30)
 
 ######
 # plotting
-pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021_3dataset_BioPlex3.pdf", width = 3, height = 3)
+pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021b_3dataset_BioPlex3.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 for (i in 1:12) {
     plotHist(
@@ -300,4 +299,4 @@ saveWorkbook(wb, "~/Documents/INET-work/virus_network/statistic_results/GWAS/3da
 
 ######
 # save workarea data
-save.image("~/Documents/INET-work/virus_network/statistic_results/GWAS/3dataset_degree_BioPlex_18082021.RData")
+save.image("~/Documents/INET-work/virus_network/statistic_results/GWAS/Nature2021b_3dataset_BioPlex.RData")

@@ -48,7 +48,6 @@ huriRewireMulti <- function(gwas, ctcl, hosp, infct, husci, gordon, stukalov, re
     df <- c(df, table(V(merged)$name %in% gordon)["TRUE"])
     df <- c(df, table(V(merged)$name %in% stukalov)["TRUE"])
     df <- c(df, gsize(merged))
-    # average shortest path of GWAS subnetwork from the rewired HuRI
     df <- c(df, mean_distance(merged))
 
     merged <- combineNetwork(re, hosp) # get GWAS+1 subnetwork only from hospitalized candidates
@@ -56,7 +55,6 @@ huriRewireMulti <- function(gwas, ctcl, hosp, infct, husci, gordon, stukalov, re
     df <- c(df, table(V(merged)$name %in% gordon)["TRUE"])
     df <- c(df, table(V(merged)$name %in% stukalov)["TRUE"])
     df <- c(df, gsize(merged))
-    # average shortest path of GWAS subnetwork from the rewired HuRI
     df <- c(df, mean_distance(merged))
 
     merged <- combineNetwork(re, infct) # get GWAS+1 subnetwork only from reported infection candidates
@@ -64,7 +62,6 @@ huriRewireMulti <- function(gwas, ctcl, hosp, infct, husci, gordon, stukalov, re
     df <- c(df, table(V(merged)$name %in% gordon)["TRUE"])
     df <- c(df, table(V(merged)$name %in% stukalov)["TRUE"])
     df <- c(df, gsize(merged))
-    # average shortest path of GWAS subnetwork from the rewired HuRI
     df <- c(df, mean_distance(merged))
 
     return(df)
@@ -95,7 +92,7 @@ plotInteraction <- function(value, ymax, observe, phenotype) {
 
 plotDistance <- function(value, ymax, observe, phenotype) {
     dens_gwas <- hist(value, breaks = 20, plot = FALSE, right = FALSE)
-    plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, yaxt = "n", xlab = "Average shortest path", main = "", cex.sub = 0.5)
+    plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, xlim = c(0, round(max(value), 0)), yaxt = "n", xlab = "Average shortest path", main = "", cex.sub = 0.5)
     mtext(side = 3, line = 1, cex = 1, paste0("COVID19 GWAS subnetwork: ", phenotype))
     mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from HuRI")
     axis(side = 2, at = seq(0, ymax, by = 500), labels = seq(0, ymax/10000, by = 0.05), las = 1)
@@ -261,7 +258,7 @@ names(all_re_df) <- c(
     "infctGWAS_subnetworkSize",
     "infctGWAS_shortestpath"
 )
-write.xlsx(all_re_df, file = "~/Documents/INET-work/virus_network/statistic_results/GWAS/meta_analysis_v2_3dataset.xlsx", overwrite = T)
+write.xlsx(all_re_df, file = "~/Documents/INET-work/virus_network/statistic_results/GWAS/Nature2021b_3dataset.xlsx", overwrite = T)
 all_re_df_plot <- all_re_df[, c(1:3, 6:8, 11:13, 16:18)]
 all_length <- c(gwas_all_husci_length,
     gwas_all_gordon_length,
@@ -286,7 +283,7 @@ phenotype <- rep(c(
 y1 <- c(0.03, 0.03, 0.03, 0.03, 0.04, 0.03, 0.03, 0.03, 0.03, 0.04, 0.05, 0.05)
 y2 <- c(0.05, 0.05, 0.05, 0.05, 0.06, 0.05, 0.05, 0.05, 0.05, 0.06, 0.07, 0.07)
 # plotting
-pdf("~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021_3dataset_HuRI.pdf", width = 3, height = 3)
+pdf("~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021b_3dataset_HuRI.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 for (i in 1:12) {
     plotHist(
@@ -463,4 +460,4 @@ plot(infct_network, vertex.size = 3, vertex.label = NA)
 
 ######
 # save result
-save.image("~/Documents/INET-work/virus_network/statistic_results/GWAS/3data_HuRI.RData")
+save.image("~/Documents/INET-work/virus_network/statistic_results/GWAS/Nature2021b_3data_HuRI.RData")

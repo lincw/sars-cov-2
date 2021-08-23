@@ -3,7 +3,7 @@
 # Lin Chung-wen
 # Date: 28.07.2021 **23:49**
 
-setwd("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/src")
+# setwd("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/src")
 ######
 # load package
 library(igraph)
@@ -13,7 +13,7 @@ library(gplots)
 library(openxlsx)
 library(plotrix) # add table to plot
 
-source("combineNetwork.r")
+source("~/Documents/INET-work/virus_network/src/combineNetwork.r")
 
 huriRewire <- function(remove.loops = FALSE, ...) {
     huri_re <- rewire(huri_g, keeping_degseq(niter = gsize(huri_g) * 10))
@@ -49,11 +49,11 @@ plotHist <- function(value, title, phenotype, length, xmax, y1, y2) {
 }
 ######
 # load dataset
-huri <- read.xlsx("../data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "HuRI")
-husci <- read.csv("../data/HuSCI_node.csv", header = TRUE)
-gwas <- read.csv("../data/GWAS_hits.csv", header = T)
-gordon <- read.xlsx("../data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Gordon")
-stukalov <- read.xlsx("../data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Stukalov")
+huri <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "HuRI")
+husci <- read.csv("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/HuSCI_node.csv", header = TRUE)
+gwas <- read.csv("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/GWAS_hits.csv", header = T)
+gordon <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Gordon")
+stukalov <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Stukalov")
 
 ######
 # 1. HuRI graph generation
@@ -133,14 +133,13 @@ text(gsize(gwas_all_final) - 200, 350, paste0("observed = ", gsize(gwas_all_fina
 
 # mean distance
 dens_gwas <- hist(gwas_rand_df_r2[, 5], plot = FALSE, right = FALSE)
-plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), xlim = c(2, 6), border = NA, las = 1, yaxt = "n", xlab = "Average shortest path", main = "", cex.sub = 0.5)
+plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), xlim = c(0, round(max(gwas_rand_df_r2[, 5]))), border = NA, las = 1, yaxt = "n", xlab = "Average shortest path", main = "", cex.sub = 0.5)
 mtext(side = 3, line = 1, cex = 1, "COVID19 GWAS subnetwork")
 mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from HuRI")
 axis(side = 2, at = seq(0, 3000, by = 500), labels = seq(0, 0.3, by = 0.05), las = 1)
 arrows(gwas_mean_dist, 500, gwas_mean_dist, 0, col = "#922687", lwd = 2, length = 0.1)
 text(median(gwas_rand_df_r2[, 5]) + 0.4, max(dens_gwas$counts), paste0("median = ", round(median(gwas_rand_df_r2[, 5]), 2)), col = "grey", cex = 0.5)
-text(round(gwas_mean_dist, 2), 600, paste0("observed = ", round(gwas_mean_dist, 2), "\np = 1"), cex = 0.4, pos = 4)
-
+text(round(gwas_mean_dist, 2), 600, paste0("observed = ", round(gwas_mean_dist, 2), "\np = ", table(gwas_rand_df_r2[, 5] >= gwas_mean_dist)["TRUE"]/10000), cex = 0.4, pos = 4)
 dev.off()
 
 ######
@@ -171,8 +170,8 @@ writeData(wb, "Gordon et al", gordon_deg, rowNames = TRUE)
 addWorksheet(wb, "Stukalov et al")
 writeData(wb, "Stukalov et al", stukalov_deg, rowNames = TRUE)
 
-saveWorkbook(wb, "~/Documents/INET-work/virus_network/statistic_results/GWAS/3dataset_degree_HuRI.xlsx", overwrite = TRUE)
+saveWorkbook(wb, "~/Documents/INET-work/virus_network/statistic_results/GWAS/Nature2021a_3dataset_HuRI.xlsx", overwrite = TRUE)
 
 ######
 # save workarea data
-save.image("~/Documents/INET-work/virus_network/statistic_results/GWAS/GWAS_3dataset.RData")
+save.image("~/Documents/INET-work/virus_network/statistic_results/GWAS/Nature2020_3dataset_HuRI.RData")

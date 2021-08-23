@@ -3,7 +3,6 @@
 # Lin Chung-wen
 # Date: 28.07.2021 **23:49**
 
-setwd("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/src")
 ######
 # load package
 library(igraph)
@@ -13,7 +12,7 @@ library(gplots)
 library(openxlsx)
 library(plotrix) # add table to plot
 
-source("combineNetwork.r")
+source("~/Documents/INET-work/virus_network/src/combineNetwork.r")
 
 bioplexRewire <- function(remove.loops = FALSE, ...) {
     bioplex_re <- rewire(bioplex_g, keeping_degseq(niter = gsize(bioplex_g) * 10))
@@ -56,11 +55,11 @@ plotHist <- function(value, title, phenotype, length, xmax, y1, y2, density = TR
 }
 ######
 # load dataset
-bioplex <- read.delim("../data/extended_table/BioPlex.3.0_edge.tsv", header = T)
-husci <- read.csv("../data/HuSCI_node.csv", header = TRUE)
+bioplex <- read.delim("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/BioPlex.3.0_edge.tsv", header = T)
+husci <- read.csv("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/HuSCI_node.csv", header = TRUE)
 gwas <- read.csv("~/Documents/INET-work/virus_network/references/GWAS/Genetic\ mechanisms\ of\ critical\ illness\ in\ COVID-19/table1.csv", header = T)
-gordon <- read.xlsx("../data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Gordon")
-stukalov <- read.xlsx("../data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Stukalov")
+gordon <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Gordon")
+stukalov <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Stukalov")
 
 gwas <- c(gwas$Locus[c(1:4, 6:8)], "OAS1", "OAS2", "OAS3")
 ######
@@ -117,7 +116,7 @@ names(gwas_rand_df_r2) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukal
 
 ######
 # plot
-pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2020_3dataset_bioPlex.pdf", width = 3, height = 3)
+pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021a_3dataset_bioPlex.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 # HuSCI viral target in GWAS subnetwork
 plotHist(gwas_rand_df_r2$HuSCI_viral_target, "HuSCI", "criticall illness, 7 genes and 1st interactors", gwas_all_husci_length, 20, 0.05, 0.07)
@@ -164,4 +163,4 @@ saveWorkbook(wb, "~/Documents/INET-work/virus_network/statistic_results/GWAS/3da
 
 ######
 # save workarea data
-save.image("~/Documents/INET-work/virus_network/statistic_results/GWAS/3dataset_degree_BioPlex.RData")
+save.image("~/Documents/INET-work/virus_network/statistic_results/GWAS/Nature2021a_3dataset_BioPlex.RData")
