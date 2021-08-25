@@ -3,7 +3,6 @@
 # Lin Chung-wen
 # Date: 28.07.2021 **23:49**
 
-rm(list = ls())
 ######
 # load package
 library(igraph)
@@ -13,18 +12,24 @@ library(gplots)
 library(openxlsx)
 library(plotrix) # add table to plot
 
-source("~/Documents/INET-work/virus_network/src/combineNetwork.r")
-
-huriRewire <- function(remove.loops = FALSE, ...) {
-    huri_re <- rewire(huri_g, keeping_degseq(niter = gsize(huri_g) * 10))
-    huri_sim <- simplify(huri_re, remove.loops = remove.loops)
-    return(huri_sim)
+subnetwork <- function(network, node) {
+    gwas_hit_1st <- make_ego_graph(network, nodes = node, order = 1, mode = "all")
+    ######
+    # 3. **rewiring analysis of HuRI**, to see if the HuSCI viral target is significant.
+    # subnetwork of GWAS hit from HuRI
+    # inherit from above code
+    gwas_all_list_df <- lapply(gwas_hit_1st, as_data_frame)
+    gwas_all_df <- do.call(rbind, gwas_all_list_df)
+    gwas_all_g_merge <- graph_from_data_frame(gwas_all_df, directed = FALSE)
+    # to have interaction between 1st interactors
+    gwas_all_final <- simplify(induced_subgraph(network, names(V(gwas_all_g_merge))), remove.loops = F)
+    return(gwas_all_final)
 }
 
-huriRewireDataset <- function(node, v_from, v_to, remove.loops = FALSE) {
+rewire3Dataset <- function(network, node, v_from, v_to) {
     count <- c()
-    huri_re <- huriRewire(remove.loops)
-    merged <- combineNetwork(huri_re, node)
+    re <- rewire(network, keeping_degseq(niter = gsize(network) * 10))
+    merged <- subnetwork(re, node)
     # merged_inHuSCI
     count <- c(count, as.numeric(table(V(merged)$name %in% husci_sym)["TRUE"]))
     # merged_inGordon
@@ -32,8 +37,7 @@ huriRewireDataset <- function(node, v_from, v_to, remove.loops = FALSE) {
     # merged_inStukalov
     count <- c(count, as.numeric(table(V(merged)$name %in% stukalov_sym)["TRUE"]))
     count <- c(count, gsize(merged))
-    # count <- c(count, mean_distance(merged))
-    count <- c(count, mean(distance(merged, v = v_from, to = v_to, mode = "all")))
+    count <- c(count, mean(distances(merged, v = v_from, to = v_to, mode = "all")))
     return(count)
 }
 
@@ -67,7 +71,7 @@ husci_huri <- V(huri_g)$name[V(huri_g)$name %in% husci_sym] # HuSCI in HuRI whol
 
 # GWAS hit in HuRI
 gwas_huri <- gwas$name[!is.na(gwas$ctl == 1)]
-gwas_huri_paralog <- gwas_huri[c(1, 3:5)] # exclude paralogs: OAS2, 23.08.2021
+gwas_huri_paralogs <- gwas_huri[c(1, 3:5)] # exclude paralogs: OAS2, 23.08.2021
 
 # Gordon and Stukalov in HuRI
 gordon_sym <- unique(gordon$PreyGene)
@@ -76,109 +80,154 @@ gordon_huri <- V(huri_g)$name[V(huri_g)$name %in% gordon_sym]
 stukalov_sym <- unique(stukalov$human)
 stukalov_huri <- V(huri_g)$name[V(huri_g)$name %in% stukalov_sym]
 
-paralogs <- function(node, v_from, v_to) {
-    ######
-    # 2. interactor of GWAS hit
-    gwas_hit_1st <- make_ego_graph(huri_g, nodes = node, order = 1, mode = "all")
-    ######
-    # 3. **rewiring analysis of HuRI**, to see if the HuSCI viral target is significant.
-    # subnetwork of GWAS hit from HuRI
-    # inherit from above code
-    gwas_all_list_df <- lapply(gwas_hit_1st, as_data_frame)
-    gwas_all_df <- do.call(rbind, gwas_all_list_df)
-    gwas_all_g_merge <- graph_from_data_frame(gwas_all_df, directed = FALSE)
-    # to have interaction between 1st interactors
-    gwas_all_final <- simplify(induced_subgraph(huri_g, names(V(gwas_all_g_merge))), remove.loops = F)
-    # gwas_mean_dist <- mean_distance(gwas_all_final)
+######
+# 2. observation
+# subnetwork establishment
+observation_all <- subnetwork(huri_g, gwas_huri)
+print("GWAS subnetwork")
+observation_all
 
-    # GWAS hit in HuSCI
-    gwas_all_husci <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% husci_sym]
-    gwas_all_husci_length <- length(gwas_all_husci)
+observation_paralogs <- subnetwork(huri_g, gwas_huri_paralogs)
+print("GWAS subnetwork, without paralogs")
+observation_paralogs
 
-    # GWAS hit in Gordon
-    gwas_all_gordon <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% gordon_sym]
-    gwas_all_gordon_length <- length(gwas_all_gordon)
+# a. viral targets within 3 dataset: HuSCI, Gordon et al, Stukalov et al
+husci_viral_targets_all <- V(observation_all)$name[V(observation_all)$name %in% husci_sym]
+print("Viral targets from HuSCI in GWAS subnetwork")
+husci_viral_targets_all
 
-    # GWAS hit in Stukalov
-    gwas_all_stukalov <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% stukalov_sym]
-    gwas_all_stukalov_length <- length(gwas_all_stukalov)
+gordon_viral_targets_all <- V(observation_all)$name[V(observation_all)$name %in% gordon_sym]
+print("Viral targets from Gordon at al in GWAS subnetwork")
+gordon_viral_targets_all
 
-    ######
-    # permutation analysis
-    gwas_rand <- c()
-    gwas_rand <- c(gwas_rand, mcreplicate(10000, huriRewireDataset(node, v_from, v_to, FALSE), mc.cores = detectCores()))
-    gwas_rand[is.na(gwas_rand)] <- 0
-    gwas_rand_df <- data.frame(matrix(gwas_rand, ncol = 5, byrow = T))
-    names(gwas_rand_df) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukalov_viral_target", "interactions", "mean_distance")
-    return(gwas_rand_df)
+stukalov_viral_targets_all <- V(observation_all)$name[V(observation_all)$name %in% stukalov_sym]
+print("Viral targets from Stukalov at al in GWAS subnetwork")
+stukalov_viral_targets_all
+
+husci_viral_targets_paralogs <- V(observation_paralogs)$name[V(observation_paralogs)$name %in% husci_sym]
+print("Viral targets from HuSCI in GWAS subnetwork, without paralogs")
+husci_viral_targets_paralogs
+
+gordon_viral_targets_paralogs <- V(observation_paralogs)$name[V(observation_paralogs)$name %in% gordon_sym]
+print("Viral targets from Gordon et al in GWAS subnetwork, without paralogs")
+gordon_viral_targets_paralogs
+
+stukalov_viral_targets_paralogs <- V(observation_paralogs)$name[V(observation_paralogs)$name %in% stukalov_sym]
+print("Viral targets from Stukalov et al in GWAS subnetwork, without paralogs")
+stukalov_viral_targets_paralogs
+
+# b. interaction
+interactions_all <- gsize(observation_all)
+print("Interactions in GWAS subnetwork")
+interactions_all
+
+interactions_paralogs <- gsize(observation_paralogs)
+print("Interactions in GWAS subnetwork, without paralogs")
+interactions_paralogs
+
+# c. average shortest path between GWAS proteins
+gwas_protein_shortest_path_all <- mean(distances(observation_all, v = gwas_huri, to = gwas_huri, mode = "all"))
+print("Average shortest path between GWAS proteins")
+gwas_protein_shortest_path_all
+
+gwas_protein_shortest_path_paralogs <- mean(distances(observation_paralogs, v = gwas_huri_paralogs, to = gwas_huri_paralogs, mode = "all"))
+print("Average shortest path between GWAS proteins, without paralogs")
+gwas_protein_shortest_path_paralogs
+
+######
+# 3. permutation analysis
+# all GWAS proteins
+permutation_all <- c()
+permutation_all <- c(permutation_all, mcreplicate(10000, rewire3Dataset(huri_g, gwas_huri, gwas_huri, gwas_huri), mc.cores = detectCores()))
+permutation_all[is.na(permutation_all)] <- 0
+permutation_all_df <- data.frame(matrix(permutation_all, ncol = 5, byrow = T))
+names(permutation_all_df) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukalov_viral_target", "interactions", "mean_distance_GWAS_proteins")
+
+# without paralogs
+permutation_paralogs <- c()
+permutation_paralogs <- c(permutation_paralogs, mcreplicate(10000, rewire3Dataset(huri_g, gwas_huri_paralogs, gwas_huri_paralogs, gwas_huri_paralogs), mc.cores = detectCores()))
+permutation_paralogs[is.na(permutation_paralogs)] <- 0
+permutation_paralogs_df <- data.frame(matrix(permutation_paralogs, ncol = 5, byrow = T))
+names(permutation_paralogs_df) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukalov_viral_target", "interactions", "mean_distance_GWAS_proteins")
+
+######
+# plot function
+toPlot <- function(value, viral_husci, viral_gordon, viral_stukalov, interaction, distance) {
+    # HuSCI viral target in GWAS subnetwork
+    plotHist(value[, 1], "HuSCI", length(viral_husci), 25, 0.03, 0.05)
+    # Gordon viral target in GWAS subnetwork
+    plotHist(value[, 2], "Gordon et al", length(viral_gordon), 20, 0.03, 0.05)
+    # Stukalov viral target in GWAS subnetwork
+    plotHist(value[, 3], "Stukalov et al", length(viral_stukalov), 20, 0.03, 0.05)
+    # interaction
+    dens_gwas <- hist(value[, 4], breaks = 20, plot = FALSE, right = FALSE)
+    plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, xlim = c(200, 1200), las = 1, yaxt = "n", xlab = "Number of interactions", main = "", cex.sub = 0.5)
+    mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from HuRI")
+    axis(side = 2, at = seq(0, 1200, by = 200), labels = seq(0, 0.12, by = 0.02), las = 1)
+    arrows(interaction, 200, interaction, 0, col = "#922687", lwd = 2, length = 0.1)
+    text(median(value[, 4]) + 100, max(dens_gwas$counts), paste0("median = ", median(value[, 4])), col = "grey", cex = 0.5)
+    text(interaction - 200, 350, paste0("observed = ", interaction, "\np < 0.0001") , cex = 0.4, pos = 4)
+
+    # mean distance
+    dens_gwas <- hist(value[, 5], breaks = 10, plot = FALSE, right = FALSE)
+    plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, xlim = c(1.5, 3.5), yaxt = "n", xlab = "Average shortest path", main = "", cex.sub = 0.5)
+    mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from HuRI")
+    axis(side = 2, at = seq(0, 3500, by = 500), labels = seq(0, 0.35, by = 0.05), las = 1)
+    arrows(distance, 600, distance, 0, col = "#922687", lwd = 2, length = 0.1)
+    text(median(value[, 5]) + 0.1, max(dens_gwas$counts), paste0("median = ", round(median(value[, 5]), 2)), col = "grey", cex = 0.5)
+    text(round(distance, 2), 1000, paste0("observed = ", round(distance, 2), "\np = ",
+        round(
+            as.numeric(table(value[value[, 5] != Inf, 5] >= distance)["TRUE"]) /
+            as.numeric(table(value[, 5] != Inf)["TRUE"]),
+        3)), cex = 0.4, pos = 4)
 }
-
-gwas_rand_df_all <- paralogs(gwas_huri, gwas_huri, gwas_huri)
-gwas_rand_df_paralogs <- paralogs(gwas_huri2, gwas_huri2, gwas_huri2)
 
 ######
 # plot
+# all
+pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021a_3dataset_HuRI_all.pdf", width = 3, height = 3)
+par(mgp = c(2, 0.7, 0), ps = 8)
+toPlot(permutation_all_df, husci_viral_targets_all, gordon_viral_targets_all, stukalov_viral_targets_all, interactions_all, gwas_protein_shortest_path_all)
+dev.off()
+# without paralogs
 pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021a_3dataset_HuRI_paralogs.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
-# HuSCI viral target in GWAS subnetwork
-plotHist(gwas_rand_df_r3$HuSCI_viral_target, "HuSCI", gwas_all_husci_length, 25, 0.03, 0.05)
-
-# Gordon viral target in GWAS subnetwork
-plotHist(gwas_rand_df_r3$Gordon_viral_target, "Gordon et al",gwas_all_gordon_length, 20, 0.03, 0.05)
-
-# Stukalov viral target in GWAS subnetwork
-plotHist(gwas_rand_df_r3$Stukalov_viral_target, "Stukalov et al",gwas_all_stukalov_length, 20, 0.03, 0.05)
-
-# interaction
-dens_gwas <- hist(gwas_rand_df_r3[, 4], breaks = 20, plot = FALSE, right = FALSE)
-plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, xlim = c(200, 1200), las = 1, yaxt = "n", xlab = "Number of interactions", main = "", cex.sub = 0.5)
-mtext(side = 3, line = 1, cex = 1, "COVID19 GWAS subnetwork")
-mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from HuRI")
-axis(side = 2, at = seq(0, 1200, by = 200), labels = seq(0, 0.12, by = 0.02), las = 1)
-arrows(gsize(gwas_all_final), 200, gsize(gwas_all_final), 0, col = "#922687", lwd = 2, length = 0.1)
-text(median(gwas_rand_df_r3[, 4]) + 100, max(dens_gwas$counts), paste0("median = ", median(gwas_rand_df_r3[, 4])), col = "grey", cex = 0.5)
-text(gsize(gwas_all_final) - 200, 350, paste0("observed = ", gsize(gwas_all_final), "\np < 0.0001"), cex = 0.4, pos = 4)
-
-# mean distance
-dens_gwas <- hist(gwas_rand_df_r3[, 5], plot = FALSE, right = FALSE)
-plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, xlim = c(2, 3), yaxt = "n", xlab = "Average shortest path", main = "", cex.sub = 0.5)
-mtext(side = 3, line = 1, cex = 1, "COVID19 GWAS subnetwork")
-mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from HuRI")
-axis(side = 2, at = seq(0, 1500, by = 500), labels = seq(0, 0.15, by = 0.05), las = 1)
-arrows(gwas_mean_dist, 300, gwas_mean_dist, 0, col = "#922687", lwd = 2, length = 0.1)
-text(median(gwas_rand_df_r3[, 5]) + 0.1, max(dens_gwas$counts), paste0("median = ", round(median(gwas_rand_df_r3[, 5]), 2)), col = "grey", cex = 0.5)
-text(round(gwas_mean_dist, 2), 500, paste0("observed = ", round(gwas_mean_dist, 2), "\np = ", table(gwas_rand_df_r3[, 5] >= gwas_mean_dist)["TRUE"]/10000), cex = 0.4, pos = 4)
+toPlot(permutation_paralogs_df, husci_viral_targets_paralogs, gordon_viral_targets_paralogs, stukalov_viral_targets_paralogs, interactions_paralogs, gwas_protein_shortest_path_paralogs)
 dev.off()
 
 ######
 # display degree of viral targets in HuRI
-husci_deg <- data.frame(degree(huri_g, v = husci_huri))
-names(husci_deg) <- "degree"
-gordon_deg <- data.frame(degree(huri_g, v = gordon_huri))
-names(gordon_deg) <- "degree"
-stukalov_deg <- data.frame(degree(huri_g, v = stukalov_huri))
-names(stukalov_deg) <- "degree"
+#------------------------------------------------
+# NOT run
+#------------------------------------------------
+# husci_deg <- data.frame(degree(huri_g, v = husci_huri))
+# names(husci_deg) <- "degree"
+# gordon_deg <- data.frame(degree(huri_g, v = gordon_huri))
+# names(gordon_deg) <- "degree"
+# stukalov_deg <- data.frame(degree(huri_g, v = stukalov_huri))
+# names(stukalov_deg) <- "degree"
 
-hist(husci_deg$degree, xlab = "degree", main = "Degree of HuSCI proteins in HuRI")
-addtable2plot(100, 50, summary(husci_deg), vlines = TRUE, bty = "l", cex = 2)
+# hist(husci_deg$degree, xlab = "degree", main = "Degree of HuSCI proteins in HuRI")
+# addtable2plot(100, 50, summary(husci_deg), vlines = TRUE, bty = "l", cex = 2)
 
-hist(gordon_deg$degree, xlab = "degree", main = "Degree of Gordon proteins in HuRI")
-addtable2plot(150, 50, summary(gordon_deg), vlines = TRUE, bty = "l", cex = 2)
+# hist(gordon_deg$degree, xlab = "degree", main = "Degree of Gordon proteins in HuRI")
+# addtable2plot(150, 50, summary(gordon_deg), vlines = TRUE, bty = "l", cex = 2)
 
-hist(stukalov_deg$degree, xlab = "degree", main = "Degree of Stukalov proteins in HuRI")
-addtable2plot(70, 100, summary(stukalov_deg), vlines = TRUE, bty = "l", cex = 2)
+# hist(stukalov_deg$degree, xlab = "degree", main = "Degree of Stukalov proteins in HuRI")
+# addtable2plot(70, 100, summary(stukalov_deg), vlines = TRUE, bty = "l", cex = 2)
 
-wb <- createWorkbook()
-addWorksheet(wb, "HuSCI")
-writeData(wb, "HuSCI", husci_deg, rowNames = TRUE)
+# wb <- createWorkbook()
+# addWorksheet(wb, "HuSCI")
+# writeData(wb, "HuSCI", husci_deg, rowNames = TRUE)
 
-addWorksheet(wb, "Gordon et al")
-writeData(wb, "Gordon et al", gordon_deg, rowNames = TRUE)
+# addWorksheet(wb, "Gordon et al")
+# writeData(wb, "Gordon et al", gordon_deg, rowNames = TRUE)
 
-addWorksheet(wb, "Stukalov et al")
-writeData(wb, "Stukalov et al", stukalov_deg, rowNames = TRUE)
+# addWorksheet(wb, "Stukalov et al")
+# writeData(wb, "Stukalov et al", stukalov_deg, rowNames = TRUE)
 
-saveWorkbook(wb, "~/Documents/INET-work/virus_network/statistic_results/GWAS/Nature2021a_3dataset_HuRI.xlsx", overwrite = TRUE)
+# saveWorkbook(wb, "~/Documents/INET-work/virus_network/statistic_results/GWAS/Nature2021a_3dataset_HuRI.xlsx", overwrite = TRUE)
+#------------------------------------------------
 
 ######
 # save workarea data

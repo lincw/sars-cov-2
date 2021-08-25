@@ -87,7 +87,7 @@ plotInteraction <- function(value, ymax, observe, phenotype) {
     axis(side = 2, at = seq(0, ymax, by = 500), labels = seq(0, ymax/10000, by = 0.05), las = 1)
     arrows(observe, 200, observe, 0, col = "#922687", lwd = 2, length = 0.1)
     text(median(value), max(dens_gwas$counts), paste0("median = ", median(value)), col = "grey", cex = 0.5)
-    text(observe - (observe / 10), 350, paste0("observed = ", observe, "\np = ", table(value >= observe)["TRUE"]/10000), cex = 0.4, pos = 4)    
+    text(observe - (observe / 10), 350, paste0("observed = ", observe, "\np = ", table(value >= observe)["TRUE"]/10000), cex = 0.4, pos = 4)
 }
 
 plotDistance <- function(value, ymax, observe, phenotype) {
@@ -98,10 +98,10 @@ plotDistance <- function(value, ymax, observe, phenotype) {
     axis(side = 2, at = seq(0, ymax, by = 500), labels = seq(0, ymax/10000, by = 0.05), las = 1)
     arrows(observe, 300, observe, 0, col = "#922687", lwd = 2, length = 0.1)
     text(round(median(value), 2), max(dens_gwas$counts), paste0("median = ", round(median(value), 2)), col = "grey", cex = 0.5)
-    text(round(observe, 1) - 0.3, 400, paste0("observed = ", round(observe, 2), "\np = ", table(value >= round(observe, 2))["TRUE"]/10000), cex = 0.4, pos = 4)        
+    text(round(observe, 1) - 0.3, 400, paste0("observed = ", round(observe, 2), "\np = ", table(value >= round(observe, 2))["TRUE"]/10000), cex = 0.4, pos = 4)
 }
 # edit plot parameters
-trace("plot.igraph", edit = T)
+# trace("plot.igraph", edit = T)
 ######
 # load dataset
 huri <- read.csv("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_Tong_withSymbol.csv", header = T)
@@ -117,13 +117,12 @@ stukalov <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/e
 huri_symbol <- huri[, c(5:6)]
 huri_g_ori <- graph_from_data_frame(huri_symbol, directed = FALSE) # V:8274, E:52573
 huri_g <- simplify(huri_g_ori, remove.loops = FALSE) # V:8274, E:52558
-huri_g_noloop <- simplify(huri_g_ori) # V:8274 E:52078 without self-loops
 # protein list filter
 husci_sym <- husci[husci$group == "human", "node"]
 husci_huri <- V(huri_g)$name[V(huri_g)$name %in% husci_sym] # HuSCI in HuRI whole
 gwas_huri <- gwas$All.LD[gwas$All.LD %in% V(huri_g)$name] # GWAS hit in HuRI
 
-gwas_huri2 <- gwas_huri[c(1, 2, 5:9, 11:17)] # omit OAS2, ICAM3 and ICAM4
+gwas_huri2 <- gwas_huri[c(1, 3, 5:9, 11:17)] # omit OAS2, ICAM1 and ICAM4
 
 # Gordon and Stukalov in HuRI
 gordon_sym <- unique(gordon$PreyGene)
@@ -142,13 +141,11 @@ ctcl <- gwas[, 2][gwas[, 5] == 1]
 ctcl <- unique(ctcl[!is.na(ctcl)])
 ctcl_huri <- ctcl[ctcl %in% V(huri_g)$name]
 
-ctcl_huri2 <- ctcl_huri[c(1, 2, 5:7, 9, 10)] # only OAS1, ICAM1
+ctcl_huri2 <- ctcl_huri[c(1, 3, 5:7, 9, 10)] # only OAS1, ICAM1
 
 ctcl_1st <- combineNetwork(huri_g, ctcl_huri2)
 gwas_ctcl_husci <- V(ctcl_1st)$name[V(ctcl_1st)$name %in% husci_sym]
 gwas_ctcl_husci_length <- length(gwas_ctcl_husci)
-# average shortest path
-gwas_ctcl_mean_dist <- mean_distance(ctcl_1st)
 
 gwas_ctcl_gordon <- V(ctcl_1st)$name[V(ctcl_1st)$name %in% gordon_sym]
 gwas_ctcl_gordon_length <- length(gwas_ctcl_gordon)
@@ -159,13 +156,11 @@ hosp <- gwas[, 2][gwas[, 6] == 1]
 hosp <- unique(hosp[!is.na(hosp)])
 hosp_huri <- hosp[hosp %in% V(huri_g)$name]
 
-hosp_huri2 <- hosp_huri[c(1, 2, 5:7, 9:13)] # only OAS1, ICAM1
+hosp_huri2 <- hosp_huri[c(1, 3, 5:7, 9:13)] # only OAS1, ICAM3
 
 hosp_1st <- combineNetwork(huri_g, hosp_huri2)
 gwas_hosp_husci <- V(hosp_1st)$name[V(hosp_1st)$name %in% husci_sym]
 gwas_hosp_husci_length <- length(gwas_hosp_husci)
-# average shortest path
-gwas_hosp_mean_dist <- mean_distance(hosp_1st)
 
 gwas_hosp_gordon <- V(hosp_1st)$name[V(hosp_1st)$name %in% gordon_sym]
 gwas_hosp_gordon_length <- length(gwas_hosp_gordon)
@@ -181,8 +176,6 @@ infct_huri2 <- infct_huri[c(1:3, 5, 6)] # only OAS1
 infct_1st <- combineNetwork(huri_g, infct_huri2)
 gwas_infct_husci <- V(infct_1st)$name[V(infct_1st)$name %in% husci_sym]
 gwas_infct_husci_length <- length(gwas_infct_husci)
-# average shortest path
-gwas_infct_mean_dist <- mean_distance(infct_1st)
 
 gwas_infct_gordon <- V(infct_1st)$name[V(infct_1st)$name %in% gordon_sym]
 gwas_infct_gordon_length <- length(gwas_infct_gordon)
@@ -216,8 +209,7 @@ gwas_all_list_df <- lapply(gwas_hit_1st, as_data_frame)
 gwas_all_df <- do.call(rbind, gwas_all_list_df)
 gwas_all_g_merge <- graph_from_data_frame(gwas_all_df, directed = FALSE)
 # to have interaction between 1st interactors
-gwas_all_final <- simplify(induced_subgraph(huri_g, names(V(gwas_all_g_merge))), remove.loops = F) 
-gwas_all_mean_dist <- mean_distance(gwas_all_final)
+gwas_all_final <- simplify(induced_subgraph(huri_g, names(V(gwas_all_g_merge))), remove.loops = F)
 
 gwas_all_husci <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% husci_sym] # 11 viral targets
 gwas_all_husci_length <- length(gwas_all_husci)
@@ -236,11 +228,6 @@ plot(gwas_all_final, vertex.frame.color = bd, vertex.size = 3, vertex.label.dist
 write_graph(gwas_all_final, "/tmp/GWAS_subnetwork.gml", format = "gml")
 dev.off()
 # 3.1. do statistical analysis for all 17 GWAS hit candidate genes # time consuming
-# huri_list <- list()
-# for (i in 1:10000) {
-#     huri_list[[i]] <- huriRewire()
-# }
-
 # HuSCI, Gordon and Stukalov
 all_re <- c()
 all_re <- c(all_re, mcreplicate(10000, huriRewireMulti(gwas_huri, ctcl_huri, hosp_huri, infct_huri, husci_sym, gordon_sym, stukalov_sym), mc.cores = detectCores()))

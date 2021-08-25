@@ -14,15 +14,25 @@ library(plotrix) # add table to plot
 
 source("~/Documents/INET-work/virus_network/src/combineNetwork.r")
 
-bioplexRewire <- function(remove.loops = FALSE, ...) {
-    bioplex_re <- rewire(bioplex_g, keeping_degseq(niter = gsize(bioplex_g) * 10))
-    bioplex_sim <- simplify(bioplex_re, remove.loops = remove.loops)
-    return(bioplex_sim)
+subnetwork <- function(network, node) {
+    gwas_hit_1st <- make_ego_graph(network, nodes = node, order = 1, mode = "all")
+    ######
+    # 3. **rewiring analysis of HuRI**, to see if the HuSCI viral target is significant.
+    # subnetwork of GWAS hit from HuRI
+    # inherit from above code
+    gwas_all_list_df <- lapply(gwas_hit_1st, as_data_frame)
+    gwas_all_df <- do.call(rbind, gwas_all_list_df)
+    gwas_all_g_merge <- graph_from_data_frame(gwas_all_df, directed = FALSE)
+    # to have interaction between 1st interactors
+    gwas_all_final <- simplify(induced_subgraph(network, names(V(gwas_all_g_merge))), remove.loops = F)
+    return(gwas_all_final)
 }
-bioplexRewireDataset <- function(node, remove.loops = FALSE) {
+
+rewire3Dataset <- function(network, node, v_from, v_to) {
     count <- c()
-    re <- bioplexRewire(remove.loops)
-    merged <- combineNetwork(re, node)
+    re <- rewire(network, keeping_degseq(niter = gsize(network) * 10))
+    sub_network <- subnetwork(re, node)
+    merged <- combineNetwork(sub_network, node)
     # merged_inHuSCI
     count <- c(count, as.numeric(table(V(merged)$name %in% husci_sym)["TRUE"]))
     # merged_inGordon
@@ -30,8 +40,10 @@ bioplexRewireDataset <- function(node, remove.loops = FALSE) {
     # merged_inStukalov
     count <- c(count, as.numeric(table(V(merged)$name %in% stukalov_sym)["TRUE"]))
     count <- c(count, gsize(merged))
+    count <- c(count, mean(distances(merged, v = v_from, to = v_to, mode = "all")))
     return(count)
 }
+
 plotHist <- function(value, title, length, xmax, y1, y2, density = TRUE) {
     if (density == TRUE) {
         dens_gwas <- hist(value, breaks = c(0:(max(value) + 1)), plot = FALSE, right = F)
@@ -61,8 +73,10 @@ gwas <- read.csv("~/Documents/INET-work/virus_network/references/GWAS/Genetic\ m
 gordon <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Gordon")
 stukalov <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Stukalov")
 
-# gwas <- c(gwas$Locus[c(1:4, 6:8)], "OAS1", "OAS2", "OAS3")
-gwas <- c(gwas$Locus[c(1:4, 6:8)], "OAS1")
+gwas_all <- c(gwas$Locus[c(1:4, 6:8)], "OAS1", "OAS2", "OAS3")
+# !there is no paralogs issue in BioPlex with Nature 2021a study
+# gwas_paralogs <- c(gwas$Locus[c(1:4, 6:8)], "OAS1")
+
 ######
 # 1. BioPlex graph generation
 bioplex_symbol <- bioplex[, c(5:6)]
@@ -73,7 +87,8 @@ husci_sym <- husci$node
 husci_bioplex <- V(bioplex_g)$name[V(bioplex_g)$name %in% husci_sym] # HuSCI in BioPlex whole, V:132
 
 # GWAS hit in BioPlex
-gwas_bioplex <- gwas[gwas %in% V(bioplex_g)$name]
+gwas_bioplex <- gwas_all[gwas_all %in% V(bioplex_g)$name]
+
 # Gordon and Stukalov in BioPlex
 gordon_sym <- unique(gordon$PreyGene)
 gordon_bioplex <- V(bioplex_g)$name[V(bioplex_g)$name %in% gordon_sym] # V:346
@@ -82,7 +97,18 @@ stukalov_sym <- unique(stukalov$human)
 stukalov_bioplex <- V(bioplex_g)$name[V(bioplex_g)$name %in% stukalov_sym] # V:723
 
 ######
-# 2. interactor of GWAS hit
+# 2. observation
+# subnetwork establishment
+observation_all <- subnetwork(bioplex_g, gwas_bioplex)
+# a. viral targets within 3 dataset: HuSCI, Gordon et al, Stukalov et al
+husci_viral_targets_all <- V(observation_all)$name[V(observation_all)$name %in% husci_sym]
+gordon_viral_targets_all <- V(observation_all)$name[V(observation_all)$name %in% gordon_sym]
+stukalov_viral_targets_all <- V(observation_all)$name[V(observation_all)$name %in% stukalov_sym]
+# b. interaction
+interactions_all <- gsize(observation_all)
+# c. average shortest path between GWAS proteins
+gwas_protein_shortest_path_all <- mean(distances(observation_all, v = gwas_bioplex, to = gwas_bioplex, mode = "all"))
+
 gwas_hit_1st <- make_ego_graph(bioplex_g, nodes = gwas_bioplex, order = 1, mode = "all")
 
 ######
