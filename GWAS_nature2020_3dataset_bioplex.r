@@ -32,7 +32,7 @@ bioplexRewireDataset <- function(node, remove.loops = FALSE) {
     count <- c(count, gsize(merged))
     return(count)
 }
-plotHist <- function(value, title, phenotype, length, xmax, y1, y2, density = TRUE) {
+plotHist <- function(value, title, length, xmax, y1, y2, density = TRUE) {
     if (density == TRUE) {
         dens_gwas <- hist(value, breaks = c(0:(max(value) + 1)), plot = FALSE, right = F)
         plot(dens_gwas, xlim = c(0, xmax), col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, xaxt = "n", freq = FALSE, xlab = "Number of viral targets", ylab = "Frequency", main = "", cex.sub = 0.5)
@@ -40,7 +40,7 @@ plotHist <- function(value, title, phenotype, length, xmax, y1, y2, density = TR
         dens_gwas <- hist(value, plot = FALSE, right = F)
         plot(dens_gwas, xlim = c(140, xmax), col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, xaxt = "n", yaxt = "n", xlab = "Number of viral targets", ylab = "Frequency", main = "", cex.sub = 0.5)
     }
-    mytitle <- paste0("COVID19 GWAS subnetwork\n(", phenotype, ")\nviral targets in ", title)
+    mytitle <- paste0("COVID19 GWAS subnetwork\nviral targets in ", title)
     mtext(side = 3, line = 1, cex = 1, mytitle)
     mtext(side = 3, line = 0.2, cex = .8, "subnetwork extracted from BioPlex3.0")
     if (density == TRUE) {
@@ -61,7 +61,8 @@ gwas <- read.csv("~/Documents/INET-work/virus_network/references/GWAS/Genetic\ m
 gordon <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Gordon")
 stukalov <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Stukalov")
 
-gwas <- c(gwas$Locus[c(1:4, 6:8)], "OAS1", "OAS2", "OAS3")
+# gwas <- c(gwas$Locus[c(1:4, 6:8)], "OAS1", "OAS2", "OAS3")
+gwas <- c(gwas$Locus[c(1:4, 6:8)], "OAS1")
 ######
 # 1. BioPlex graph generation
 bioplex_symbol <- bioplex[, c(5:6)]
@@ -72,7 +73,7 @@ husci_sym <- husci$node
 husci_bioplex <- V(bioplex_g)$name[V(bioplex_g)$name %in% husci_sym] # HuSCI in BioPlex whole, V:132
 
 # GWAS hit in BioPlex
-gwas_bioplex <- gwas[gwas %in% V(bioplex_g)$name] # V:7
+gwas_bioplex <- gwas[gwas %in% V(bioplex_g)$name]
 # Gordon and Stukalov in BioPlex
 gordon_sym <- unique(gordon$PreyGene)
 gordon_bioplex <- V(bioplex_g)$name[V(bioplex_g)$name %in% gordon_sym] # V:346
@@ -108,27 +109,43 @@ gwas_all_stukalov_length <- length(gwas_all_stukalov)
 
 ######
 # permutation analysis
+gwas_rand_r1 <- c()
+gwas_rand_r1 <- c(gwas_rand_r1, mcreplicate(10000, bioplexRewireDataset(gwas_bioplex, FALSE), mc.cores = detectCores()))
+gwas_rand_r1[is.na(gwas_rand_r1)] <- 0
+
 gwas_rand_r2 <- c()
 gwas_rand_r2 <- c(gwas_rand_r2, mcreplicate(10000, bioplexRewireDataset(gwas_bioplex, FALSE), mc.cores = detectCores()))
 gwas_rand_r2[is.na(gwas_rand_r2)] <- 0
-gwas_rand_df_r2 <- data.frame(matrix(gwas_rand_r2, ncol = 4, byrow = T))
+
+{
+    randomized <- gwas_rand_r1
+    # randomized <- gwas_rand_r2
+}
+gwas_rand_df_r2 <- data.frame(matrix(randomized, ncol = 4, byrow = T))
 names(gwas_rand_df_r2) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukalov_viral_target", "interactions")
 
 ######
 # plot
-pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021a_3dataset_bioPlex.pdf", width = 3, height = 3)
+pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021a_3dataset_bioPlex_paralogs.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 # HuSCI viral target in GWAS subnetwork
-plotHist(gwas_rand_df_r2$HuSCI_viral_target, "HuSCI", "criticall illness, 7 genes and 1st interactors", gwas_all_husci_length, 20, 0.05, 0.07)
+plotHist(gwas_rand_df_r2$HuSCI_viral_target, "HuSCI", gwas_all_husci_length, 20, 0.05, 0.07)
 
 # Gordon viral target in GWAS subnetwork
-plotHist(gwas_rand_df_r2$Gordon_viral_target, "Gordon et al", "criticall illness, 7 genes and 1st interactors",gwas_all_gordon_length, 20, 0.03, 0.05)
+plotHist(gwas_rand_df_r2$Gordon_viral_target, "Gordon et al",gwas_all_gordon_length, 20, 0.03, 0.05)
 
 # Stukalov viral target in GWAS subnetwork
-plotHist(gwas_rand_df_r2$Stukalov_viral_target, "Stukalov et al", "criticall illness, 7 genes and 1st interactors",gwas_all_stukalov_length, 20, 0.03, 0.05)
+plotHist(gwas_rand_df_r2$Stukalov_viral_target, "Stukalov et al",gwas_all_stukalov_length, 20, 0.03, 0.05)
 
 # Interconnectivity result of GWAS+1 subnetwork in BioPlex3
-plotHist(gwas_rand_df_r2$interactions, "Interaction", "GWAS+1 subnetwork in BioPlex", length(E(gwas_all_final)), 300, 300, 500, density = FALSE)
+dens_gwas <- hist(gwas_rand_df_r2$interactions, breaks = 20, plot = FALSE, right = FALSE)
+plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, yaxt = "n", xlab = "Number of interactions", main = "", cex.sub = 0.5)
+mtext(side = 3, line = 1, cex = 1, "COVID19 GWAS subnetwork")
+mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from BioPlex3")
+axis(side = 2, at = seq(0, 1200, by = 200), labels = seq(0, 0.12, by = 0.02), las = 1)
+arrows(gsize(gwas_all_final), 200, gsize(gwas_all_final), 0, col = "#922687", lwd = 2, length = 0.1)
+text(median(gwas_rand_df_r2$interactions) + 10, max(dens_gwas$counts), paste0("median = ", median(gwas_rand_df_r2$interactions)), col = "grey", cex = 0.5)
+text(gsize(gwas_all_final) - 20, 350, paste0("observed = ", gsize(gwas_all_final), "\np = ", table(gwas_rand_df_r2$interactions >= gsize(gwas_all_final))["TRUE"]/10000), cex = 0.4, pos = 4)
 dev.off()
 
 ######

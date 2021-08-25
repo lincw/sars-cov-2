@@ -51,10 +51,10 @@ bioplexRewireMulti <- function(gwas, ctcl, hosp, infct, husci, gordon, stukalov,
     return(df)
 }
 
-plotHist <- function(value, title, phenotype, length, xmax, y1, y2) {
+plotHist <- function(value, title, length, xmax, y1, y2) {
     dens_gwas <- hist(value, breaks = c(0:(max(value) + 1)), plot = FALSE, right = F)
     plot(dens_gwas, xlim = c(0, xmax), col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, xaxt = "n", freq = FALSE, xlab = "Number of viral targets", ylab = "Frequency", main = "", cex.sub = 0.5)
-    mytitle <- paste0("COVID19 GWAS subnetwork\n(", phenotype, ")\nviral targets in ", title)
+    mytitle <- paste0("COVID19 GWAS subnetwork\nviral targets in ", title)
     mtext(side = 3, line = 1, cex = 1, mytitle)
     mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from BioPlex3.0")
     axis(side = 1, at = seq(0, xmax, by = 5) + 0.5, labels = seq(0, xmax, by = 5))
@@ -80,19 +80,23 @@ bioplex_g <- simplify(bioplex_g_ori, remove.loops = FALSE) # V:13957, E:118162
 ctcl <- gwas[, 1][gwas[, 6] == 1]
 ctcl <- unique(ctcl[!is.na(ctcl)])
 ctcl_bioplex <- ctcl[ctcl %in% V(bioplex_g)$name] # V:10
-ctcl_1st <- combineNetwork(bioplex_g, ctcl_bioplex)
+ctcl_bioplex2 <- ctcl_bioplex[c(1, 2, 6:10)]
+ctcl_1st <- combineNetwork(bioplex_g, ctcl_bioplex2)
 
 hosp <- gwas[, 1][gwas[, 7] == 1]
 hosp <- unique(hosp[!is.na(hosp)])
 hosp_bioplex <- hosp[hosp %in% V(bioplex_g)$name] # V:17
-hosp_1st <- combineNetwork(bioplex_g, hosp_bioplex)
+hosp_bioplex2 <- hosp_bioplex[c(1:5, 9:17)]
+hosp_1st <- combineNetwork(bioplex_g, hosp_bioplex2)
 
 infct <- gwas[, 1][gwas[, 8] == 1]
 infct <- unique(infct[!is.na(infct)])
 infct_bioplex <- infct[infct %in% V(bioplex_g)$name] # V:10
-infct_1st <- combineNetwork(bioplex_g, infct_bioplex)
+infct_bioplex2 <- infct_bioplex[c(1:10)]
+infct_1st <- combineNetwork(bioplex_g, infct_bioplex2)
 
 gwas_bioplex <- gwas$All.LD[gwas$All.LD %in% V(bioplex_g)$name] # 24 of 42 candidates found in BioPlex3.0
+gwas_bioplex2 <- gwas_bioplex[c(1:6, 10:24)]
 
 # HuSCI, Gordon and Stukalov in BioPlex
 husci_sym <- husci$node # V:171
@@ -106,7 +110,7 @@ stukalov_bioplex <- V(bioplex_g)$name[V(bioplex_g)$name %in% stukalov_sym] # V:7
 
 ######
 # 2. interactor of GWAS hit
-gwas_hit_1st <- make_ego_graph(bioplex_g, nodes = gwas_bioplex, order = 1, mode = "all") # 24 of 42 GWAS in BioPlex3.0
+gwas_hit_1st <- make_ego_graph(bioplex_g, nodes = gwas_bioplex2, order = 1, mode = "all") 
 
 ######
 # 3. **rewiring analysis of HuRI**, to see if the HuSCI viral target is significant.
@@ -153,7 +157,18 @@ gwas_infct_stukalov_length <- length(gwas_infct_stukalov)
 gwas_rand_r2 <- c()
 gwas_rand_r2 <- c(gwas_rand_r2, mcreplicate(10000, bioplexRewireMulti(gwas_bioplex, ctcl_bioplex, hosp_bioplex, infct_bioplex, husci_sym, gordon_sym, stukalov_sym), mc.cores = detectCores()))
 gwas_rand_r2[is.na(gwas_rand_r2)] <- 0
-gwas_rand_df_r2 <- data.frame(matrix(gwas_rand_r2, ncol = 16, byrow = T))
+
+gwas_rand_r3 <- c()
+gwas_rand_r3 <- c(gwas_rand_r3, mcreplicate(10000, bioplexRewireMulti(gwas_bioplex2, ctcl_bioplex2, hosp_bioplex2, infct_bioplex2, husci_sym, gordon_sym, stukalov_sym), mc.cores = detectCores()))
+gwas_rand_r3[is.na(gwas_rand_r3)] <- 0
+
+# choose 1 of 2 randomization results
+{
+    # randomization <- all_re
+    randomization <- gwas_rand_r3
+}
+
+gwas_rand_df_r2 <- data.frame(matrix(randomization, ncol = 16, byrow = T))
 names(gwas_rand_df_r2) <- c(
     "allGWAS_viral_target_inHuSCI",
     "allGWAS_viral_target_inGordon",
@@ -189,22 +204,29 @@ all_length <- c(
 )
 title <- rep(c("HuSCI", "Gordon et al", "Stukalov et al"), 4)
 phenotype <- rep(c(
-    "all 24 genes and 1st interactors",
-    "critical illness, 10 genes and 1st interactors",
-    "hospitalization, 17 genes and 1st interactors",
-    "reported infection, 10 genes and 1st interactors"
+    "all 24 genes",
+    "critical illness, 10 genes",
+    "hospitalization, 17 genes",
+    "reported infection, 10 genes"
+    ), each = 3)
+
+phenotype2 <- rep(c(
+    "all 24 genes",
+    "critical illness, 10 genes",
+    "hospitalization, 17 genes",
+    "reported infection, 10 genes"
     ), each = 3)
 xmax <- c(20, 25, 45, 15, 20, 30, 15, 20, 30, 15, 20, 30)
 
 ######
 # plotting
-pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021b_3dataset_BioPlex3.pdf", width = 3, height = 3)
+pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021b_3dataset_BioPlex3_paralogs.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 for (i in 1:12) {
     plotHist(
         all_re_df_plot[, i],
         title[i],
-        phenotype[i],
+        # phenotype2[i],
         all_length[i],
         xmax[i],
         0.03, 0.05
