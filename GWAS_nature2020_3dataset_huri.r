@@ -26,7 +26,7 @@ subnetwork <- function(network, node) {
     return(gwas_all_final)
 }
 
-rewire3Dataset <- function(network, node, v_from, v_to) {
+rewire3Dataset <- function(network, node) {
     count <- c()
     re <- rewire(network, keeping_degseq(niter = gsize(network) * 10))
     merged <- subnetwork(re, node)
@@ -37,7 +37,7 @@ rewire3Dataset <- function(network, node, v_from, v_to) {
     # merged_inStukalov
     count <- c(count, as.numeric(table(V(merged)$name %in% stukalov_sym)["TRUE"]))
     count <- c(count, gsize(merged))
-    count <- c(count, mean(distances(merged, v = v_from, to = v_to, mode = "all")))
+    count <- c(count, mean(distances(re, v = node, to = node, mode = "all")))
     return(count)
 }
 
@@ -126,11 +126,11 @@ print("Interactions in GWAS subnetwork, without paralogs")
 interactions_paralogs
 
 # c. average shortest path between GWAS proteins
-gwas_protein_shortest_path_all <- mean(distances(observation_all, v = gwas_huri, to = gwas_huri, mode = "all"))
+gwas_protein_shortest_path_all <- mean(distances(huri_g, gwas_huri, to = gwas_huri))
 print("Average shortest path between GWAS proteins")
 gwas_protein_shortest_path_all
 
-gwas_protein_shortest_path_paralogs <- mean(distances(observation_paralogs, v = gwas_huri_paralogs, to = gwas_huri_paralogs, mode = "all"))
+gwas_protein_shortest_path_paralogs <- mean(distances(huri_g, gwas_huri_paralogs, to = gwas_huri_paralogs))
 print("Average shortest path between GWAS proteins, without paralogs")
 gwas_protein_shortest_path_paralogs
 
@@ -138,17 +138,17 @@ gwas_protein_shortest_path_paralogs
 # 3. permutation analysis
 # all GWAS proteins
 permutation_all <- c()
-permutation_all <- c(permutation_all, mcreplicate(10000, rewire3Dataset(huri_g, gwas_huri, gwas_huri, gwas_huri), mc.cores = detectCores()))
+permutation_all <- c(permutation_all, mcreplicate(10000, rewire3Dataset(huri_g, gwas_huri), mc.cores = detectCores()))
 permutation_all[is.na(permutation_all)] <- 0
 permutation_all_df <- data.frame(matrix(permutation_all, ncol = 5, byrow = T))
-names(permutation_all_df) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukalov_viral_target", "interactions", "mean_distance_GWAS_proteins")
+names(permutation_all_df) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukalov_viral_target", "interactions", "GWAS_average_shortest_path")
 
 # without paralogs
 permutation_paralogs <- c()
-permutation_paralogs <- c(permutation_paralogs, mcreplicate(10000, rewire3Dataset(huri_g, gwas_huri_paralogs, gwas_huri_paralogs, gwas_huri_paralogs), mc.cores = detectCores()))
+permutation_paralogs <- c(permutation_paralogs, mcreplicate(10000, rewire3Dataset(huri_g, gwas_huri_paralogs), mc.cores = detectCores()))
 permutation_paralogs[is.na(permutation_paralogs)] <- 0
 permutation_paralogs_df <- data.frame(matrix(permutation_paralogs, ncol = 5, byrow = T))
-names(permutation_paralogs_df) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukalov_viral_target", "interactions", "mean_distance_GWAS_proteins")
+names(permutation_paralogs_df) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukalov_viral_target", "interactions", "GWAS_average_shortest_path")
 
 ######
 # plot function
@@ -169,15 +169,14 @@ toPlot <- function(value, viral_husci, viral_gordon, viral_stukalov, interaction
     text(interaction - 200, 350, paste0("observed = ", interaction, "\np < 0.0001") , cex = 0.4, pos = 4)
 
     # mean distance
-    dens_gwas <- hist(value[, 5], breaks = 10, plot = FALSE, right = FALSE)
+    dens_gwas <- hist(value[, 5], breaks = 8, plot = FALSE, right = FALSE)
     plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, xlim = c(1.5, 3.5), yaxt = "n", xlab = "Average shortest path", main = "", cex.sub = 0.5)
-    mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from HuRI")
-    axis(side = 2, at = seq(0, 3500, by = 500), labels = seq(0, 0.35, by = 0.05), las = 1)
+    axis(side = 2, at = seq(0, 5000, by = 500), labels = seq(0, 0.5, by = 0.05), las = 1)
     arrows(distance, 600, distance, 0, col = "#922687", lwd = 2, length = 0.1)
     text(median(value[, 5]) + 0.1, max(dens_gwas$counts), paste0("median = ", round(median(value[, 5]), 2)), col = "grey", cex = 0.5)
     text(round(distance, 2), 1000, paste0("observed = ", round(distance, 2), "\np = ",
         round(
-            as.numeric(table(value[value[, 5] != Inf, 5] >= distance)["TRUE"]) /
+            as.numeric(table(value[value[, 5] != Inf, 5] >= distance)["FALSE"]) /
             as.numeric(table(value[, 5] != Inf)["TRUE"]),
         3)), cex = 0.4, pos = 4)
 }
@@ -185,7 +184,7 @@ toPlot <- function(value, viral_husci, viral_gordon, viral_stukalov, interaction
 ######
 # plot
 # all
-pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021a_3dataset_HuRI_all.pdf", width = 3, height = 3)
+pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021a_3dataset_HuRI.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 toPlot(permutation_all_df, husci_viral_targets_all, gordon_viral_targets_all, stukalov_viral_targets_all, interactions_all, gwas_protein_shortest_path_all)
 dev.off()

@@ -48,6 +48,11 @@ bioplexRewireMulti <- function(gwas, ctcl, hosp, infct, husci, gordon, stukalov,
     df <- c(df, table(V(merged)$name %in% gordon)["TRUE"])
     df <- c(df, table(V(merged)$name %in% stukalov)["TRUE"])
     df <- c(df, gsize(merged))
+
+    df <- c(df, mean(distances(re, v = gwas, to = gwas)))
+    df <- c(df, mean(distances(re, v = ctcl, to = ctcl)))
+    df <- c(df, mean(distances(re, v = hosp, to = hosp)))
+    df <- c(df, mean(distances(re, v = infct, to = infct)))
     return(df)
 }
 
@@ -62,6 +67,27 @@ plotHist <- function(value, title, length, xmax, y1, y2) {
     text(median(value) + 4, max(dens_gwas$counts / 10000), paste0("median = ", median(value)), col = "grey", cex = 0.5)
     text(length - 2, y2, paste0("observed = ", length, "\np = ", table(value >= length)["TRUE"]/10000), cex = 0.4, pos = 4)
 }
+
+plotInteraction <- function(value, ymax, observe, phenotype) {
+    dens_gwas <- hist(value, breaks = 20, plot = FALSE, right = FALSE)
+    plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), xlim = c(min(value), ifelse(observe > max(value), observe, max(value))), border = NA, las = 1, yaxt = "n", xlab = "Number of interactions", main = "", cex.sub = 0.5)
+    mtext(side = 3, line = 1, cex = 1, paste0("COVID19 GWAS subnetwork: ", phenotype))
+    mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from BioPlex3")
+    axis(side = 2, at = seq(0, ymax, by = 500), labels = seq(0, ymax/10000, by = 0.05), las = 1)
+    arrows(observe, 200, observe, 0, col = "#922687", lwd = 2, length = 0.1)
+    text(median(value), max(dens_gwas$counts), paste0("median = ", median(value)), col = "grey", cex = 0.5)
+    text(observe - (observe / 9), 350, paste0("observed = ", observe, "\np ", ifelse(is.na(as.numeric(table(value >= observe)["TRUE"])), "< 0.0001", paste0(" = ", table(value >= observe)["TRUE"]/10000))), cex = 0.4, pos = 4)
+}
+plotDistance <- function(value, ymax, observe, phenotype) {
+    dens_gwas <- hist(value, breaks = 8, plot = FALSE, right = FALSE)
+    plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, xlim = c(2, 4), yaxt = "n", xlab = "Average shortest path", main = "", cex.sub = 0.5)
+    mtext(side = 3, line = 1, cex = 1, paste0("COVID19 GWAS subnetwork: ", phenotype))
+    mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from HuRI")
+    axis(side = 2, at = seq(0, ymax, by = 500), labels = seq(0, ymax/10000, by = 0.05), las = 1)
+    arrows(observe, 300, observe, 0, col = "#922687", lwd = 2, length = 0.1)
+    text(round(median(value), 2), max(dens_gwas$counts), paste0("median = ", round(median(value), 2)), col = "grey", cex = 0.5)
+    text(round(observe, 1) - 0.3, 400, paste0("observed = ", round(observe, 2), "\np = ", table(value >= round(observe, 2))["FALSE"]/10000), cex = 0.4, pos = 4)
+}
 ######
 # load dataset
 bioplex <- read.delim("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/BioPlex.3.0_edge.tsv", header = T)
@@ -73,30 +99,29 @@ stukalov <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/e
 ######
 # 1. BioPlex graph generation
 bioplex_symbol <- bioplex[, c(5:6)]
-bioplex_g_ori <- graph_from_data_frame(bioplex_symbol, directed = FALSE) # V:13957, E:118162
-bioplex_g <- simplify(bioplex_g_ori, remove.loops = FALSE) # V:13957, E:118162
+bioplex_g <- graph_from_data_frame(bioplex_symbol, directed = FALSE) # V:13957, E:118162
 
 # GWAS list
+gwas_bioplex <- gwas$All.LD[gwas$All.LD %in% V(bioplex_g)$name] # 24 of 42 candidates found in BioPlex3.0
+gwas_bioplex2 <- gwas_bioplex[c(1:5, 7, 10:24)]
+
 ctcl <- gwas[, 1][gwas[, 6] == 1]
 ctcl <- unique(ctcl[!is.na(ctcl)])
 ctcl_bioplex <- ctcl[ctcl %in% V(bioplex_g)$name] # V:10
-ctcl_bioplex2 <- ctcl_bioplex[c(1, 2, 6:10)]
-ctcl_1st <- combineNetwork(bioplex_g, ctcl_bioplex2)
+ctcl_bioplex2 <- ctcl_bioplex[c(1, 3, 6:10)]
+ctcl_1st <- combineNetwork(bioplex_g, ctcl_bioplex)
 
 hosp <- gwas[, 1][gwas[, 7] == 1]
 hosp <- unique(hosp[!is.na(hosp)])
 hosp_bioplex <- hosp[hosp %in% V(bioplex_g)$name] # V:17
-hosp_bioplex2 <- hosp_bioplex[c(1:5, 9:17)]
-hosp_1st <- combineNetwork(bioplex_g, hosp_bioplex2)
+hosp_bioplex2 <- hosp_bioplex[c(1:4, 6, 9:17)]
+hosp_1st <- combineNetwork(bioplex_g, hosp_bioplex)
 
 infct <- gwas[, 1][gwas[, 8] == 1]
 infct <- unique(infct[!is.na(infct)])
 infct_bioplex <- infct[infct %in% V(bioplex_g)$name] # V:10
 infct_bioplex2 <- infct_bioplex[c(1:10)]
-infct_1st <- combineNetwork(bioplex_g, infct_bioplex2)
-
-gwas_bioplex <- gwas$All.LD[gwas$All.LD %in% V(bioplex_g)$name] # 24 of 42 candidates found in BioPlex3.0
-gwas_bioplex2 <- gwas_bioplex[c(1:6, 10:24)]
+infct_1st <- combineNetwork(bioplex_g, infct_bioplex)
 
 # HuSCI, Gordon and Stukalov in BioPlex
 husci_sym <- husci$node # V:171
@@ -110,7 +135,7 @@ stukalov_bioplex <- V(bioplex_g)$name[V(bioplex_g)$name %in% stukalov_sym] # V:7
 
 ######
 # 2. interactor of GWAS hit
-gwas_hit_1st <- make_ego_graph(bioplex_g, nodes = gwas_bioplex2, order = 1, mode = "all") 
+gwas_hit_1st <- make_ego_graph(bioplex_g, nodes = gwas_bioplex, order = 1, mode = "all")
 
 ######
 # 3. **rewiring analysis of HuRI**, to see if the HuSCI viral target is significant.
@@ -152,6 +177,12 @@ gwas_hosp_stukalov_length <- length(gwas_hosp_stukalov)
 gwas_infct_stukalov <- V(infct_1st)$name[V(infct_1st)$name %in% stukalov_sym]
 gwas_infct_stukalov_length <- length(gwas_infct_stukalov)
 
+# average shortest path of GWAS proteins
+gwas_all_path <- mean(distances(bioplex_g, v = gwas_bioplex, to = gwas_bioplex))
+gwas_ctcl_path <- mean(distances(bioplex_g, v = ctcl_bioplex, to = ctcl_bioplex))
+gwas_hosp_path <- mean(distances(bioplex_g, v = hosp_bioplex, to = hosp_bioplex))
+gwas_infct_path <- mean(distances(bioplex_g, v = infct_bioplex, to = infct_bioplex))
+
 ######
 # permutation analysis
 gwas_rand_r2 <- c()
@@ -164,11 +195,11 @@ gwas_rand_r3[is.na(gwas_rand_r3)] <- 0
 
 # choose 1 of 2 randomization results
 {
-    # randomization <- all_re
-    randomization <- gwas_rand_r3
+    randomization <- gwas_rand_r2
+    # randomization <- gwas_rand_r3
 }
 
-gwas_rand_df_r2 <- data.frame(matrix(randomization, ncol = 16, byrow = T))
+gwas_rand_df_r2 <- data.frame(matrix(randomization, ncol = 20, byrow = T))
 names(gwas_rand_df_r2) <- c(
     "allGWAS_viral_target_inHuSCI",
     "allGWAS_viral_target_inGordon",
@@ -185,7 +216,11 @@ names(gwas_rand_df_r2) <- c(
     "infctGWAS_viral_target_inHuSCI",
     "infctGWAS_viral_target_inGordon",
     "infctGWAS_viral_target_inStukalov",
-    "infctGWAS_subnetworkSize"
+    "infctGWAS_subnetworkSize",
+    "GWAS_average_shortest_path",
+    "GWAS_ctcl_avg_path",
+    "GWAS_hosp_avg_path",
+    "GWAS_infct_avg_path"
 )
 all_re_df_plot <- gwas_rand_df_r2[, c(1:3, 5:7, 9:11, 13:15)]
 all_length <- c(
@@ -220,7 +255,7 @@ xmax <- c(20, 25, 45, 15, 20, 30, 15, 20, 30, 15, 20, 30)
 
 ######
 # plotting
-pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021b_3dataset_BioPlex3_paralogs.pdf", width = 3, height = 3)
+pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021b_3dataset_BioPlex3.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 for (i in 1:12) {
     plotHist(
@@ -232,53 +267,16 @@ for (i in 1:12) {
         0.03, 0.05
         )
 }
-dens_gwas <- hist(gwas_rand_df_r2[, 4], breaks = 20, plot = FALSE, right = FALSE)
-plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, yaxt = "n", xlab = "Number of interactions", main = "", cex.sub = 0.5)
-mtext(side = 3, line = 1, cex = 1, "COVID19 GWAS subnetwork")
-mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from BioPlex3.0")
-axis(side = 2, at = seq(0, 1400, by = 200), labels = seq(0, 0.14, by = 0.02), las = 1)
-arrows(gsize(gwas_all_final), 200, gsize(gwas_all_final), 0, col = "#922687", lwd = 2, length = 0.1)
-text(median(gwas_rand_df_r2[, 4]) + 100, max(dens_gwas$counts), paste0("median = ", median(gwas_rand_df_r2[, 4])), col = "grey", cex = 0.5)
-text(gsize(gwas_all_final) - 50, 350, paste0("observed = ", gsize(gwas_all_final), "\np = ", table(gwas_rand_df_r2[, 4] >= gsize(gwas_all_final))["TRUE"]/10000), cex = 0.4, pos = 4)
-dev.off()
-
-dens_gwas <- hist(gwas_rand_df_r2$HuSCI_viral_target, plot = FALSE, right = F)
-plot(dens_gwas, xlim = c(0, 25), col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, yaxt = ifelse(sum(dens_gwas$density) != 1, "n", "s"), freq = ifelse(sum(dens_gwas$density) != 1, TRUE, FALSE), xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
-mytitle <- "Subnetwork of COVID19 GWAS"
-mysubtitle <- "# HuSCI viral targets"
-mtext(side = 3, line = 1, cex = 1, mytitle)
-mtext(side = 3, line = 0.5, cex = .7, mysubtitle)
-if(sum(dens_gwas$density) != 1) {
-    axis(side = 2, at = seq(0, 2500, 500), labels = seq(0, 2500, 500)/10000, las = 1)
-} else {
-    next
-}
-arrows(gwas_all_husci_length, 300, gwas_all_husci_length, 0, col = "#922687", lwd = 2, length = 0.1)
-text(gwas_all_husci_length, 400, paste0("observed = 20 \np = ", table(gwas_rand_df_r2[, "HuSCI_viral_target"] >= 20)["TRUE"]/10000), cex = 0.4, pos = 4)
-# Gordon viral target in GWAS subnetwork
-dens_gwas <- hist(gwas_rand_df_r2$Gordon_viral_target, plot = FALSE, right = F)
-plot(dens_gwas, xlim = c(0, 25), col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, yaxt = ifelse(sum(dens_gwas$density) != 1, "n", "s"), freq = ifelse(sum(dens_gwas$density) != 1, TRUE, FALSE), xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
-mytitle <- "Subnetwork of COVID19 GWAS"
-mysubtitle <- "# Gordon et al. viral targets"
-mtext(side = 3, line = 1, cex = 1, mytitle)
-mtext(side = 3, line = 0.5, cex = .7, mysubtitle)
-if(sum(dens_gwas$density) != 1) {
-    axis(side = 2, at = seq(0, 2500, 500), labels = seq(0, 2500, 500)/10000, las = 1)
-}
-arrows(gwas_all_gordon_length, 0.03, gwas_all_gordon_length, 0, col = "#922687", lwd = 2, length = 0.1)
-text(gwas_all_gordon_length, 0.04, paste0("observed = 7 \np = ", table(gwas_rand_df_r2[, "Gordon_viral_target"] >= 7)["TRUE"]/10000), cex = 0.4, pos = 4)
-# Stukalov viral target in GWAS subnetwork
-dens_gwas <- hist(gwas_rand_df_r2$Stukalov_viral_target, plot = FALSE, right = F)
-plot(dens_gwas, xlim = c(0, 25), col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, yaxt = ifelse(sum(dens_gwas$density) != 1, "n", "s"), freq = ifelse(sum(dens_gwas$density) != 1, TRUE, FALSE), xlab = "Number of viral targets", ylab = "Frequency density", main = "", cex.sub = 0.5)
-mytitle <- "Subnetwork of COVID19 GWAS"
-mysubtitle <- "# Stukalov et al. viral targets"
-mtext(side = 3, line = 1, cex = 1, mytitle)
-mtext(side = 3, line = 0.5, cex = .7, mysubtitle)
-if(sum(dens_gwas$density) != 1) {
-    axis(side = 2, at = seq(0, 2500, 500), labels = seq(0, 2500, 500)/10000, las = 1)
-}
-arrows(gwas_all_stukalov_length, 0.03, gwas_all_stukalov_length, 0, col = "#922687", lwd = 2, length = 0.1)
-text(gwas_all_stukalov_length, 0.04, paste0("observed = 2 \np = ", table(gwas_rand_df_r2[, "Stukalov_viral_target"] >= 2)["TRUE"]/10000), cex = 0.4, pos = 4)
+# interaction
+plotInteraction(gwas_rand_df_r2[, 4], 1500, gsize(gwas_all_final), "all GWAS")
+plotInteraction(gwas_rand_df_r2[, 8], 1500, gsize(ctcl_1st), "critical illness")
+plotInteraction(gwas_rand_df_r2[, 12], 1500, gsize(hosp_1st), "hospitalization")
+plotInteraction(gwas_rand_df_r2[, 16], 1000, gsize(infct_1st), "reported infection")
+# average shortest path
+plotDistance(gwas_rand_df_r2[, 17], 3000, gwas_all_path, "all GWAS")
+plotDistance(gwas_rand_df_r2[, 18], 3500, gwas_ctcl_path, "critical illness")
+plotDistance(gwas_rand_df_r2[, 19], 4000, gwas_hosp_path, "hospitalization")
+plotDistance(gwas_rand_df_r2[, 20], 4000, gwas_infct_path, "reported infection")
 dev.off()
 
 df <- data.frame(HuRI = V(huri_g)$name, inGWASsubnetwork = V(huri_g)$name %in% gwas$name, inHuSCI = V(huri_g)$name %in% husci_sym, inGordon = V(huri_g)$name %in% gordon_sym, inGordoninGWAS = V(huri_g)$name %in% gordon_sym[gordon_sym %in% gwas$name], inStukalov = V(huri_g)$name %in% stukalov_sym, inStukalovinGWAS = V(huri_g)$name %in% stukalov_sym[stukalov_sym %in% gwas$name])
