@@ -22,7 +22,7 @@ subnetwork <- function(network, node) {
     gwas_all_df <- do.call(rbind, gwas_all_list_df)
     gwas_all_g_merge <- graph_from_data_frame(gwas_all_df, directed = FALSE)
     # to have interaction between 1st interactors
-    gwas_all_final <- simplify(induced_subgraph(network, names(V(gwas_all_g_merge))), remove.loops = F)
+    gwas_all_final <- simplify(induced_subgraph(network, names(V(gwas_all_g_merge))), remove.loops = TRUE)
     return(gwas_all_final)
 }
 
@@ -37,7 +37,7 @@ rewire3Dataset <- function(network, node) {
     # merged_inStukalov
     count <- c(count, as.numeric(table(V(merged)$name %in% stukalov_sym)["TRUE"]))
     count <- c(count, gsize(merged))
-    count <- c(count, mean(distances(merged, v = node, to = node, mode = "all")))
+    count <- c(count, mean(distances(merged, v = node, to = node, mode = "all")[lower.tri(distances(merged, v = node, to = node, mode = "all"))]))
     return(count)
 }
 
@@ -78,7 +78,7 @@ gwas_all <- c(gwas$Locus[c(1:4, 6:8)], "OAS1", "OAS2", "OAS3")
 # 1. BioPlex graph generation
 bioplex_symbol <- bioplex[, c(5:6)]
 bioplex_g_ori <- graph_from_data_frame(bioplex_symbol, directed = FALSE) # V:13957, E:118162
-bioplex_g <- simplify(bioplex_g_ori, remove.loops = FALSE) # V:13957, E:118162
+bioplex_g <- simplify(bioplex_g_ori, remove.loops = TRUE) # V:13957, E:118162
 # protein list filter
 husci_sym <- husci$node
 husci_bioplex <- V(bioplex_g)$name[V(bioplex_g)$name %in% husci_sym] # HuSCI in BioPlex whole, V:132
@@ -104,7 +104,7 @@ stukalov_viral_targets_all <- V(observation_all)$name[V(observation_all)$name %i
 # b. interaction
 interactions_all <- gsize(observation_all)
 # c. average shortest path between GWAS proteins
-gwas_protein_shortest_path_all <- mean(distances(observation_all, v = gwas_bioplex, to = gwas_bioplex, mode = "all"))
+gwas_protein_shortest_path_all <- mean(distances(observation_all, v = gwas_bioplex, to = gwas_bioplex, mode = "all")[lower.tri(distances(observation_all, v = gwas_bioplex, to = gwas_bioplex, mode = "all"))])
 
 ######
 # 3. **rewiring analysis of BioPlex3**, to see if the HuSCI viral target is significant.
@@ -113,7 +113,7 @@ gwas_all_list_df <- lapply(gwas_hit_1st, as_data_frame)
 gwas_all_df <- do.call(rbind, gwas_all_list_df)
 gwas_all_g_merge <- graph_from_data_frame(gwas_all_df, directed = FALSE)
 # to have interaction between 1st interactors
-gwas_all_final <- simplify(induced_subgraph(bioplex_g, names(V(gwas_all_g_merge))), remove.loops = F)
+gwas_all_final <- simplify(induced_subgraph(bioplex_g, names(V(gwas_all_g_merge))), remove.loops = TRUE)
 
 # GWAS hit in HuSCI
 gwas_all_husci <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% husci_sym]
@@ -127,7 +127,7 @@ gwas_all_gordon_length <- length(gwas_all_gordon)
 gwas_all_stukalov <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% stukalov_sym]
 gwas_all_stukalov_length <- length(gwas_all_stukalov)
 
-gwas_all_path <- mean(distances(bioplex_g, v = gwas_bioplex, to = gwas_bioplex, mode = "all"))
+gwas_all_path <- mean(distances(bioplex_g, v = gwas_bioplex, to = gwas_bioplex, mode = "all")[lower.tri(distances(bioplex_g, v = gwas_bioplex, to = gwas_bioplex, mode = "all"))])
 
 ######
 # permutation analysis
@@ -135,15 +135,13 @@ gwas_rand_r1 <- c()
 gwas_rand_r1 <- c(gwas_rand_r1, mcreplicate(10000, rewire3Dataset(bioplex_g, gwas_bioplex), mc.cores = detectCores()))
 gwas_rand_r1[is.na(gwas_rand_r1)] <- 0
 
-{
-    randomized <- gwas_rand_r1
-}
+randomized <- gwas_rand_r1
 gwas_rand_df_r2 <- data.frame(matrix(randomized, ncol = 5, byrow = T))
 names(gwas_rand_df_r2) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukalov_viral_target", "interactions", "GWAS_average_shortest_path")
 
 ######
 # plot
-pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021a_3dataset_bioPlex.pdf", width = 3, height = 3)
+pdf(file = "Nature2021a_3dataset_bioPlex.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 # HuSCI viral target in GWAS subnetwork
 plotHist(gwas_rand_df_r2$HuSCI_viral_target, "HuSCI", gwas_all_husci_length, 20, 0.05, 0.07)
@@ -174,34 +172,34 @@ dev.off()
 
 ######
 # display degree of viral targets in HuRI
-husci_deg <- data.frame(degree(bioplex_g, v = husci_bioplex))
-names(husci_deg) <- "degree"
-gordon_deg <- data.frame(degree(bioplex_g, v = gordon_bioplex))
-names(gordon_deg) <- "degree"
-stukalov_deg <- data.frame(degree(bioplex_g, v = stukalov_bioplex))
-names(stukalov_deg) <- "degree"
+# husci_deg <- data.frame(degree(bioplex_g, v = husci_bioplex))
+# names(husci_deg) <- "degree"
+# gordon_deg <- data.frame(degree(bioplex_g, v = gordon_bioplex))
+# names(gordon_deg) <- "degree"
+# stukalov_deg <- data.frame(degree(bioplex_g, v = stukalov_bioplex))
+# names(stukalov_deg) <- "degree"
 
-hist(husci_deg$degree, xlab = "degree", main = "Degree of HuSCI proteins in BioPlex")
-addtable2plot(100, 50, summary(husci_deg), vlines = TRUE, bty = "l", cex = 2)
+# hist(husci_deg$degree, xlab = "degree", main = "Degree of HuSCI proteins in BioPlex")
+# addtable2plot(100, 50, summary(husci_deg), vlines = TRUE, bty = "l", cex = 2)
 
-hist(gordon_deg$degree, xlab = "degree", main = "Degree of Gordon proteins in BioPlex")
-addtable2plot(150, 50, summary(gordon_deg), vlines = TRUE, bty = "l", cex = 2)
+# hist(gordon_deg$degree, xlab = "degree", main = "Degree of Gordon proteins in BioPlex")
+# addtable2plot(150, 50, summary(gordon_deg), vlines = TRUE, bty = "l", cex = 2)
 
-hist(stukalov_deg$degree, xlab = "degree", main = "Degree of Stukalov proteins in BioPlex")
-addtable2plot(70, 100, summary(stukalov_deg), vlines = TRUE, bty = "l", cex = 2)
+# hist(stukalov_deg$degree, xlab = "degree", main = "Degree of Stukalov proteins in BioPlex")
+# addtable2plot(70, 100, summary(stukalov_deg), vlines = TRUE, bty = "l", cex = 2)
 
-wb <- createWorkbook()
-addWorksheet(wb, "HuSCI")
-writeData(wb, "HuSCI", husci_deg, rowNames = TRUE)
+# wb <- createWorkbook()
+# addWorksheet(wb, "HuSCI")
+# writeData(wb, "HuSCI", husci_deg, rowNames = TRUE)
 
-addWorksheet(wb, "Gordon et al")
-writeData(wb, "Gordon et al", gordon_deg, rowNames = TRUE)
+# addWorksheet(wb, "Gordon et al")
+# writeData(wb, "Gordon et al", gordon_deg, rowNames = TRUE)
 
-addWorksheet(wb, "Stukalov et al")
-writeData(wb, "Stukalov et al", stukalov_deg, rowNames = TRUE)
+# addWorksheet(wb, "Stukalov et al")
+# writeData(wb, "Stukalov et al", stukalov_deg, rowNames = TRUE)
 
-saveWorkbook(wb, "~/Documents/INET-work/virus_network/statistic_results/GWAS/3dataset_degree_BioPlex.xlsx", overwrite = TRUE)
+# saveWorkbook(wb, "~/Documents/INET-work/virus_network/statistic_results/GWAS/3dataset_degree_BioPlex.xlsx", overwrite = TRUE)
 
 ######
 # save workarea data
-save.image("~/Documents/INET-work/virus_network/statistic_results/GWAS/Nature2021a_3dataset_BioPlex.RData")
+save.image("Nature2021a_3dataset_BioPlex.RData")

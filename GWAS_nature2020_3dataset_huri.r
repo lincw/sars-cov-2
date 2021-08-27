@@ -22,7 +22,7 @@ subnetwork <- function(network, node) {
     gwas_all_df <- do.call(rbind, gwas_all_list_df)
     gwas_all_g_merge <- graph_from_data_frame(gwas_all_df, directed = FALSE)
     # to have interaction between 1st interactors
-    gwas_all_final <- simplify(induced_subgraph(network, names(V(gwas_all_g_merge))), remove.loops = F)
+    gwas_all_final <- simplify(induced_subgraph(network, names(V(gwas_all_g_merge))), remove.loops = TRUE)
     return(gwas_all_final)
 }
 
@@ -37,7 +37,8 @@ rewire3Dataset <- function(network, node) {
     # merged_inStukalov
     count <- c(count, as.numeric(table(V(merged)$name %in% stukalov_sym)["TRUE"]))
     count <- c(count, gsize(merged))
-    count <- c(count, mean(distances(re, v = node, to = node, mode = "all")))
+    dist <- distances(re, v = node, to = node, mode = "all")
+    count <- c(count, mean(dist[lower.tri(dist)]))
     return(count)
 }
 
@@ -64,7 +65,7 @@ stukalov <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/e
 # 1. HuRI graph generation
 huri_symbol <- huri[, c(5:6)]
 huri_g_ori <- graph_from_data_frame(huri_symbol, directed = FALSE) # V:8274, E:52573
-huri_g <- simplify(huri_g_ori, remove.loops = FALSE) # V:8274, E:52558
+huri_g <- simplify(huri_g_ori, remove.loops = TRUE) # V:8274, E:52558
 # protein list filter
 husci_sym <- husci$node
 husci_huri <- V(huri_g)$name[V(huri_g)$name %in% husci_sym] # HuSCI in HuRI whole
@@ -126,11 +127,13 @@ print("Interactions in GWAS subnetwork, without paralogs")
 interactions_paralogs
 
 # c. average shortest path between GWAS proteins
-gwas_protein_shortest_path_all <- mean(distances(huri_g, gwas_huri, to = gwas_huri))
+dist_all <- distances(huri_g, gwas_huri, to = gwas_huri)
+gwas_protein_shortest_path_all <- mean(dist_all[lower.tri(dist_all)])
 print("Average shortest path between GWAS proteins")
 gwas_protein_shortest_path_all
 
-gwas_protein_shortest_path_paralogs <- mean(distances(huri_g, gwas_huri_paralogs, to = gwas_huri_paralogs))
+dist_paralogs <- distances(huri_g, gwas_huri_paralogs, to = gwas_huri_paralogs)
+gwas_protein_shortest_path_paralogs <- mean(dist_paralogs[lower.tri(dist_paralogs)])
 print("Average shortest path between GWAS proteins, without paralogs")
 gwas_protein_shortest_path_paralogs
 
@@ -184,12 +187,12 @@ toPlot <- function(value, viral_husci, viral_gordon, viral_stukalov, interaction
 ######
 # plot
 # all
-pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021a_3dataset_HuRI.pdf", width = 3, height = 3)
+pdf(file = "Nature2021a_3dataset_HuRI.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 toPlot(permutation_all_df, husci_viral_targets_all, gordon_viral_targets_all, stukalov_viral_targets_all, interactions_all, gwas_protein_shortest_path_all)
 dev.off()
 # without paralogs
-pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021a_3dataset_HuRI_paralogs.pdf", width = 3, height = 3)
+pdf(file = "Nature2021a_3dataset_HuRI_paralogs.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 toPlot(permutation_paralogs_df, husci_viral_targets_paralogs, gordon_viral_targets_paralogs, stukalov_viral_targets_paralogs, interactions_paralogs, gwas_protein_shortest_path_paralogs)
 dev.off()
@@ -230,4 +233,4 @@ dev.off()
 
 ######
 # save workarea data
-save.image("~/Documents/INET-work/virus_network/statistic_results/GWAS/Nature2021a_3dataset_HuRI.RData")
+save.image("Nature2021a_3dataset_HuRI.RData")

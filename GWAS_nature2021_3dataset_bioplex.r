@@ -16,13 +16,13 @@ library(plotrix) # add table to plot
 
 source("~/Documents/INET-work/virus_network/src/combineNetwork.r")
 
-bioplexRewire <- function(remove.loops = FALSE, ...) {
+bioplexRewire <- function(remove.loops = TRUE, ...) {
     bioplex_re <- rewire(bioplex_g, keeping_degseq(niter = gsize(bioplex_g) * 10))
     bioplex_sim <- simplify(bioplex_re, remove.loops = remove.loops)
     return(bioplex_sim)
 }
 
-bioplexRewireMulti <- function(gwas, ctcl, hosp, infct, husci, gordon, stukalov, remove.loops = FALSE) {
+bioplexRewireMulti <- function(gwas, ctcl, hosp, infct, husci, gordon, stukalov, remove.loops = TRUE) {
     df <- c()
     re <- bioplexRewire(remove.loops) # rewire BioPlex
     merged <- combineNetwork(re, gwas) # get GWAS+1 subnetwork
@@ -49,10 +49,10 @@ bioplexRewireMulti <- function(gwas, ctcl, hosp, infct, husci, gordon, stukalov,
     df <- c(df, table(V(merged)$name %in% stukalov)["TRUE"])
     df <- c(df, gsize(merged))
 
-    df <- c(df, mean(distances(re, v = gwas, to = gwas)))
-    df <- c(df, mean(distances(re, v = ctcl, to = ctcl)))
-    df <- c(df, mean(distances(re, v = hosp, to = hosp)))
-    df <- c(df, mean(distances(re, v = infct, to = infct)))
+    df <- c(df, mean(distances(re, v = gwas, to = gwas))[lower.tri(distances(re, v = gwas, to = gwas))])
+    df <- c(df, mean(distances(re, v = ctcl, to = ctcl)[lower.tri(distances(re, v = ctcl, to = ctcl))]))
+    df <- c(df, mean(distances(re, v = hosp, to = hosp)[lower.tri(distances(re, v = hosp, to = hosp))]))
+    df <- c(df, mean(distances(re, v = infct, to = infct)[lower.tri(distances(re, v = infct, to = infct))]))
     return(df)
 }
 
@@ -103,24 +103,20 @@ bioplex_g <- graph_from_data_frame(bioplex_symbol, directed = FALSE) # V:13957, 
 
 # GWAS list
 gwas_bioplex <- gwas$All.LD[gwas$All.LD %in% V(bioplex_g)$name] # 24 of 42 candidates found in BioPlex3.0
-gwas_bioplex2 <- gwas_bioplex[c(1:5, 7, 10:24)]
 
 ctcl <- gwas[, 1][gwas[, 6] == 1]
 ctcl <- unique(ctcl[!is.na(ctcl)])
 ctcl_bioplex <- ctcl[ctcl %in% V(bioplex_g)$name] # V:10
-ctcl_bioplex2 <- ctcl_bioplex[c(1, 3, 6:10)]
 ctcl_1st <- combineNetwork(bioplex_g, ctcl_bioplex)
 
 hosp <- gwas[, 1][gwas[, 7] == 1]
 hosp <- unique(hosp[!is.na(hosp)])
 hosp_bioplex <- hosp[hosp %in% V(bioplex_g)$name] # V:17
-hosp_bioplex2 <- hosp_bioplex[c(1:4, 6, 9:17)]
 hosp_1st <- combineNetwork(bioplex_g, hosp_bioplex)
 
 infct <- gwas[, 1][gwas[, 8] == 1]
 infct <- unique(infct[!is.na(infct)])
 infct_bioplex <- infct[infct %in% V(bioplex_g)$name] # V:10
-infct_bioplex2 <- infct_bioplex[c(1:10)]
 infct_1st <- combineNetwork(bioplex_g, infct_bioplex)
 
 # HuSCI, Gordon and Stukalov in BioPlex
@@ -145,7 +141,7 @@ gwas_all_list_df <- lapply(gwas_hit_1st, as_data_frame)
 gwas_all_df <- do.call(rbind, gwas_all_list_df)
 gwas_all_g_merge <- graph_from_data_frame(gwas_all_df, directed = FALSE)
 # to have interaction between 1st interactors
-gwas_all_final <- simplify(induced_subgraph(bioplex_g, names(V(gwas_all_g_merge))), remove.loops = F)
+gwas_all_final <- simplify(induced_subgraph(bioplex_g, names(V(gwas_all_g_merge))), remove.loops = TRUE)
 
 # GWAS hit in HuSCI
 gwas_all_husci <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% husci_sym] # V:5
@@ -178,10 +174,10 @@ gwas_infct_stukalov <- V(infct_1st)$name[V(infct_1st)$name %in% stukalov_sym]
 gwas_infct_stukalov_length <- length(gwas_infct_stukalov)
 
 # average shortest path of GWAS proteins
-gwas_all_path <- mean(distances(bioplex_g, v = gwas_bioplex, to = gwas_bioplex))
-gwas_ctcl_path <- mean(distances(bioplex_g, v = ctcl_bioplex, to = ctcl_bioplex))
-gwas_hosp_path <- mean(distances(bioplex_g, v = hosp_bioplex, to = hosp_bioplex))
-gwas_infct_path <- mean(distances(bioplex_g, v = infct_bioplex, to = infct_bioplex))
+gwas_all_path <- mean(distances(bioplex_g, v = gwas_bioplex, to = gwas_bioplex)[lower.tri(distances(bioplex_g, v = gwas_bioplex, to = gwas_bioplex))])
+gwas_ctcl_path <- mean(distances(bioplex_g, v = ctcl_bioplex, to = ctcl_bioplex)[lower.tri(distances(bioplex_g, v = ctcl_bioplex, to = ctcl_bioplex))])
+gwas_hosp_path <- mean(distances(bioplex_g, v = hosp_bioplex, to = hosp_bioplex)[lower.tri(distances(bioplex_g, v = hosp_bioplex, to = hosp_bioplex))])
+gwas_infct_path <- mean(distances(bioplex_g, v = infct_bioplex, to = infct_bioplex)[lower.tri(distances(bioplex_g, v = infct_bioplex, to = infct_bioplex))])
 
 ######
 # permutation analysis
@@ -189,18 +185,8 @@ gwas_rand_r2 <- c()
 gwas_rand_r2 <- c(gwas_rand_r2, mcreplicate(10000, bioplexRewireMulti(gwas_bioplex, ctcl_bioplex, hosp_bioplex, infct_bioplex, husci_sym, gordon_sym, stukalov_sym), mc.cores = detectCores()))
 gwas_rand_r2[is.na(gwas_rand_r2)] <- 0
 
-gwas_rand_r3 <- c()
-gwas_rand_r3 <- c(gwas_rand_r3, mcreplicate(10000, bioplexRewireMulti(gwas_bioplex2, ctcl_bioplex2, hosp_bioplex2, infct_bioplex2, husci_sym, gordon_sym, stukalov_sym), mc.cores = detectCores()))
-gwas_rand_r3[is.na(gwas_rand_r3)] <- 0
-
-# choose 1 of 2 randomization results
-{
-    randomization <- gwas_rand_r2
-    # randomization <- gwas_rand_r3
-}
-
-gwas_rand_df_r2 <- data.frame(matrix(randomization, ncol = 20, byrow = T))
-names(gwas_rand_df_r2) <- c(
+gwas_rand_df_r2 <- data.frame(matrix(gwas_rand_r2, ncol = 20, byrow = T))
+gwas_rand_df_name <- c(
     "allGWAS_viral_target_inHuSCI",
     "allGWAS_viral_target_inGordon",
     "allGWAS_viral_target_inStukalov",
@@ -222,6 +208,9 @@ names(gwas_rand_df_r2) <- c(
     "GWAS_hosp_avg_path",
     "GWAS_infct_avg_path"
 )
+
+names(gwas_rand_df_r2) <- gwas_rand_df_name
+
 all_re_df_plot <- gwas_rand_df_r2[, c(1:3, 5:7, 9:11, 13:15)]
 all_length <- c(
     gwas_all_husci_length,
@@ -255,7 +244,7 @@ xmax <- c(20, 25, 45, 15, 20, 30, 15, 20, 30, 15, 20, 30)
 
 ######
 # plotting
-pdf(file = "~/Documents/INET-work/virus_network/figure_results/GWAS/Nature2021b_3dataset_BioPlex3.pdf", width = 3, height = 3)
+pdf(file = "Nature2021b_3dataset_BioPlex3.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 for (i in 1:12) {
     plotHist(
@@ -279,44 +268,100 @@ plotDistance(gwas_rand_df_r2[, 19], 4000, gwas_hosp_path, "hospitalization")
 plotDistance(gwas_rand_df_r2[, 20], 4000, gwas_infct_path, "reported infection")
 dev.off()
 
-df <- data.frame(HuRI = V(huri_g)$name, inGWASsubnetwork = V(huri_g)$name %in% gwas$name, inHuSCI = V(huri_g)$name %in% husci_sym, inGordon = V(huri_g)$name %in% gordon_sym, inGordoninGWAS = V(huri_g)$name %in% gordon_sym[gordon_sym %in% gwas$name], inStukalov = V(huri_g)$name %in% stukalov_sym, inStukalovinGWAS = V(huri_g)$name %in% stukalov_sym[stukalov_sym %in% gwas$name])
-df_raw <- list(HuSCI = husci_sym, Gordon = gordon_sym, Stukalov = stukalov_sym)
-attributes(df_raw) <- list(names = names(df_raw), row.names = 1:max(length(husci_sym), length(gordon_sym), length(stukalov_sym)), class = 'data.frame') # ref: https://stackoverflow.com/questions/7196450/create-a-data-frame-of-unequal-lengths
-write.xlsx(df, file = "~/Documents/INET-work/virus_network/statistic_results/GWAS/3dataset_df.xlsx", quote = TRUE, overwrite = TRUE)
-write.table(husci_sym, file = "/tmp/husci_sym.tsv", sep = "\t", row.names = F, quote = F)
-write.table(gordon_sym, file = "/tmp/gordon_sym.tsv", sep = "\t", row.names = F, quote = F)
-write.table(stukalov_sym, file = "/tmp/stukalov_sym.tsv", sep = "\t", row.names = F, quote = F)
+######################################################
+# exclude paralogs
+######################################################
+gwas_bioplex2 <- gwas_bioplex[c(1:5, 7, 10:24)]
+ctcl_bioplex2 <- ctcl_bioplex[c(1, 3, 6:10)]
+ctcl_1st <- combineNetwork(bioplex_g, ctcl_bioplex2)
+hosp_bioplex2 <- hosp_bioplex[c(1:4, 6, 9:17)]
+hosp_1st <- combineNetwork(bioplex_g, hosp_bioplex2)
+infct_bioplex2 <- infct_bioplex[c(1:10)]
+infct_1st <- combineNetwork(bioplex_g, infct_bioplex2)
 
-######
-# display degree of viral targets in HuRI
-husci_deg <- data.frame(degree(huri_g, v = husci_huri))
-names(husci_deg) <- "degree"
-gordon_deg <- data.frame(degree(huri_g, v = gordon_huri))
-names(gordon_deg) <- "degree"
-stukalov_deg <- data.frame(degree(huri_g, v = stukalov_huri))
-names(stukalov_deg) <- "degree"
+gwas_hit_1st <- make_ego_graph(bioplex_g, nodes = gwas_bioplex2, order = 1, mode = "all")
+gwas_all_list_df <- lapply(gwas_hit_1st, as_data_frame)
+gwas_all_df <- do.call(rbind, gwas_all_list_df)
+gwas_all_g_merge <- graph_from_data_frame(gwas_all_df, directed = FALSE)
+gwas_all_final <- simplify(induced_subgraph(bioplex_g, names(V(gwas_all_g_merge))), remove.loops = TRUE)
 
-hist(husci_deg$degree, xlab = "degree", main = "Degree of HuSCI proteins in HuRI")
-addtable2plot(100, 50, summary(husci_deg), vlines = TRUE, bty = "l", cex = 2)
+gwas_all_husci <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% husci_sym] # V:5
+gwas_all_husci_length <- length(gwas_all_husci)
+gwas_ctcl_husci <- V(ctcl_1st)$name[V(ctcl_1st)$name %in% husci_sym] # V:2
+gwas_ctcl_husci_length <- length(gwas_ctcl_husci)
+gwas_hosp_husci <- V(hosp_1st)$name[V(hosp_1st)$name %in% husci_sym] # V:2
+gwas_hosp_husci_length <- length(gwas_hosp_husci)
+gwas_infct_husci <- V(infct_1st)$name[V(infct_1st)$name %in% husci_sym] # V:4
+gwas_infct_husci_length <- length(gwas_infct_husci)
 
-hist(gordon_deg$degree, xlab = "degree", main = "Degree of Gordon proteins in HuRI")
-addtable2plot(150, 50, summary(gordon_deg), vlines = TRUE, bty = "l", cex = 2)
+gwas_all_gordon <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% gordon_sym] # V:10
+gwas_all_gordon_length <- length(gwas_all_gordon)
+gwas_ctcl_gordon <- V(ctcl_1st)$name[V(ctcl_1st)$name %in% gordon_sym]
+gwas_ctcl_gordon_length <- length(gwas_ctcl_gordon)
+gwas_hosp_gordon <- V(hosp_1st)$name[V(hosp_1st)$name %in% gordon_sym]
+gwas_hosp_gordon_length <- length(gwas_hosp_gordon)
+gwas_infct_gordon <- V(infct_1st)$name[V(infct_1st)$name %in% gordon_sym]
+gwas_infct_gordon_length <- length(gwas_infct_gordon)
 
-hist(stukalov_deg$degree, xlab = "degree", main = "Degree of Stukalov proteins in HuRI")
-addtable2plot(70, 100, summary(stukalov_deg), vlines = TRUE, bty = "l", cex = 2)
+gwas_all_stukalov <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% stukalov_sym] # V:19
+gwas_all_stukalov_length <- length(gwas_all_stukalov)
+gwas_ctcl_stukalov <- V(ctcl_1st)$name[V(ctcl_1st)$name %in% stukalov_sym]
+gwas_ctcl_stukalov_length <- length(gwas_ctcl_stukalov)
+gwas_hosp_stukalov <- V(hosp_1st)$name[V(hosp_1st)$name %in% stukalov_sym]
+gwas_hosp_stukalov_length <- length(gwas_hosp_stukalov)
+gwas_infct_stukalov <- V(infct_1st)$name[V(infct_1st)$name %in% stukalov_sym]
+gwas_infct_stukalov_length <- length(gwas_infct_stukalov)
 
-wb <- createWorkbook()
-addWorksheet(wb, "HuSCI")
-writeData(wb, "HuSCI", husci_deg, rowNames = TRUE)
+gwas_all_path <- mean(distances(bioplex_g, v = gwas_bioplex, to = gwas_bioplex)[lower.tri(distances(bioplex_g, v = gwas_bioplex, to = gwas_bioplex))])
+gwas_ctcl_path <- mean(distances(bioplex_g, v = ctcl_bioplex, to = ctcl_bioplex)[lower.tri(distances(bioplex_g, v = ctcl_bioplex, to = ctcl_bioplex))])
+gwas_hosp_path <- mean(distances(bioplex_g, v = hosp_bioplex, to = hosp_bioplex)[lower.tri(distances(bioplex_g, v = hosp_bioplex, to = hosp_bioplex))])
+gwas_infct_path <- mean(distances(bioplex_g, v = infct_bioplex, to = infct_bioplex)[lower.tri(distances(bioplex_g, v = infct_bioplex, to = infct_bioplex))])
 
-addWorksheet(wb, "Gordon et al")
-writeData(wb, "Gordon et al", gordon_deg, rowNames = TRUE)
+gwas_rand_r3 <- c()
+gwas_rand_r3 <- c(gwas_rand_r3, mcreplicate(10000, bioplexRewireMulti(gwas_bioplex2, ctcl_bioplex2, hosp_bioplex2, infct_bioplex2, husci_sym, gordon_sym, stukalov_sym), mc.cores = detectCores()))
+gwas_rand_r3[is.na(gwas_rand_r3)] <- 0
+gwas_rand_df_r3 <- data.frame(matrix(gwas_rand_r2, ncol = 20, byrow = T))
+names(gwas_rand_df_r3) <- gwas_rand_df_name
+all_re_df_plot <- gwas_rand_df_r3[, c(1:3, 5:7, 9:11, 13:15)]
+all_length <- c(
+    gwas_all_husci_length,
+    gwas_all_gordon_length,
+    gwas_all_stukalov_length,
+    gwas_ctcl_husci_length,
+    gwas_ctcl_gordon_length,
+    gwas_ctcl_stukalov_length,
+    gwas_hosp_husci_length,
+    gwas_hosp_gordon_length,
+    gwas_hosp_stukalov_length,
+    gwas_infct_husci_length,
+    gwas_infct_gordon_length,
+    gwas_infct_stukalov_length
+)
 
-addWorksheet(wb, "Stukalov et al")
-writeData(wb, "Stukalov et al", stukalov_deg, rowNames = TRUE)
-
-saveWorkbook(wb, "~/Documents/INET-work/virus_network/statistic_results/GWAS/3dataset_degree_HuRI.xlsx", overwrite = TRUE)
+pdf(file = "Nature2021b_3dataset_BioPlex3_paralogs.pdf", width = 3, height = 3)
+par(mgp = c(2, 0.7, 0), ps = 8)
+for (i in 1:12) {
+    plotHist(
+        all_re_df_plot[, i],
+        title[i],
+        # phenotype2[i],
+        all_length[i],
+        xmax[i],
+        0.03, 0.05
+        )
+}
+# interaction
+plotInteraction(gwas_rand_df_r3[, 4], 1500, gsize(gwas_all_final), "all GWAS")
+plotInteraction(gwas_rand_df_r3[, 8], 1500, gsize(ctcl_1st), "critical illness")
+plotInteraction(gwas_rand_df_r3[, 12], 1500, gsize(hosp_1st), "hospitalization")
+plotInteraction(gwas_rand_df_r3[, 16], 1000, gsize(infct_1st), "reported infection")
+# average shortest path
+plotDistance(gwas_rand_df_r3[, 17], 3000, gwas_all_path, "all GWAS")
+plotDistance(gwas_rand_df_r3[, 18], 3500, gwas_ctcl_path, "critical illness")
+plotDistance(gwas_rand_df_r3[, 19], 4000, gwas_hosp_path, "hospitalization")
+plotDistance(gwas_rand_df_r3[, 20], 4000, gwas_infct_path, "reported infection")
+dev.off()
 
 ######
 # save workarea data
-save.image("~/Documents/INET-work/virus_network/statistic_results/GWAS/Nature2021b_3dataset_BioPlex.RData")
+save.image("Nature2021b_3dataset_BioPlex_noLoop.RData")
