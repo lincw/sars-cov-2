@@ -141,7 +141,7 @@ names(gwas_rand_df_r2) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukal
 
 ######
 # plot
-pdf(file = "Nature2021a_3dataset_bioPlex.pdf", width = 3, height = 3)
+pdf(file = "Nature2021a_3dataset_BioPlex3.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 # HuSCI viral target in GWAS subnetwork
 plotHist(gwas_rand_df_r2$HuSCI_viral_target, "HuSCI", gwas_all_husci_length, 20, 0.05, 0.07)
@@ -163,11 +163,11 @@ text(gsize(gwas_all_final) - 20, 350, paste0("observed = ", gsize(gwas_all_final
 
 # Average shortest path
 dens_gwas <- hist(gwas_rand_df_r2[, 5], breaks = 8, plot = FALSE, right = FALSE)
-plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, yaxt = "n", xlab = "Average shortest path", main = "", cex.sub = 0.5)
-axis(side = 2, at = seq(0, 2500, by = 500), labels = seq(0, 0.25, by = 0.05), las = 1)
+plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, yaxt = "n", xlim = c(2.5, 5), xlab = "Average shortest path", main = "", cex.sub = 0.5)
+axis(side = 2, at = seq(0, 2000, by = 500), labels = seq(0, 0.2, by = 0.05), las = 1)
 arrows(gwas_all_path, 500, gwas_all_path, 0, col = "#922687", lwd = 2, length = 0.1)
 text(median(gwas_rand_df_r2[, 5]), max(dens_gwas$counts), paste0("median = ", round(median(gwas_rand_df_r2[, 5]), 3)), col = "grey", cex = 0.5)
-text(round(gwas_all_path, 3), 700, paste0("observed = ", round(gwas_all_path, 3), "\np = ", table(gwas_rand_df_r2[, 5] >= gwas_all_path)["FALSE"]/10000), cex = 0.4, pos = 4)
+text(round(gwas_all_path, 3), 700, paste0("observed = ", round(gwas_all_path, 3), "\np = ", round(table(gwas_rand_df_r2[, 5] >= gwas_all_path)["FALSE"]/sum(dens_gwas$counts), 4)), cex = 0.4, pos = 4)
 dev.off()
 
 ######

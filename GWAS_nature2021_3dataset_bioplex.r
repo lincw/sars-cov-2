@@ -49,7 +49,7 @@ bioplexRewireMulti <- function(gwas, ctcl, hosp, infct, husci, gordon, stukalov,
     df <- c(df, table(V(merged)$name %in% stukalov)["TRUE"])
     df <- c(df, gsize(merged))
 
-    df <- c(df, mean(distances(re, v = gwas, to = gwas))[lower.tri(distances(re, v = gwas, to = gwas))])
+    df <- c(df, mean(distances(re, v = gwas, to = gwas)[lower.tri(distances(re, v = gwas, to = gwas))]))
     df <- c(df, mean(distances(re, v = ctcl, to = ctcl)[lower.tri(distances(re, v = ctcl, to = ctcl))]))
     df <- c(df, mean(distances(re, v = hosp, to = hosp)[lower.tri(distances(re, v = hosp, to = hosp))]))
     df <- c(df, mean(distances(re, v = infct, to = infct)[lower.tri(distances(re, v = infct, to = infct))]))
@@ -59,7 +59,7 @@ bioplexRewireMulti <- function(gwas, ctcl, hosp, infct, husci, gordon, stukalov,
 plotHist <- function(value, title, length, xmax, y1, y2) {
     dens_gwas <- hist(value, breaks = c(0:(max(value) + 1)), plot = FALSE, right = F)
     plot(dens_gwas, xlim = c(0, xmax), col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, xaxt = "n", freq = FALSE, xlab = "Number of viral targets", ylab = "Frequency", main = "", cex.sub = 0.5)
-    mytitle <- paste0("COVID19 GWAS subnetwork\nviral targets in ", title)
+    mytitle <- paste0("viral targets in ", title)
     mtext(side = 3, line = 1, cex = 1, mytitle)
     mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from BioPlex3.0")
     axis(side = 1, at = seq(0, xmax, by = 5) + 0.5, labels = seq(0, xmax, by = 5))
@@ -71,7 +71,7 @@ plotHist <- function(value, title, length, xmax, y1, y2) {
 plotInteraction <- function(value, ymax, observe, phenotype) {
     dens_gwas <- hist(value, breaks = 20, plot = FALSE, right = FALSE)
     plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), xlim = c(min(value), ifelse(observe > max(value), observe, max(value))), border = NA, las = 1, yaxt = "n", xlab = "Number of interactions", main = "", cex.sub = 0.5)
-    mtext(side = 3, line = 1, cex = 1, paste0("COVID19 GWAS subnetwork: ", phenotype))
+    mtext(side = 3, line = 1, cex = 1, phenotype)
     mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from BioPlex3")
     axis(side = 2, at = seq(0, ymax, by = 500), labels = seq(0, ymax/10000, by = 0.05), las = 1)
     arrows(observe, 200, observe, 0, col = "#922687", lwd = 2, length = 0.1)
@@ -80,13 +80,12 @@ plotInteraction <- function(value, ymax, observe, phenotype) {
 }
 plotDistance <- function(value, ymax, observe, phenotype) {
     dens_gwas <- hist(value, breaks = 8, plot = FALSE, right = FALSE)
-    plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, xlim = c(2, 4), yaxt = "n", xlab = "Average shortest path", main = "", cex.sub = 0.5)
-    mtext(side = 3, line = 1, cex = 1, paste0("COVID19 GWAS subnetwork: ", phenotype))
-    mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from HuRI")
+    plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, xlim = c(2.5, 4), yaxt = "n", xlab = "Average shortest path", main = "", cex.sub = 0.5)
+    mtext(side = 3, line = 1, cex = 1, phenotype)
     axis(side = 2, at = seq(0, ymax, by = 500), labels = seq(0, ymax/10000, by = 0.05), las = 1)
     arrows(observe, 300, observe, 0, col = "#922687", lwd = 2, length = 0.1)
     text(round(median(value), 2), max(dens_gwas$counts), paste0("median = ", round(median(value), 2)), col = "grey", cex = 0.5)
-    text(round(observe, 1) - 0.3, 400, paste0("observed = ", round(observe, 2), "\np = ", table(value >= round(observe, 2))["FALSE"]/10000), cex = 0.4, pos = 4)
+    text(round(observe, 3) - 0.3, 400, paste0("observed = ", round(observe, 2), "\np = ", round(table(value >= observe)["FALSE"]/length(value[!is.infinite(value)]), 5)), cex = 0.4, pos = 4)
 }
 ######
 # load dataset
@@ -134,7 +133,7 @@ stukalov_bioplex <- V(bioplex_g)$name[V(bioplex_g)$name %in% stukalov_sym] # V:7
 gwas_hit_1st <- make_ego_graph(bioplex_g, nodes = gwas_bioplex, order = 1, mode = "all")
 
 ######
-# 3. **rewiring analysis of HuRI**, to see if the HuSCI viral target is significant.
+# 3. **rewiring analysis of bioplex**, to see if the HuSCI viral target is significant.
 # subnetwork of GWAS hit from BioPlex
 # inherit from above code
 gwas_all_list_df <- lapply(gwas_hit_1st, as_data_frame)
@@ -257,15 +256,15 @@ for (i in 1:12) {
         )
 }
 # interaction
-plotInteraction(gwas_rand_df_r2[, 4], 1500, gsize(gwas_all_final), "all GWAS")
+plotInteraction(gwas_rand_df_r2[, 4], 1000, gsize(gwas_all_final), "all GWAS")
 plotInteraction(gwas_rand_df_r2[, 8], 1500, gsize(ctcl_1st), "critical illness")
 plotInteraction(gwas_rand_df_r2[, 12], 1500, gsize(hosp_1st), "hospitalization")
 plotInteraction(gwas_rand_df_r2[, 16], 1000, gsize(infct_1st), "reported infection")
 # average shortest path
-plotDistance(gwas_rand_df_r2[, 17], 3000, gwas_all_path, "all GWAS")
-plotDistance(gwas_rand_df_r2[, 18], 3500, gwas_ctcl_path, "critical illness")
-plotDistance(gwas_rand_df_r2[, 19], 4000, gwas_hosp_path, "hospitalization")
-plotDistance(gwas_rand_df_r2[, 20], 4000, gwas_infct_path, "reported infection")
+plotDistance(gwas_rand_df_r2[!is.infinite(gwas_rand_df_r2[, 17]), 17], 3000, gwas_all_path, "all GWAS")
+plotDistance(gwas_rand_df_r2[!is.infinite(gwas_rand_df_r2[, 18]), 18], 3500, gwas_ctcl_path, "critical illness")
+plotDistance(gwas_rand_df_r2[!is.infinite(gwas_rand_df_r2[, 19]), 19], 4000, gwas_hosp_path, "hospitalization")
+plotDistance(gwas_rand_df_r2[!is.infinite(gwas_rand_df_r2[, 20]), 20], 4000, gwas_infct_path, "reported infection")
 dev.off()
 
 ######################################################
@@ -320,7 +319,7 @@ gwas_infct_path <- mean(distances(bioplex_g, v = infct_bioplex, to = infct_biopl
 gwas_rand_r3 <- c()
 gwas_rand_r3 <- c(gwas_rand_r3, mcreplicate(10000, bioplexRewireMulti(gwas_bioplex2, ctcl_bioplex2, hosp_bioplex2, infct_bioplex2, husci_sym, gordon_sym, stukalov_sym), mc.cores = detectCores()))
 gwas_rand_r3[is.na(gwas_rand_r3)] <- 0
-gwas_rand_df_r3 <- data.frame(matrix(gwas_rand_r2, ncol = 20, byrow = T))
+gwas_rand_df_r3 <- data.frame(matrix(gwas_rand_r3, ncol = 20, byrow = T))
 names(gwas_rand_df_r3) <- gwas_rand_df_name
 all_re_df_plot <- gwas_rand_df_r3[, c(1:3, 5:7, 9:11, 13:15)]
 all_length <- c(
@@ -356,10 +355,10 @@ plotInteraction(gwas_rand_df_r3[, 8], 1500, gsize(ctcl_1st), "critical illness")
 plotInteraction(gwas_rand_df_r3[, 12], 1500, gsize(hosp_1st), "hospitalization")
 plotInteraction(gwas_rand_df_r3[, 16], 1000, gsize(infct_1st), "reported infection")
 # average shortest path
-plotDistance(gwas_rand_df_r3[, 17], 3000, gwas_all_path, "all GWAS")
-plotDistance(gwas_rand_df_r3[, 18], 3500, gwas_ctcl_path, "critical illness")
-plotDistance(gwas_rand_df_r3[, 19], 4000, gwas_hosp_path, "hospitalization")
-plotDistance(gwas_rand_df_r3[, 20], 4000, gwas_infct_path, "reported infection")
+plotDistance(gwas_rand_df_r3[!is.infinite(gwas_rand_df_r3[, 17]), 17], 3000, gwas_all_path, "all GWAS")
+plotDistance(gwas_rand_df_r3[!is.infinite(gwas_rand_df_r3[, 18]), 18], 4000, gwas_ctcl_path, "critical illness")
+plotDistance(gwas_rand_df_r3[!is.infinite(gwas_rand_df_r3[, 19]), 19], 3500, gwas_hosp_path, "hospitalization")
+plotDistance(gwas_rand_df_r3[!is.infinite(gwas_rand_df_r3[, 20]), 20], 4000, gwas_infct_path, "reported infection")
 dev.off()
 
 ######

@@ -66,6 +66,7 @@ stukalov <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/e
 huri_symbol <- huri[, c(5:6)]
 huri_g_ori <- graph_from_data_frame(huri_symbol, directed = FALSE) # V:8274, E:52573
 huri_g <- simplify(huri_g_ori, remove.loops = TRUE) # V:8274, E:52558
+
 # protein list filter
 husci_sym <- husci$node
 husci_huri <- V(huri_g)$name[V(huri_g)$name %in% husci_sym] # HuSCI in HuRI whole
@@ -155,7 +156,7 @@ names(permutation_paralogs_df) <- c("HuSCI_viral_target", "Gordon_viral_target",
 
 ######
 # plot function
-toPlot <- function(value, viral_husci, viral_gordon, viral_stukalov, interaction, distance) {
+toPlot <- function(value, viral_husci, viral_gordon, viral_stukalov, interaction, distance, ymax) {
     # HuSCI viral target in GWAS subnetwork
     plotHist(value[, 1], "HuSCI", length(viral_husci), 25, 0.03, 0.05)
     # Gordon viral target in GWAS subnetwork
@@ -173,8 +174,8 @@ toPlot <- function(value, viral_husci, viral_gordon, viral_stukalov, interaction
 
     # mean distance
     dens_gwas <- hist(value[, 5], breaks = 8, plot = FALSE, right = FALSE)
-    plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, xlim = c(1.5, 3.5), yaxt = "n", xlab = "Average shortest path", main = "", cex.sub = 0.5)
-    axis(side = 2, at = seq(0, 5000, by = 500), labels = seq(0, 0.5, by = 0.05), las = 1)
+    plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, xlim = c(2, 4), yaxt = "n", xlab = "Average shortest path", main = "", cex.sub = 0.5)
+    axis(side = 2, at = seq(0, ymax, by = 500), labels = seq(0, ymax/10000, by = 0.05), las = 1)
     arrows(distance, 600, distance, 0, col = "#922687", lwd = 2, length = 0.1)
     text(median(value[, 5]) + 0.1, max(dens_gwas$counts), paste0("median = ", round(median(value[, 5]), 2)), col = "grey", cex = 0.5)
     text(round(distance, 2), 1000, paste0("observed = ", round(distance, 2), "\np = ",
@@ -189,12 +190,12 @@ toPlot <- function(value, viral_husci, viral_gordon, viral_stukalov, interaction
 # all
 pdf(file = "Nature2021a_3dataset_HuRI.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
-toPlot(permutation_all_df, husci_viral_targets_all, gordon_viral_targets_all, stukalov_viral_targets_all, interactions_all, gwas_protein_shortest_path_all)
+toPlot(permutation_all_df, husci_viral_targets_all, gordon_viral_targets_all, stukalov_viral_targets_all, interactions_all, gwas_protein_shortest_path_all, 4000)
 dev.off()
 # without paralogs
 pdf(file = "Nature2021a_3dataset_HuRI_paralogs.pdf", width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
-toPlot(permutation_paralogs_df, husci_viral_targets_paralogs, gordon_viral_targets_paralogs, stukalov_viral_targets_paralogs, interactions_paralogs, gwas_protein_shortest_path_paralogs)
+toPlot(permutation_paralogs_df, husci_viral_targets_paralogs, gordon_viral_targets_paralogs, stukalov_viral_targets_paralogs, interactions_paralogs, gwas_protein_shortest_path_paralogs, 3000)
 dev.off()
 
 ######
