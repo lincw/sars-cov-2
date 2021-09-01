@@ -31,8 +31,9 @@ avg_path_rand <- function(network, node, verbose = FALSE) {
 	return(sample_avg)
 }
 
-plotDistance <- function(value, ymax, observe, phenotype) {
+plotDistance <- function(value, observe, phenotype) {
     dens_gwas <- hist(value, plot = FALSE, right = FALSE)
+    ymax <- round(max(dens_gwas$count)/1000, 1) * 1000
     plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, yaxt = "n", xlab = "Average shortest path", main = "", cex.sub = 0.5)
     mtext(side = 3, line = 1, cex = 1, phenotype)
     axis(side = 2, at = seq(0, ymax, by = 500), labels = seq(0, ymax/10000, by = 0.05), las = 1)
@@ -84,7 +85,7 @@ permut_onlyPlot <- function(result_list, network, node_list, dist_list) {
 			sig_value <- round(as.numeric(sig), 4)
 		}
 
-		plotDistance(sample_notInf, 1000, dist_list[[names(node_list[no])]], names(node_list[no]))
+		plotDistance(sample_notInf, dist_list[[names(node_list[no])]], names(node_list[no]))
 	}	
 	dev.off()
 }
@@ -228,7 +229,7 @@ bioplex_result <- permut("BioPlex", nodes_bioplex, dist_bioplex, 10000)
 # Node: infct; Network: BioPlex; avg shortest path: 3.511
 # [1] "right tail: FALSE; median = 3.844; sig = 0.1007"
 
-# replot, if necessary
+## replot, if necessary
 # permut_onlyPlot(bioplex_result, "BioPlex", nodes_bioplex, dist_bioplex)
 
 # b. random select proteins with similar degree profile (degree of proteins plus/minus round of square of degree proteins by 1)
@@ -322,8 +323,7 @@ for (a in 1:times) {
 }
 close(pb)
 
-meandist_sqrt_final <- lapply(meandist_sqrt_result, function(x) {sample(x, 10000)})
-permut_onlyPlot(meandist_sqrt_final, "HuRI", nodes_huri, dist_huri)
+permut_onlyPlot(meandist_sqrt_result, "HuRI", nodes_huri, dist_huri)
 
 ######
 # Topological twins, 
