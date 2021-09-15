@@ -19,11 +19,13 @@ mean_dist <- function(network, node, verbose = FALSE) {
 source("~/Documents/INET-work/virus_network/src/combineNetwork.r")
 sqrt_deg_lo <- function(network, node) {
 	deg <- degree(networks[[network]], node)
-	deg_out <- deg - round(deg ^ 0.5, 0)
+	# deg_out <- deg - round(deg ^ 0.5, 0)
+	deg_out <- deg - round(deg * 0.9, 0)
 }
 sqrt_deg_hi <- function(network, node) {
 	deg <- degree(networks[[network]], node)
-	deg_out <- deg + round(deg ^ 0.5, 0)
+	# deg_out <- deg + round(deg ^ 0.5, 0)
+	deg_out <- deg + round(deg * 1.1, 0)
 }
 viralTarget <- function(network, node, viral_list) {
     subnet <- combineNetwork(network, node)
@@ -154,7 +156,8 @@ nodes_huri <- list(
 	hosp = gwas2021b_hosp[gwas2021b_hosp %in% V(networks[["HuRI"]])$name],
 	hosp_noParalog = c("FDX2", "ICAM3", "LZTFL1", "NSF", "OAS1", "RAVER1", "SPPL2C", "STH", "TMEM65", "TYK2"),
 	infct = gwas2021b_infct[gwas2021b_infct %in% V(networks[["HuRI"]])$name],
-	infct_noParalog = c("LZTFL1", "NXPE3", "OAS1", "PLEKHA4", "SLC6A20")
+	infct_noParalog = c("LZTFL1", "NXPE3", "OAS1", "PLEKHA4", "SLC6A20"),
+	gwas_union = unique(union(gwas2021a, gwas2021b$All.LD))[unique(union(gwas2021a, gwas2021b$All.LD)) %in% V(networks[["HuRI"]])$name]
 )
 
 nodes_bioplex <- list(
