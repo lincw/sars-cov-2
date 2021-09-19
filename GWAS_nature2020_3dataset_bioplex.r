@@ -2,6 +2,12 @@
 # plus Gordon and Stukalov dataset
 # Lin Chung-wen
 # Date: 28.07.2021 **23:49**
+# 16.09.2021 **09:50**
+######
+# environment
+google <- "/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/"
+paper <- "/Volumes/GoogleDrive/My Drive/Paper_VirHostome_CoV2"
+gwas_dic <- "~/Documents/INET-work/virus_network/references/GWAS/"
 
 ######
 # load package
@@ -15,8 +21,8 @@ library(plotrix) # add table to plot
 subnetwork <- function(network, node) {
     gwas_hit_1st <- make_ego_graph(network, nodes = node, order = 1, mode = "all")
     ######
-    # 3. **rewiring analysis of HuRI**, to see if the HuSCI viral target is significant.
-    # subnetwork of GWAS hit from HuRI
+    # 3. **rewiring analysis of BioPlex**, to see if the HuSCI viral target is significant.
+    # subnetwork of GWAS hit from BioPlex
     # inherit from above code
     gwas_all_list_df <- lapply(gwas_hit_1st, as_data_frame)
     gwas_all_df <- do.call(rbind, gwas_all_list_df)
@@ -64,11 +70,11 @@ plotHist <- function(value, title, length, xmax, y1, y2, density = TRUE) {
 }
 ######
 # load dataset
-bioplex <- read.delim("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/BioPlex.3.0_edge.tsv", header = T)
-husci <- read.csv("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/HuSCI_node.csv", header = TRUE)
-gwas <- read.csv("~/Documents/INET-work/virus_network/references/GWAS/Genetic\ mechanisms\ of\ critical\ illness\ in\ COVID-19/table1.csv", header = T)
-gordon <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Gordon")
-stukalov <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Stukalov")
+bioplex <- read.delim(file.path(google, "data/extended_table/BioPlex.3.0_edge.tsv"), header = T)
+husci <- read.xlsx(file.path(paper, "04_Supplementary Information/Supplementary_Table_1.xlsx"), sheet = '1b - HuSCI', startRow = 4)
+gwas <- read.csv(file.path(gwas_dic, "Genetic\ mechanisms\ of\ critical\ illness\ in\ COVID-19/table1.csv"), header = T)
+gordon <- read.xlsx(file.path(google, "data/extended_table/Extended_Table_2_PPIs.xlsx"), sheet = "Gordon")
+stukalov <- read.xlsx(file.path(google, "data/extended_table/Extended_Table_2_PPIs.xlsx"), sheet = "Stukalov")
 
 gwas_all <- c(gwas$Locus[c(1:4, 6:8)], "OAS1", "OAS2", "OAS3")
 # !there is no paralogs issue in BioPlex with Nature 2021a study
@@ -80,7 +86,7 @@ bioplex_symbol <- bioplex[, c(5:6)]
 bioplex_g_ori <- graph_from_data_frame(bioplex_symbol, directed = FALSE) # V:13957, E:118162
 bioplex_g <- simplify(bioplex_g_ori, remove.loops = TRUE) # V:13957, E:118162
 # protein list filter
-husci_sym <- husci$node
+husci_sym <- unique(husci[, "Host.protein_symbol"])
 husci_bioplex <- V(bioplex_g)$name[V(bioplex_g)$name %in% husci_sym] # HuSCI in BioPlex whole, V:132
 
 # GWAS hit in BioPlex
@@ -141,7 +147,7 @@ names(gwas_rand_df_r2) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukal
 
 ######
 # plot
-pdf(file = "Nature2021a_3dataset_BioPlex3.pdf", width = 3, height = 3)
+pdf(file.path(google, "result/graph/Nature2021a_3dataset_BioPlex3.pdf"), width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 # HuSCI viral target in GWAS subnetwork
 plotHist(gwas_rand_df_r2$HuSCI_viral_target, "HuSCI", gwas_all_husci_length, 20, 0.05, 0.07)
@@ -202,4 +208,4 @@ dev.off()
 
 ######
 # save workarea data
-save.image("Nature2021a_3dataset_BioPlex.RData")
+save.image(file.path(google, "result/Nature2021a_3dataset_BioPlex.RData"))

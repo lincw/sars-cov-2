@@ -2,6 +2,12 @@
 # plus Gordon and Stukalov dataset
 # Lin Chung-wen
 # Date: 28.07.2021 **23:49**
+# 16.09.2021 **09:50**
+######
+# environment
+google <- "/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/"
+paper <- "/Volumes/GoogleDrive/My Drive/Paper_VirHostome_CoV2"
+gwas_dic <- "~/Documents/INET-work/virus_network/references/GWAS/"
 
 ######
 # load package
@@ -55,12 +61,13 @@ plotHist <- function(value, title, length, xmax, y1, y2) {
 }
 ######
 # load dataset
-huri <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "HuRI")
-husci <- read.csv("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/HuSCI_node.csv", header = TRUE)
-gwas <- read.csv("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/GWAS_hits.csv", header = T)
-gordon <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Gordon")
-stukalov <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Stukalov")
+huri <- read.xlsx(file.path(google, "data/extended_table/Extended_Table_2_PPIs.xlsx"), sheet = "HuRI")
+husci <- read.xlsx(file.path(paper, "04_Supplementary Information/Supplementary_Table_1.xlsx"), sheet = '1b - HuSCI', startRow = 4)
+gwas <- read.csv(file.path(gwas_dic, "Genetic\ mechanisms\ of\ critical\ illness\ in\ COVID-19/table1.csv"), header = T)
+gordon <- read.xlsx(file.path(google, "data/extended_table/Extended_Table_2_PPIs.xlsx"), sheet = "Gordon")
+stukalov <- read.xlsx(file.path(google, "data/extended_table/Extended_Table_2_PPIs.xlsx"), sheet = "Stukalov")
 
+gwas_all <- c(gwas$Locus[c(1:4, 6:8)], "OAS1", "OAS2", "OAS3")
 ######
 # 1. HuRI graph generation
 huri_symbol <- huri[, c(5:6)]
@@ -68,19 +75,23 @@ huri_g_ori <- graph_from_data_frame(huri_symbol, directed = FALSE) # V:8274, E:5
 huri_g <- simplify(huri_g_ori, remove.loops = TRUE) # V:8274, E:52558
 
 # protein list filter
-husci_sym <- husci$node
+husci_sym <- unique(husci[, "Host.protein_symbol"])
 husci_huri <- V(huri_g)$name[V(huri_g)$name %in% husci_sym] # HuSCI in HuRI whole
 
 # GWAS hit in HuRI
-gwas_huri <- gwas$name[!is.na(gwas$ctl == 1)]
-gwas_huri_paralogs <- gwas_huri[c(1, 3:5)] # exclude paralogs: OAS2, 23.08.2021
+gwas_huri <- gwas_all[gwas_all %in% V(huri_g)$name]
+message(paste0("GWAS candidates in HuRI: ", paste(gwas_huri, collapse = ", ")))
+message(paste0("Total number: ", length(gwas_huri)))
+# gwas_huri_paralogs <- gwas_huri[c(1, 3:5)] # exclude paralogs: OAS2, 23.08.2021
 
 # Gordon and Stukalov in HuRI
 gordon_sym <- unique(gordon$PreyGene)
 gordon_huri <- V(huri_g)$name[V(huri_g)$name %in% gordon_sym]
+message(paste0("Gordon proteins in HuRI: ", length(gordon_huri)))
 
 stukalov_sym <- unique(stukalov$human)
 stukalov_huri <- V(huri_g)$name[V(huri_g)$name %in% stukalov_sym]
+message(paste0("Stukalov proteins in HuRI: ", length(stukalov_huri)))
 
 ######
 # 2. observation
@@ -89,54 +100,47 @@ observation_all <- subnetwork(huri_g, gwas_huri)
 print("GWAS subnetwork")
 observation_all
 
-observation_paralogs <- subnetwork(huri_g, gwas_huri_paralogs)
-print("GWAS subnetwork, without paralogs")
-observation_paralogs
+# observation_paralogs <- subnetwork(huri_g, gwas_huri_paralogs)
+# print("GWAS subnetwork, without paralogs")
+# observation_paralogs
 
 # a. viral targets within 3 dataset: HuSCI, Gordon et al, Stukalov et al
 husci_viral_targets_all <- V(observation_all)$name[V(observation_all)$name %in% husci_sym]
-print("Viral targets from HuSCI in GWAS subnetwork")
-husci_viral_targets_all
+message(paste0("Viral targets from HuSCI in GWAS subnetwork: ", paste(husci_viral_targets_all, collapse = ", "), ". \nTotal number: ", length(husci_viral_targets_all)))
 
 gordon_viral_targets_all <- V(observation_all)$name[V(observation_all)$name %in% gordon_sym]
-print("Viral targets from Gordon at al in GWAS subnetwork")
-gordon_viral_targets_all
+message(paste0("Viral targets from Gordon at al in GWAS subnetwork: ", paste(gordon_viral_targets_all, collapse = ", "), ". \nTotal number: ", length(gordon_viral_targets_all)))
 
 stukalov_viral_targets_all <- V(observation_all)$name[V(observation_all)$name %in% stukalov_sym]
-print("Viral targets from Stukalov at al in GWAS subnetwork")
-stukalov_viral_targets_all
+message(paste0("Viral targets from Stukalov at al in GWAS subnetwork: ", paste(stukalov_viral_targets_all, collapse = ", "), ". \nTotal number: ", length(stukalov_viral_targets_all)))
 
-husci_viral_targets_paralogs <- V(observation_paralogs)$name[V(observation_paralogs)$name %in% husci_sym]
-print("Viral targets from HuSCI in GWAS subnetwork, without paralogs")
-husci_viral_targets_paralogs
+# husci_viral_targets_paralogs <- V(observation_paralogs)$name[V(observation_paralogs)$name %in% husci_sym]
+# print("Viral targets from HuSCI in GWAS subnetwork, without paralogs")
+# husci_viral_targets_paralogs
 
-gordon_viral_targets_paralogs <- V(observation_paralogs)$name[V(observation_paralogs)$name %in% gordon_sym]
-print("Viral targets from Gordon et al in GWAS subnetwork, without paralogs")
-gordon_viral_targets_paralogs
+# gordon_viral_targets_paralogs <- V(observation_paralogs)$name[V(observation_paralogs)$name %in% gordon_sym]
+# print("Viral targets from Gordon et al in GWAS subnetwork, without paralogs")
+# gordon_viral_targets_paralogs
 
-stukalov_viral_targets_paralogs <- V(observation_paralogs)$name[V(observation_paralogs)$name %in% stukalov_sym]
-print("Viral targets from Stukalov et al in GWAS subnetwork, without paralogs")
-stukalov_viral_targets_paralogs
+# stukalov_viral_targets_paralogs <- V(observation_paralogs)$name[V(observation_paralogs)$name %in% stukalov_sym]
+# print("Viral targets from Stukalov et al in GWAS subnetwork, without paralogs")
+# stukalov_viral_targets_paralogs
 
 # b. interaction
 interactions_all <- gsize(observation_all)
-print("Interactions in GWAS subnetwork")
-interactions_all
+message(paste0("Interactions in GWAS subnetwork: ", interactions_all))
 
-interactions_paralogs <- gsize(observation_paralogs)
-print("Interactions in GWAS subnetwork, without paralogs")
-interactions_paralogs
+# interactions_paralogs <- gsize(observation_paralogs)
+# message(paste0("Interactions in GWAS subnetwork, without paralogs: ", interactions_paralogs))
 
 # c. average shortest path between GWAS proteins
 dist_all <- distances(huri_g, gwas_huri, to = gwas_huri)
 gwas_protein_shortest_path_all <- mean(dist_all[lower.tri(dist_all)])
-print("Average shortest path between GWAS proteins")
-gwas_protein_shortest_path_all
+message(paste0("Average shortest path between GWAS proteins: ", gwas_protein_shortest_path_all))
 
-dist_paralogs <- distances(huri_g, gwas_huri_paralogs, to = gwas_huri_paralogs)
-gwas_protein_shortest_path_paralogs <- mean(dist_paralogs[lower.tri(dist_paralogs)])
-print("Average shortest path between GWAS proteins, without paralogs")
-gwas_protein_shortest_path_paralogs
+# dist_paralogs <- distances(huri_g, gwas_huri_paralogs, to = gwas_huri_paralogs)
+# gwas_protein_shortest_path_paralogs <- mean(dist_paralogs[lower.tri(dist_paralogs)])
+# message(paste0("Average shortest path between GWAS proteins, without paralogs", gwas_protein_shortest_path_paralogs))
 
 ######
 # 3. permutation analysis
@@ -148,11 +152,11 @@ permutation_all_df <- data.frame(matrix(permutation_all, ncol = 5, byrow = T))
 names(permutation_all_df) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukalov_viral_target", "interactions", "GWAS_average_shortest_path")
 
 # without paralogs
-permutation_paralogs <- c()
-permutation_paralogs <- c(permutation_paralogs, mcreplicate(10000, rewire3Dataset(huri_g, gwas_huri_paralogs), mc.cores = detectCores()))
-permutation_paralogs[is.na(permutation_paralogs)] <- 0
-permutation_paralogs_df <- data.frame(matrix(permutation_paralogs, ncol = 5, byrow = T))
-names(permutation_paralogs_df) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukalov_viral_target", "interactions", "GWAS_average_shortest_path")
+# permutation_paralogs <- c()
+# permutation_paralogs <- c(permutation_paralogs, mcreplicate(10000, rewire3Dataset(huri_g, gwas_huri_paralogs), mc.cores = detectCores()))
+# permutation_paralogs[is.na(permutation_paralogs)] <- 0
+# permutation_paralogs_df <- data.frame(matrix(permutation_paralogs, ncol = 5, byrow = T))
+# names(permutation_paralogs_df) <- c("HuSCI_viral_target", "Gordon_viral_target", "Stukalov_viral_target", "interactions", "GWAS_average_shortest_path")
 
 ######
 # plot function
@@ -188,15 +192,15 @@ toPlot <- function(value, viral_husci, viral_gordon, viral_stukalov, interaction
 ######
 # plot
 # all
-pdf(file = "Nature2021a_3dataset_HuRI.pdf", width = 3, height = 3)
+pdf(file.path(google, "result/graph/Nature2021a_3dataset_HuRI.pdf"), width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 toPlot(permutation_all_df, husci_viral_targets_all, gordon_viral_targets_all, stukalov_viral_targets_all, interactions_all, gwas_protein_shortest_path_all, 4000)
 dev.off()
 # without paralogs
-pdf(file = "Nature2021a_3dataset_HuRI_paralogs.pdf", width = 3, height = 3)
-par(mgp = c(2, 0.7, 0), ps = 8)
-toPlot(permutation_paralogs_df, husci_viral_targets_paralogs, gordon_viral_targets_paralogs, stukalov_viral_targets_paralogs, interactions_paralogs, gwas_protein_shortest_path_paralogs, 3000)
-dev.off()
+# pdf(file = "Nature2021a_3dataset_HuRI_paralogs.pdf", width = 3, height = 3)
+# par(mgp = c(2, 0.7, 0), ps = 8)
+# toPlot(permutation_paralogs_df, husci_viral_targets_paralogs, gordon_viral_targets_paralogs, stukalov_viral_targets_paralogs, interactions_paralogs, gwas_protein_shortest_path_paralogs, 3000)
+# dev.off()
 
 ######
 # display degree of viral targets in HuRI
@@ -234,4 +238,4 @@ dev.off()
 
 ######
 # save workarea data
-save.image("Nature2021a_3dataset_HuRI.RData")
+save.image(file.path(google, "result/Nature2021a_3dataset_HuRI.RData"))

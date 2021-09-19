@@ -4,6 +4,12 @@
 # plus Gordon and Stukalov dataset
 # Lin Chung-wen
 # Date: 11.08.2021
+# 16.09.2021 **13:55**
+######
+# environment
+google <- "/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/"
+paper <- "/Volumes/GoogleDrive/My Drive/Paper_VirHostome_CoV2"
+gwas_dic <- "~/Documents/INET-work/virus_network/references/GWAS/"
 
 ######
 # load package
@@ -89,11 +95,11 @@ plotDistance <- function(value, ymax, observe, phenotype) {
 }
 ######
 # load dataset
-bioplex <- read.delim("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/BioPlex.3.0_edge.tsv", header = T)
-husci <- read.csv("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/HuSCI_node.csv", header = TRUE)
-gwas <- read.xlsx("~/Documents/INET-work/virus_network/statistic_results/GWAS/COVID_GWAS_hit_inHUSCI_v2.xlsx")
-gordon <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Gordon")
-stukalov <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Stukalov")
+bioplex <- read.delim(file.path(google, "data/extended_table/BioPlex.3.0_edge.tsv"), header = T)
+husci <- read.xlsx(file.path(paper, "04_Supplementary Information/Supplementary_Table_1.xlsx"), sheet = '1b - HuSCI', startRow = 4)
+gwas <- read.xlsx("~/Documents/INET-work/virus_network/statistic_results/GWAS/COVID_GWAS hits_v2.xlsx") # ref: Mapping the human genetic architecture of COVID-19 (url: https://doi.org/10.1038/s41586-021-03767-x)
+gordon <- read.xlsx(file.path(google, "data/extended_table/Extended_Table_2_PPIs.xlsx"), sheet = "Gordon")
+stukalov <- read.xlsx(file.path(google, "data/extended_table/Extended_Table_2_PPIs.xlsx"), sheet = "Stukalov")
 
 ######
 # 1. BioPlex graph generation
@@ -102,30 +108,34 @@ bioplex_g <- graph_from_data_frame(bioplex_symbol, directed = FALSE) # V:13957, 
 
 # GWAS list
 gwas_bioplex <- gwas$All.LD[gwas$All.LD %in% V(bioplex_g)$name] # 24 of 42 candidates found in BioPlex3.0
+message(paste0(length(gwas_bioplex), " of ", length(gwas$All.LD), " candidates found in BioPlex 3.0"))
 
-ctcl <- gwas[, 1][gwas[, 6] == 1]
+ctcl <- gwas[, 2][gwas[, 5] == 1]
 ctcl <- unique(ctcl[!is.na(ctcl)])
 ctcl_bioplex <- ctcl[ctcl %in% V(bioplex_g)$name] # V:10
 ctcl_1st <- combineNetwork(bioplex_g, ctcl_bioplex)
 
-hosp <- gwas[, 1][gwas[, 7] == 1]
+hosp <- gwas[, 2][gwas[, 6] == 1]
 hosp <- unique(hosp[!is.na(hosp)])
 hosp_bioplex <- hosp[hosp %in% V(bioplex_g)$name] # V:17
 hosp_1st <- combineNetwork(bioplex_g, hosp_bioplex)
 
-infct <- gwas[, 1][gwas[, 8] == 1]
+infct <- gwas[, 2][gwas[, 7] == 1]
 infct <- unique(infct[!is.na(infct)])
 infct_bioplex <- infct[infct %in% V(bioplex_g)$name] # V:10
 infct_1st <- combineNetwork(bioplex_g, infct_bioplex)
 
 # HuSCI, Gordon and Stukalov in BioPlex
-husci_sym <- husci$node # V:171
+husci_sym <- unique(husci[, "Host.protein_symbol"])
+message(paste0("Total ", length(husci_sym), " viral targets in HuSCI"))
 husci_bioplex <- V(bioplex_g)$name[V(bioplex_g)$name %in% husci_sym] # HuSCI in BioPlex whole, V:132
 
 gordon_sym <- unique(gordon$PreyGene) # V:384
+message(paste0("Total ", length(gordon_sym), " viral targets in Gordon"))
 gordon_bioplex <- V(bioplex_g)$name[V(bioplex_g)$name %in% gordon_sym] # V:346
 
 stukalov_sym <- unique(stukalov$human) # V:876
+message(paste0("Total ", length(stukalov_sym), " viral targets in Stukalov"))
 stukalov_bioplex <- V(bioplex_g)$name[V(bioplex_g)$name %in% stukalov_sym] # V:723
 
 ######
@@ -145,12 +155,17 @@ gwas_all_final <- simplify(induced_subgraph(bioplex_g, names(V(gwas_all_g_merge)
 # GWAS hit in HuSCI
 gwas_all_husci <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% husci_sym] # V:5
 gwas_all_husci_length <- length(gwas_all_husci)
+message("Number of GWAS candidates' 1st interactor in HuSCI: ", gwas_all_husci_length, ", and they are: ", paste(gwas_all_husci, collapse = ", "))
 gwas_ctcl_husci <- V(ctcl_1st)$name[V(ctcl_1st)$name %in% husci_sym] # V:2
 gwas_ctcl_husci_length <- length(gwas_ctcl_husci)
+message("Number of critical associated GWAS candidates' 1st interactor in HuSCI: ", gwas_ctcl_husci_length, ", and they are: ", paste(gwas_ctcl_husci, collapse = ", "))
 gwas_hosp_husci <- V(hosp_1st)$name[V(hosp_1st)$name %in% husci_sym] # V:2
 gwas_hosp_husci_length <- length(gwas_hosp_husci)
+message("Number of hospitalization associated GWAS candidates' 1st interactor in HuSCI: ", gwas_hosp_husci_length, ", and they are: ", paste(gwas_hosp_husci, collapse = ", "))
+
 gwas_infct_husci <- V(infct_1st)$name[V(infct_1st)$name %in% husci_sym] # V:4
 gwas_infct_husci_length <- length(gwas_infct_husci)
+message("Number of reported infection associated GWAS candidates' 1st interactor in HuSCI: ", gwas_infct_husci_length, ", and they are: ", paste(gwas_infct_husci, collapse = ", "))
 
 # GWAS hit in Gordon
 gwas_all_gordon <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% gordon_sym] # V:10
@@ -243,7 +258,7 @@ xmax <- c(20, 25, 45, 15, 20, 30, 15, 20, 30, 15, 20, 30)
 
 ######
 # plotting
-pdf(file = "Nature2021b_3dataset_BioPlex3.pdf", width = 3, height = 3)
+pdf(file.path(google, "result/graph/Nature2021b_3dataset_BioPlex3.pdf"), width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 for (i in 1:12) {
     plotHist(
@@ -363,4 +378,4 @@ dev.off()
 
 ######
 # save workarea data
-save.image("Nature2021b_3dataset_BioPlex_noLoop.RData")
+save.image(file.path(google, "result/Nature2021b_3dataset_BioPlex_noLoop.RData"))

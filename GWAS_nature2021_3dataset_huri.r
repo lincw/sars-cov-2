@@ -2,6 +2,12 @@
 # Lin Chung-win
 # 11.08.2021
 # result saved as "~/INET/GWAS_3data_HuRI.RData"
+# 16.09.2021 **10:19**
+######
+# environment
+google <- "/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/"
+paper <- "/Volumes/GoogleDrive/My Drive/Paper_VirHostome_CoV2"
+gwas_dic <- "~/Documents/INET-work/virus_network/references/GWAS/"
 
 ######
 # load package
@@ -91,13 +97,13 @@ plotDistance <- function(value, ymax, observe, phenotype) {
 
 ######
 # load dataset
-huri <- read.csv("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_Tong_withSymbol.csv", header = T)
+huri <- read.xlsx(file.path(google, "data/extended_table/Extended_Table_2_PPIs.xlsx"), sheet = "HuRI")
 gwas <- read.xlsx("~/Documents/INET-work/virus_network/statistic_results/GWAS/COVID_GWAS hits_v2.xlsx") # ref: Mapping the human genetic architecture of COVID-19 (url: https://doi.org/10.1038/s41586-021-03767-x)
-husci <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/binary_node_1126.csv", header = TRUE)
+husci <- read.xlsx(file.path(paper, "04_Supplementary Information/Supplementary_Table_1.xlsx"), sheet = '1b - HuSCI', startRow = 4)
 
 # add Gordon and Stukalov data
-gordon <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Gordon")
-stukalov <- read.xlsx("/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx", sheet = "Stukalov")
+gordon <- read.xlsx(file.path(google, "data/extended_table/Extended_Table_2_PPIs.xlsx"), sheet = "Gordon")
+stukalov <- read.xlsx(file.path(google, "data/extended_table/Extended_Table_2_PPIs.xlsx"), sheet = "Stukalov")
 
 ######
 # 1. HuRI graph generation
@@ -105,7 +111,7 @@ huri_symbol <- huri[, c(5:6)]
 huri_g_ori <- graph_from_data_frame(huri_symbol, directed = FALSE) # V:8274, E:52573
 huri_g <- simplify(huri_g_ori, remove.loops = TRUE) # V:8274, E:52558
 # protein list filter
-husci_sym <- husci[husci$group == "human", "node"]
+husci_sym <- unique(husci[, "Host.protein_symbol"])
 husci_huri <- V(huri_g)$name[V(huri_g)$name %in% husci_sym] # HuSCI in HuRI whole
 
 ######
@@ -183,7 +189,8 @@ gwas_all_final <- simplify(induced_subgraph(huri_g, names(V(gwas_all_g_merge))),
 
 gwas_all_husci <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% husci_sym] # 11 viral targets
 gwas_all_husci_length <- length(gwas_all_husci)
-
+message(paste0("1st neighbor of GWAS candidates is HuSCI: ", paste(gwas_all_husci, collapse = ", ")))
+message(paste0("Total number: ", gwas_all_husci_length))
 gwas_all_gordon <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% gordon_sym] # 4 viral targets
 gwas_all_gordon_length <- length(gwas_all_gordon)
 gwas_all_stukalov <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% stukalov_sym] # 9 viral targets
@@ -253,7 +260,7 @@ title <- rep(c("HuSCI", "Gordon et al", "Stukalov et al"), 4)
 y1 <- c(0.03, 0.03, 0.03, 0.03, 0.04, 0.03, 0.03, 0.03, 0.03, 0.04, 0.05, 0.05)
 y2 <- c(0.05, 0.05, 0.05, 0.05, 0.06, 0.05, 0.05, 0.05, 0.05, 0.06, 0.07, 0.07)
 # plotting
-pdf("Nature2021b_3dataset_HuRI.pdf", width = 3, height = 3)
+pdf(file.path(google, "result/graph/Nature2021b_3dataset_HuRI.pdf"), width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 for (i in 1:12) {
     plotHist(
@@ -386,4 +393,4 @@ dev.off()
 
 ######
 # save result
-save.image("Nature2021b_3data_HuRI.RData")
+save.image(file.path(google, "result/Nature2021b_3data_HuRI.RData"))
