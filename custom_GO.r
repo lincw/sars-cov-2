@@ -208,11 +208,11 @@ save.image("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/
 
 ######
 # exclude above, using gProfiler web server, via Benny
-husci_gprofiler <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/gProfiler_hsapiens_6-30-2021_3-27-18 PM__intersections_NO_IEA.csv", skip = 17, header = T)
-husci_gprofiler <- husci_gprofiler[, c(1:10)]
+husci_gprofiler <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/GO/gProfiler_hsapiens_9-20-2021_11-03-20 AM__intersections.csv", skip = 17, header = T)
+husci_gprofiler <- husci_gprofiler[husci_gprofiler$adjusted_p_value < 0.05, c(1:10)]
 
 husci_toPlot <- data.frame(
-    term = paste0(husci_gprofiler$source, "_", husci_gprofiler[, 2]),
+    term = husci_gprofiler[, 2],
     term2 = husci_gprofiler[, 2],
     intersection = husci_gprofiler[, 8],
     query = husci_gprofiler[, 8] / husci_gprofiler[, 7],
@@ -221,7 +221,7 @@ husci_toPlot <- data.frame(
 )
 
 
-pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/HuSCI_GO_gProfiler_Benny_point.pdf", height = 4)
+pdf("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/figures/GO/HuSCI_GO_gProfiler_20210920.pdf", height = 4)
 # metaPlot(husci_toPlot, "no IEA")
 # metaPlot(husci_toPlot[grepl("GO", husci_toPlot$term), ], "no IEA, GO only")
 # metaPlot(husci_toPlot[husci_gprofiler[, 6] > 2,], "no IEA, term_size > 2")
