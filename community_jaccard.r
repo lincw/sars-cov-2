@@ -1,6 +1,7 @@
 # HuRI communities jaccard similarity analysis. The communities were used in GWAS trait analysis
-# 10.06.2021
 # Lin Chung-wen
+# 10.06.2021
+# 23.09.2021
 
 #######
 # load package
@@ -25,7 +26,7 @@ pheatmapPlotBasic <- function(data, main) {
 }
 ######
 # load OCG data
-load("~/Documents/INET-work/virus_network/statistic_results/HuRI_ocg.RData")
+load("~/Documents/INET-work/virus_network/statistic_results/community/HuRI_ocg.RData")
 
 ######
 # function, define Jaccard Similarity function
@@ -37,7 +38,7 @@ jaccard <- function(a, b) {
 
 ######
 # The communities used in GWAS trait analysis
-community <- c(3682, 2769, 731, 316, 4227, 1353, 4160, 2831, 1833, 2545, 692, 926, 2398, 525, 1882, 1652, 3941, 415, 377, 571)
+community <- c(3682, 2769, 731, 316, 4227, 1353, 4160, 2831, 1833, 2545, 692, 926, 2398, 525, 1882, 1652, 3941, 415, 377, 571, 7)
 
 comm_member <- list()
 for (i in 1:length(community)) {
@@ -54,7 +55,7 @@ for (i in 1:length(community)) {
     }
 }
 
-jac_result_df <- matrix(jac_result, ncol = 20)
+jac_result_df <- matrix(jac_result, ncol = 21)
 rownames(jac_result_df) <- community
 colnames(jac_result_df) <- community
 
@@ -62,7 +63,7 @@ paletteLength <- 50
 myColor_jac <- colorRampPalette(c("blue", "white", "red"))(paletteLength)
 myBreaks_jac <- c(seq(min(jac_result_df), 0, length.out = ceiling(paletteLength/2) + 1), seq(max(jac_result_df)/paletteLength, max(jac_result_df), length.out = floor(paletteLength/2)))
 
-pdf("~/Documents/INET-work/virus_network/figure_results/gwas_trait_jaccard_v3.pdf", width = 5, height = 5)
+pdf("~/Documents/INET-work/virus_network/figure_results/gwas_trait_jaccard_20210923.pdf", width = 5, height = 5)
 pheatmap(jac_result_df, cutree_rows = 5, cutree_cols = 5, main = "Jaccard similarity of community membership",
     color = myColor_jac,
     breaks = myBreaks_jac,

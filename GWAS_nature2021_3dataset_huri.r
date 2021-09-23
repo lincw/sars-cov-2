@@ -109,7 +109,7 @@ stukalov <- read.xlsx(file.path(google, "data/extended_table/Extended_Table_2_PP
 # 1. HuRI graph generation
 huri_symbol <- huri[, c(5:6)]
 huri_g_ori <- graph_from_data_frame(huri_symbol, directed = FALSE) # V:8274, E:52573
-huri_g <- simplify(huri_g_ori, remove.loops = TRUE) # V:8274, E:52558
+huri_g <- simplify(huri_g_ori, remove.loops = TRUE) # V:8274, E:52078
 # protein list filter
 husci_sym <- unique(husci[, "Host.protein_symbol"])
 husci_huri <- V(huri_g)$name[V(huri_g)$name %in% husci_sym] # HuSCI in HuRI whole
@@ -127,8 +127,6 @@ stukalov_huri <- V(huri_g)$name[V(huri_g)$name %in% stukalov_sym]
 
 ######
 # 2. interactor of GWAS hit
-gwas_hit_1st <- make_ego_graph(huri_g, nodes = sort(gwas_huri), order = 1, mode = "all") #14 of 42 in HuRI
-
 # 2.1 interactors of GWAS hits with critical illness phenotypes
 ctcl <- gwas[, 2][gwas[, 5] == 1]
 ctcl <- unique(ctcl[!is.na(ctcl)])
@@ -136,6 +134,7 @@ ctcl <- unique(ctcl[!is.na(ctcl)])
 ctcl_huri <- ctcl[ctcl %in% V(huri_g)$name]
 
 ctcl_1st <- combineNetwork(huri_g, ctcl_huri)
+message("Subnetwork of critical illness associated GWAS proteins\nnode: ", vcount(ctcl_1st), "\nedge: ", ecount(ctcl_1st))
 gwas_ctcl_husci <- V(ctcl_1st)$name[V(ctcl_1st)$name %in% husci_sym]
 gwas_ctcl_husci_length <- length(gwas_ctcl_husci)
 
@@ -150,6 +149,7 @@ hosp <- unique(hosp[!is.na(hosp)])
 hosp_huri <- hosp[hosp %in% V(huri_g)$name]
 
 hosp_1st <- combineNetwork(huri_g, hosp_huri)
+message("Subnetwork of hospitalization associated GWAS proteins\nnode: ", vcount(hosp_1st), "\nedge: ", ecount(hosp_1st))
 gwas_hosp_husci <- V(hosp_1st)$name[V(hosp_1st)$name %in% husci_sym]
 gwas_hosp_husci_length <- length(gwas_hosp_husci)
 
@@ -164,6 +164,7 @@ infct <- unique(infct[!is.na(infct)])
 infct_huri <- infct[infct %in% V(huri_g)$name]
 
 infct_1st <- combineNetwork(huri_g, infct_huri)
+message("Subnetwork of reported infection associated GWAS proteins\nnode: ", vcount(infct_1st), "\nedge: ", ecount(infct_1st))
 gwas_infct_husci <- V(infct_1st)$name[V(infct_1st)$name %in% husci_sym]
 gwas_infct_husci_length <- length(gwas_infct_husci)
 
@@ -181,11 +182,13 @@ infct_path <- mean(distances(huri_g, v = infct_huri, to = infct_huri)[lower.tri(
 # 3. **rewiring analysis of HuRI**, to see if the HuSCI viral target is significant.
 # load gwas loci info, with 3 phenotype (critical illness, hospitalization and infection)
 # subnetwork of GWAS hit from HuRI
+gwas_hit_1st <- make_ego_graph(huri_g, nodes = sort(gwas_huri), order = 1, mode = "all") #14 of 42 in HuRI
 gwas_all_list_df <- lapply(gwas_hit_1st, as_data_frame)
 gwas_all_df <- do.call(rbind, gwas_all_list_df)
 gwas_all_g_merge <- graph_from_data_frame(gwas_all_df, directed = FALSE)
 # to have interaction between 1st interactors
 gwas_all_final <- simplify(induced_subgraph(huri_g, names(V(gwas_all_g_merge))), remove.loops = TRUE)
+message("Subnetwork of all 3 categories GWAS proteins\nnode: ", vcount(gwas_all_final), "\nedge: ", ecount(gwas_all_final))
 
 gwas_all_husci <- V(gwas_all_final)$name[V(gwas_all_final)$name %in% husci_sym] # 11 viral targets
 gwas_all_husci_length <- length(gwas_all_husci)

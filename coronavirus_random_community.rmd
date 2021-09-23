@@ -26,13 +26,14 @@ source("~/Documents/INET-work/virus_network/src/plotOCGGraph.r")
 funcEnrich <- function(ocg, organism, size) {
     go <- list()
     df <- data.frame("name" = names(ocg$clustsizes), "clustsize" = ocg$clustsizes)
-    for (i in df[df$clustsize > size, "name"]) {
+    for (i in df[df$clustsize >= size, "name"]) {
         query_list <- ocg[[4]][ocg[[4]][, 2] == i, "node"]
         goquery <- gost(query = query_list, organism = organism, correction_method = "bonferroni", evcodes = TRUE)
         goquery$result$inCommunity <- paste0( goquery$meta$query_metadata$queries$query_1, collapse = ",")
         goquery$result$annotatedInCommunity <- paste0(goquery$meta$genes_metadata$query$query_1$ensgs, collapse = ",")
-        target <- query_list[query_list %in% binary$node]
+        target <- query_list[query_list %in% binary$"Host.protein_symbol"]
         goquery$result$viralTarget <- paste0(target, collapse = ",")
+        goquery$result$commmunity <- i
         go[[i]] <- goquery$result
     }
     return(go)
@@ -68,7 +69,7 @@ goOutput <- function(ocg, ocgbp) {
 
         dfa1 <- list()
         for (i in ocg1_graph$cluster) {
-                if (length(ocgbp[[i]]) != 19) {
+                if (length(ocgbp[[i]]) != 20) {
                         next
                 } else {
                         dfa1[i] <- ocgbp[i]
@@ -107,14 +108,14 @@ binary_node <- unique(binary[, "Host.protein_symbol"])
 
 horf <- read.xlsx('/Volumes/GoogleDrive/My\ Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_1_search_space.xlsx', sheet = "search_space")
 horf_name <- unique(horf[, "ensembl_gene_name"])
-V(huri_ocg$igraph)$name[!V(huri_ocg$igraph)$name %in% horf_name]
+# V(huri_ocg$igraph)$name[!V(huri_ocg$igraph)$name %in% horf_name]
 ```
 
 ## HuRI functional enrichmane assay
 ```{r eval = FALSE}
-huri_ocg_gobp <- funcEnrich(huri_ocg, bp_cust, 5)
-huri_ocg_gomf <- funcEnrich(huri_ocg, mf_cust, 5)
-huri_ocg_gocc <- funcEnrich(huri_ocg, cc_cust, 5)
+huri_ocg_gobp <- funcEnrich(huri_ocg, bp_cust, 4)
+huri_ocg_gomf <- funcEnrich(huri_ocg, mf_cust, 4)
+huri_ocg_gocc <- funcEnrich(huri_ocg, cc_cust, 4)
 
 ocgRI_bp <- goOutput(huri_ocg, huri_ocg_gobp)
 ocgRI_mf <- goOutput(huri_ocg, huri_ocg_gomf)
@@ -124,7 +125,7 @@ ocgRI_bp_viralT <- ocgRI_bp[ocgRI_bp$viralTarget != "", ]
 ocgRI_mf_viralT <- ocgRI_mf[ocgRI_mf$viralTarget != "", ]
 ocgRI_cc_viralT <- ocgRI_cc[ocgRI_cc$viralTarget != "", ]
 
-write.csv(rbind(ocgRI_bp_viralT, ocgRI_mf_viralT, ocgRI_cc_viralT)[, c(1:13, 15:19)], file = paste0("HuRI_GO_EXP.csv"))
+write.csv(rbind(ocgRI_bp_viralT, ocgRI_mf_viralT, ocgRI_cc_viralT)[, c(20, 3:13, 15:19)], file = "~/Documents/INET-work/virus_network/statistic_results/community/HuRI_GO_EXP.csv", row.names = FALSE)
 ```
 ## HuRI community viral target enrichment
 ```{r eval = TRUE}
