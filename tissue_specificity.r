@@ -58,6 +58,17 @@ bioid_sama <- read.xlsx(file.path(google, ext_table2), sheet = 9)
 samavarchi_tissue <- unique(hpa_tissue[hpa_tissue$ensemblID %in% bioid_sama$ensemblID, ])
 samavarchi_dorward <- read.xlsx(file.path(google, ext_table5), sheet = "Samavarchi")
 
+total_count <- data.frame(
+    HPA = length(unique(hpa$Ensembl)),
+    HuSCI = length(unique(binary$Ensembl.gene.ID)),
+    Gordon = length(unique(gordon$Ensembl_uniprotIDmapping)),
+    Stukalov = length(unique(stukalov$ensemblID)),
+    Li = length(unique(li$ensemblID)),
+    Nabeel = length(unique(nabeel$Prey_ensembl)),
+    Laurent = length(unique(bioid1$ensemblID)),
+    St_Germain = length(unique(bioid_st$ensemblID)),
+    Samavarchi = length(unique(bioid_sama$ensemblID)))
+
 ######
 # proportion of protein tissue specificity
 tissue_tables <- list(
@@ -117,6 +128,32 @@ row.names(dorward) <- names(table_dorward)
 dorward_melt <- melt(t(dorward))
 names(dorward_melt) <- c("Organ", "interactome", "value")
 dorward_melt$interactome <- factor(dorward_melt$interactome, levels = c("HuSCI", "HPA", "Gordon", "Stukalov", "Li", "Nabeel", "Laurent", "St_Germain", "Samavarchi"))
+
+dorward_perc <- t(do.call(rbind, apply(dorward, 2, function(x) x/total_count)))
+
+pvalue <- c()
+for (i in c(2:9)) {
+    for (j in c(1:9)) {
+        data <- matrix(as.numeric(c(dorward[i, j], dorward[1, j], total_count[i] - dorward[i, j], total_count[1] - dorward[1, j])), ncol = 2)
+        ftest <- fisher.test(data)
+        pvalue <- c(pvalue, ftest$p.value)
+    }
+}
+padj_value <- p.adjust(pvalue, method = "bonferroni")
+pv <- list(
+    pvalue = data.frame(matrix(pvalue, ncol = 9, byrow = T)),
+    pvalue_bonferroni = data.frame(matrix(padj_value, ncol = 9, byrow = T))
+)
+names(pv[[1]]) <- colnames(dorward)
+names(pv[[2]]) <- colnames(dorward)
+row.names(pv[[1]]) <- rownames(dorward)[c(2:9)]
+row.names(pv[[2]]) <- rownames(dorward)[c(2:9)]
+pv <- lapply(pv, t)
+
+pv_table <- do.call(cbind, pv)
+dorward_df <- t(dorward)
+organo_out <- cbind(dorward_df, pv_table)
+
 ######
 # plotting
 gp_style <- theme_bw() +

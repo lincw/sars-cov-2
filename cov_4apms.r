@@ -1,4 +1,5 @@
 # date: 2021.04.06
+# 2021.09.27
 # author: Lin Chung-wen
 
 library(openxlsx)
@@ -14,8 +15,9 @@ has_organ <- has_name$organ
 has_dorwie <- read.delim("~/Documents/INET-work/virus_network/raw/human_split.tsv", header = T, sep = "\t", na.strings = c("", " ", "NA"))
 
 ## loading HuSCI ----
-husci <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/binary_node_1126.csv", header = TRUE)
-husci <- husci[husci$group == "human", c("Ensembl_ID", "node", "category")]
+husci <- read.xlsx("/Volumes/GoogleDrive/My\ Drive/Paper_VirHostome_CoV2/04_Supplementary\ Information/Supplementary_Table_1.xlsx", sheet = "1b - HuSCI", startRow = 4)
+husci <- unique(husci[, c("Ensembl.gene.ID", "Host.protein_symbol")])
+names(husci) <- c("Ensembl_ID", "node")
 husci_rna <- unique(has_tissue[has_tissue$ensemblID %in% husci$Ensembl_ID,])
 row.names(husci_rna) <- husci_rna$Gene
 

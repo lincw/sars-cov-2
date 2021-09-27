@@ -46,7 +46,7 @@ scale_x_reordered <- function(..., sep = "___") {
 source("~/Documents/INET-work/virus_network/src/cov_4apms.r", local = knitr::knit_global())
 huri <- read.csv("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_Tong_withSymbol.csv", header = T)
 huri_uniq <- unique(c(huri$ensembl_gene_id_a, huri$ensembl_gene_id_b))
-# write.xlsx(has_tissue[has_tissue$ensemblID %in% huri_uniq, ], file = "~/Documents/INET-work/virus_network/toSummarize/tissue_specificity/data/HuRI_tissue_HPA.xlsx")
+# write.xlsx(has_tissue[has_tissue$ensemblID %in% huri_uniq, ], file = "~/Documents/INET-work/virus_network/toSummarize/tissue_specificity/data/HuRI_tissue_HPA.xlsx", overwrite = TRUE)
 ```
 
 ```{r}
@@ -394,7 +394,19 @@ dorward <- dorward[c(1:6, 9, 7, 8), ]
 dorward[is.na(dorward)] <- 0
 # manual save data in "7interactome_statistics.xlsx, worksheet: inDorward"
 dorward <- t(dorward[, c(2:12)]) # worksheet 4
-total <- c(length(unique(husci$Ensembl_ID)), length(unique(gordon_science$Ensembl_uniprotIDmapping)), length(unique(stukalov$ensemblID)), length(unique(li$ensemblID)), length(unique(nabeel$Prey_ensembl)), length(unique(bioid1$ensemblID)), length(unique(bioid_st$ensemblID)), length(unique(bioid_sama$ensemblID)), length(unique(c(huri$ensembl_gene_id_a, huri$ensembl_gene_id_b))), length(unique(bioplex3_id$Ensembl)), length(unique(has_all$Ensembl)))
+total <- c(
+    length(unique(husci$Ensembl_ID)), 
+    length(unique(gordon_science$Ensembl_uniprotIDmapping)), 
+    length(unique(stukalov$ensemblID)), 
+    length(unique(li$ensemblID)), 
+    length(unique(nabeel$Prey_ensembl)), 
+    length(unique(bioid1$ensemblID)), 
+    length(unique(bioid_st$ensemblID)), 
+    length(unique(bioid_sama$ensemblID)), 
+    length(unique(c(huri$ensembl_gene_id_a, huri$ensembl_gene_id_b))), 
+    length(unique(bioplex3_id$Ensembl)), 
+    length(unique(has_all$Ensembl))
+    )
 dorward_per <- dorward/total # worksheet 5
 
 df1_melt <- melt(dorward[c(1:8, 11), ])
@@ -471,7 +483,7 @@ toOutput <- list(HPA = has_tissue[, c(1:4)],
     Samavarchi = unique(merge(bioid_sama[, c(3, 2)], has_tissue[, c(1:4)], by.x = "ensemblID", by.y = "ensemblID", all.x = TRUE))[, c(1, 2, 4, 5)]
     )
 
-write.xlsx(toOutput, file = "~/Documents/INET-work/virus_network/toSummarize/tissue_specificity/data/tissue_raw.xlsx")
+write.xlsx(toOutput, file = "~/Documents/INET-work/virus_network/toSummarize/tissue_specificity/data/tissue_raw.xlsx", overwrite = TRUE)
 ```
 
 # 12. output infected organ
@@ -486,7 +498,7 @@ toOutput <- list(HPA = has_dorwie,
     St_Germain = has_dorwie[has_dorwie$from %in% bioid_st$ensemblID, ],
     Samavarchi = has_dorwie[has_dorwie$from %in% bioid_sama$ensemblID, ]
     )
-write.xlsx(toOutput, file = "~/Documents/INET-work/virus_network/toSummarize/infected_organ/data/dorard_raw.xlsx")
+write.xlsx(toOutput, file = "~/Documents/INET-work/virus_network/toSummarize/infected_organ/data/dorard_raw.xlsx", overwrite = TRUE)
 
-write.xlsx(dorward, file = "~/Documents/INET-work/virus_network/toSummarize/infected_organ/data/dorward_summary.xlsx")
+write.xlsx(dorward, file = "~/Documents/INET-work/virus_network/toSummarize/infected_organ/data/dorward_summary.xlsx", overwrite = TRUE)
 ```
