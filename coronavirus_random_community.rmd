@@ -6,6 +6,7 @@ output: html_document
 ---
 
 ## R environment setup
+gwas_dic <- "~/Documents/INET-work/virus_network/references/GWAS/"
 
 ### load pre-detected HuRI communities
 ```{r echo = FALSE, eval = FALSE, message = FALSE}
@@ -21,6 +22,7 @@ library(dplyr)
 library(rstatix)
 library(stringr)
 library(openxlsx)
+library(RCy3)
 source("~/Documents/INET-work/virus_network/src/plotOCGGraph.r")
 
 funcEnrich <- function(ocg, organism, size) {
@@ -109,6 +111,9 @@ binary_node <- unique(binary[, "Host.protein_symbol"])
 horf <- read.xlsx('/Volumes/GoogleDrive/My\ Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_1_search_space.xlsx', sheet = "search_space")
 horf_name <- unique(horf[, "ensembl_gene_name"])
 # V(huri_ocg$igraph)$name[!V(huri_ocg$igraph)$name %in% horf_name]
+
+gwas <- read.csv(file.path(gwas_dic, "Genetic\ mechanisms\ of\ critical\ illness\ in\ COVID-19/table1.csv"), header = T)
+gwas_all <- c(gwas$Locus[c(1:4, 6:8)], "OAS1", "OAS2", "OAS3")
 ```
 
 ## HuRI functional enrichmane assay
@@ -146,6 +151,16 @@ write.xlsx(huri_ocg_output, file = "~/Documents/INET-work/virus_network/statisti
 
 viral_sig_comm <- huri_ocg_enrich[huri_ocg_enrich$p < 0.05 & huri_ocg_enrich$size >= 4, "cluster"]
 
+for (i in viral_sig_comm$cluster) {
+        setCurrentNetwork(network = "HuRI")
+        clearSelection()
+        sel <- getNodesIn(huri_ocg, clusterids = i)
+        selectNodes(sel, by.col = "name", network = "HuRI")
+        createSubnetwork(subnetwork.name = paste0("HuRI_community_", i))
+        setVisualStyle("default", paste0("HuRI_community_", i))
+        layoutNetwork("force-directed")
+}
+
 huri_ocg_output_sig <- list(
   node = huri_ocg$nodeclusters[huri_ocg$nodeclusters$cluster %in% viral_sig_comm$cluster, ],
   stats = huri_ocg_enrich[huri_ocg_enrich$cluster %in% viral_sig_comm$cluster, c(4, 2, 3, 5, 6)]
@@ -161,6 +176,7 @@ dev.off()
 ```
 
 ### for checking
+28.09.2021
 ```{r}
 traf1_cluster <- huri_ocg$nodecluster[huri_ocg$nodeclusters$node %in% "TRAF1", "cluster"]
 for (i in traf1_cluster) {
@@ -171,6 +187,60 @@ ntaq1_cluster <- huri_ocg$nodecluster[huri_ocg$nodeclusters$node %in% "NTAQ1", "
 for (i in ntaq1_cluster) {
   plotOCGraph(huri_ocg, clusterids = i, main = i)
 }
+
+statCalGWAS <- function(ocg, length_gwas, totalN) {
+        clust <- ocg$nodeclusters
+        clust2 <- clust %>% select(cluster) %>% group_by(cluster) %>% mutate(count = n()) %>% distinct()
+        df <- ocg$nodeclusters[ocg$nodeclusters$node %in% gwas_all, ]
+        df2 <- df %>% select(cluster) %>% group_by(cluster) %>% mutate(count = n()) %>% distinct()
+        merged <- merge(clust2, df2, by = "cluster", all.x = TRUE)
+        merged[is.na(merged)] <- 0
+        merged$notTarget <- merged[, 2] - merged[, 3]
+        merged$cluster <- merged$cluster
+        row.names(merged) <- merged[, 1]
+        merged <- merged[, c(3, 4)]
+        names(merged) <- c("Target", "notTarget")
+        total <- c(length_gwas, totalN - length_gwas)
+        names(total) <- c("Target", "notTarget")
+        data <- data.frame()
+        data <- apply(merged, 1, function(x) {
+                tab <- rbind(x, total)
+                fisher_test(tab)
+                })
+        return(data)
+}
+huri_ocg_GWASenrich <- do.call(rbind.data.frame, statCalGWAS(huri_ocg, length(gwas_all), length(unique(huri_ocg$nodeclusters$node))))
+huri_ocg_GWASenrich$cluster <- row.names(huri_ocg_GWASenrich)
+huri_ocg_GWASenrich$size <- table(huri_ocg$nodeclusters$cluster)
+huri_ocg_GWASenrich$"viral_target" <- c()
+for (i in 1:nrow(huri_ocg_GWASenrich)) {
+    nodes <- huri_ocg$nodecluster[huri_ocg$nodeclusters$cluster == i, "node"]
+    huri_ocg_GWASenrich[i, "viral_target"] <- paste(nodes[nodes %in% binary_node], collapse = ",")
+}
+huri_ocg_GWASenrich$GWAScandidate <- c()
+for (i in 1:nrow(huri_ocg_GWASenrich)) {
+    nodes <- huri_ocg$nodecluster[huri_ocg$nodeclusters$cluster == i, "node"]
+    huri_ocg_GWASenrich[i, "GWAScandidate"] <- paste(nodes[nodes %in% gwas_all], collapse = ",")
+}
+
+huri_ocg_GWASoutput <- list(
+  node = huri_ocg$nodeclusters,
+  stats = huri_ocg_GWASenrich[, c(4, 2, 3, 5, 6)]
+)
+write.xlsx(huri_ocg_GWASoutput, file = "~/Documents/INET-work/virus_network/statistic_results/community/HuRI_communities_withGWAS.xlsx", overwrite = TRUE)
+
+gwas_community <- huri_ocg_GWASenrich[huri_ocg_GWASenrich[, "p"] < 0.05 & huri_ocg_GWASenrich[, "size"] > 3, "cluster"]
+for (i in gwas_community$cluster) {
+        setCurrentNetwork(network = "HuRI")
+        clearSelection()
+        sel <- getNodesIn(huri_ocg, clusterids = i)
+        selectNodes(sel, by.col = "name", network = "HuRI")
+        createSubnetwork(subnetwork.name = paste0("HuRI_community_", i))
+        setVisualStyle("default", paste0("HuRI_community_", i))
+        layoutNetwork("force-directed")
+}
+
+toCyto(, huri_ocg, "HuRI", "HuRI")
 
 ```
 
