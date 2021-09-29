@@ -2,7 +2,7 @@
 title: enrichment analysis
 author: Lin Chung-wen
 date: 2020.12.07
-modified: 2021.06.10
+modified: 2021.09.29
 output: html_document
 ---
 ## loading enviroment set and data
@@ -16,7 +16,7 @@ library(linkcomm)
 library(RCy3)
 
 # load("~/Documents/INET-work/virus_network/statistic_results/HuRI_ocg_assays.RData")
-load("~/Documents/INET-work/virus_network/statistic_results/HuRI_ocg.RData")
+huri_ocg <- readRDS("~/Documents/INET-work/virus_network/statistic_results/community/HuRI_ocg.RDS")
 # load("~/Documents/INET-work/virus_network/statistic_results/HI_union_ocg.RData")
 
 bp_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HuRI_GOBP_EXP.gmt")
@@ -111,6 +111,10 @@ export <- function(go, checklist) {
 
 ## summary for HuRI community
 ```{r}
+paper <- "/Volumes/GoogleDrive/My Drive/Paper_VirHostome_CoV2"
+husci <- read.xlsx(file.path(paper, "04_Supplementary Information/Supplementary_Table_1.xlsx"), sheet = '1b - HuSCI', startRow = 4)
+binary_node <- unique(husci$Host.protein_symbol)
+
 clust <- huri_ocg$nodeclusters
 clust2 <- clust %>% select(cluster) %>% group_by(cluster) %>% mutate(count = n()) %>% distinct() # have community size
 df <- huri_ocg$nodeclusters[huri_ocg$nodeclusters$node %in% binary_node, ] # viral target in community
@@ -122,7 +126,7 @@ row.names(merged) <- merged[, 1]
 merged_checkP <- merged[, c(3, 4)]
 names(merged_checkP) <- c("Target", "notTarget")
 
-total <- c(171, 8274)
+total <- c(length(binary_node), vcount(huri_ocg$igraph))
 data <- data.frame()
 data <- apply(merged_checkP, 1, function(x) {
     tab <- rbind(x, total)
@@ -141,12 +145,12 @@ huri_all <- cbind(merged, huri_ocg_enrich, padj)
 names(huri_all) <- c("community", "community_size", "viral_target", "notTarget", "n", "p", "p.signif", "community_2", "p_adjust (fdr)")
 write.csv(huri_all[, c(1, 2, 3, 6, 7, 9)], file = "~/Documents/INET-work/virus_network/statistic_results/HuRI_signif_community.csv", row.names = F)
 
-check_list <- huri_all[huri_all[, 2] > 3 & huri_all[, 4] < 0.05, 1] # based on community size and fisher test p value
+check_list <- huri_all[huri_all[, 2] > 3 & huri_all[, 6] < 0.05, 1] # based on community size and fisher test p value
 
 pdf("~/Documents/INET-work/virus_network/figure_results/HuRI_community_distribution.pdf", width = 7, height = 5)
 layout(matrix(c(1, 1, 2), nrow = 1, byrow = TRUE))
 barplot(table(huri_ocg$clustsizes), las = 1, xlab = "size", ylab = "count")
-text(16, 600, labels = "Size:\n
+text(16, 600, labels = "Size\n
     Min: 1\n
     1st Qu: 4\n
     Median: 5\n
@@ -157,16 +161,30 @@ dev.off()
 ```
 ## running GO functional enrichment analysis
 ```{r}
-binary <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/binary_node_1126_simple.csv", header = T)
-binary_node <- unique(binary[binary$category == "human", "node"])
+# binary <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/binary_node_1126_simple.csv", header = T)
+# binary_node <- unique(binary[binary$category == "human", "node"])
 
 # subDir <- "ocg1"
 # dir.create(file.path(subDir), showWarnings = FALSE)
 # setwd(file.path(subDir))
 
-huri_ocg_gobp <- funcEnrich(huri_ocg, bp_cust, check_list)
-huri_ocg_gomf <- funcEnrich(huri_ocg, mf_cust, check_list)
-huri_ocg_gocc <- funcEnrich(huri_ocg, cc_cust, check_list)
+funcEnrich2 <- function(ocg, organism, querylist) {
+    go <- list()
+    df <- data.frame("name" = names(ocg$clustsizes), "clustsize" = ocg$clustsizes)
+    for (i in querylist) {
+        query_list <- ocg[[4]][ocg[[4]][, 2] == i, "node"]
+        goquery <- gost(query = query_list, organism = organism, correction_method = "bonferroni", evcodes = TRUE)
+        goquery$result$inCommunity <- paste0( goquery$meta$query_metadata$queries$query_1, collapse = ",")
+        goquery$result$annotatedInCommunity <- paste0(goquery$meta$genes_metadata$query$query_1$ensgs, collapse = ",")
+        go[[i]] <- goquery$result
+    }
+    return(go)
+}
+
+check_list2 <- huri_all[huri_all[, 2] >= 4, 1] # based on community size only
+huri_ocg_gobp <- funcEnrich2(huri_ocg, bp_cust, check_list)
+huri_ocg_gomf <- funcEnrich2(huri_ocg, mf_cust, check_list)
+huri_ocg_gocc <- funcEnrich2(huri_ocg, cc_cust, check_list)
 
 # huri_ocg1_gobp <- funcEnrich(huri_ocg1, a1_bp_cust, 5)
 # huri_ocg1_gomf <- funcEnrich(huri_ocg1, a1_mf_cust, 5)
