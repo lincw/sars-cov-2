@@ -58,10 +58,10 @@ phtmap <- pheatmap::pheatmap(t(beta005))
 col_dend <- phtmap[[2]]
 row_dend <- phtmap[[1]]
 # reorder columns
-col_dend <- rotate(col_dend, order = c("415", "3941", "1652", "377", "571", "2545", "692", "926", "2398", "525", "1882", "1833", "731", "316", "4227", "3682", "2769", "7", "2831", "4160", "1353"))
+col_dend <- rotate(col_dend, order = c("415", "3941", "1652", "377", "571", "2545", "692", "926", "2398", "525", "1882", "4227", "316", "731", "1833", "3682", "2769", "7", "2831", "4160", "1353"))
 # reorder rows
 row_dend <- rotate(row_dend, order = c("IBD_UKBS", "OST_UKBS", "BMIA", "NEUROT_UKB", "T2D_UKBS", "HRET", "RET", "ADPN", "PHF", "HEIGHT", "HIP", "FAT_UKB", "HC_UKBS", "HYPOTHY_UKBS", "SCZ_UKBS"))
-pdf(file.path(google, "figures/gwas_beta_fdr005.pdf"), height = 4, width = 6)
+pdf("/tmp/tmp.pdf", height = 4, width = 6)
 pheatmap::pheatmap(t(beta005),
     cluster_cols = as.hclust(col_dend), cluster_row = as.hclust(row_dend),
     color = colorRampPalette(c("blue", "white", "red"))(50), breaks = myBreaks, border_color = "white",
@@ -74,5 +74,5 @@ pheatmap::pheatmap(t(beta005),
     legend_labels = c("-3", "-2", "-1", "0", "1", "2", "3", "4", "BETA/SE\n"),
     legend = TRUE,
     main = "Community GWAS hits (FDR < 0.05)",
-    annotation = df, annotation_legend = FALSE)
+    annotation = df, annotation_legend = TRUE)
 dev.off()

@@ -5,6 +5,8 @@ date: 2020.12.07
 modified: 2021.09.29
 output: html_document
 ---
+# A MESSY CODE REPOSITORY
+
 ## loading enviroment set and data
 ```{r}
 library(gprofiler2)
@@ -14,6 +16,7 @@ library(igraph)
 library(stringr)
 library(linkcomm)
 library(RCy3)
+library(openxlsx)
 
 # load("~/Documents/INET-work/virus_network/statistic_results/HuRI_ocg_assays.RData")
 huri_ocg <- readRDS("~/Documents/INET-work/virus_network/statistic_results/community/HuRI_ocg.RDS")
@@ -56,7 +59,7 @@ funcEnrich <- function(ocg, organism, querylist) {
         goquery <- gost(query = query_list, organism = organism, correction_method = "bonferroni", evcodes = TRUE)
         goquery$result$inCommunity <- paste0( goquery$meta$query_metadata$queries$query_1, collapse = ",")
         goquery$result$annotatedInCommunity <- paste0(goquery$meta$genes_metadata$query$query_1$ensgs, collapse = ",")
-        target <- query_list[query_list %in% binary$node]
+        target <- query_list[query_list %in% binary_node]
         goquery$result$viralTarget <- paste0(target, collapse = ",")
         go[[i]] <- goquery$result
     }
@@ -146,6 +149,49 @@ names(huri_all) <- c("community", "community_size", "viral_target", "notTarget",
 write.csv(huri_all[, c(1, 2, 3, 6, 7, 9)], file = "~/Documents/INET-work/virus_network/statistic_results/HuRI_signif_community.csv", row.names = F)
 
 check_list <- huri_all[huri_all[, 2] > 3 & huri_all[, 6] < 0.05, 1] # based on community size and fisher test p value
+
+huri_ocg_gobp <- funcEnrich(huri_ocg, bp_cust, check_list)
+huri_ocg_gomf <- funcEnrich(huri_ocg, mf_cust, check_list)
+huri_ocg_gocc <- funcEnrich(huri_ocg, cc_cust, check_list)
+
+for (i in 1:length(huri_ocg_gobp)) {
+    if(length(huri_ocg_gobp[[i]]) != 0) {
+        huri_ocg_gobp[[i]]$community <- i
+    } else {
+        next
+    }
+}
+for (i in 1:length(huri_ocg_gomf)) {
+    if(length(huri_ocg_gomf[[i]]) != 0) {
+        huri_ocg_gomf[[i]]$community <- i
+    } else {
+        next
+    }
+}
+for (i in 1:length(huri_ocg_gocc)) {
+    if(length(huri_ocg_gocc[[i]]) != 0) {
+        huri_ocg_gocc[[i]]$community <- i
+    } else {
+        next
+    }
+}
+
+goOutput2 <- function(check_list, go_result) { # get enriched community
+        dfa1 <- list()
+        for (i in check_list) {
+                if (length(go_result[[i]]) != 19) {
+                        next
+                } else {
+                        dfa1[i] <- go_result[i]
+                }
+        }
+        go_out <- do.call(rbind, dfa1)
+        return (go_out)
+}
+
+gobp_out <- goOutput2(check_list, huri_ocg_gobp)
+gobp_out$source <- "BP"
+
 
 pdf("~/Documents/INET-work/virus_network/figure_results/HuRI_community_distribution.pdf", width = 7, height = 5)
 layout(matrix(c(1, 1, 2), nrow = 1, byrow = TRUE))

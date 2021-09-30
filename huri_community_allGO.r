@@ -4,7 +4,7 @@
 
 ######
 # environment
-huri_ocg <- readRDS("~/Documents/INET-work/virus_network/statistic_results/community/HuRI_ocg.RDS")
+huri_ocg <- readRDS("~/Documents/INET-work/HuRI/HuRI_ocg.RDS")
 database <- "~/workplace/database"
 
 ######
