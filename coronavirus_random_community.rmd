@@ -10,8 +10,7 @@ gwas_dic <- "~/Documents/INET-work/virus_network/references/GWAS/"
 
 ### load pre-detected HuRI communities
 ```{r echo = FALSE, eval = FALSE, message = FALSE}
-load("~/Documents/INET-work/virus_network/statistic_results/community/HuRI_ocg.RData")
-rm(list = c("funcEnrich", "goOutput", "statCal"))
+huri_ocg <- readRDS("~/Documents/INET-work/HuRI/HuRI_ocg.RDS")
 ```
 
 ```{r message = FALSE}
@@ -41,27 +40,7 @@ funcEnrich <- function(ocg, organism, size) {
     return(go)
 }
 
-statCal <- function(ocg, virTarget, totalN) {
-        clust <- ocg$nodeclusters
-        clust2 <- clust %>% select(cluster) %>% group_by(cluster) %>% mutate(count = n()) %>% distinct()
-        df <- ocg$nodeclusters[ocg$nodeclusters$node %in% binary_node, ]
-        df2 <- df %>% select(cluster) %>% group_by(cluster) %>% mutate(count = n()) %>% distinct()
-        merged <- merge(clust2, df2, by = "cluster", all.x = TRUE)
-        merged[is.na(merged)] <- 0
-        merged$notTarget <- merged[, 2] - merged[, 3]
-        merged$cluster <- merged$cluster
-        row.names(merged) <- merged[, 1]
-        merged <- merged[, c(3, 4)]
-        names(merged) <- c("Target", "notTarget")
-        total <- c(virTarget, totalN - virTarget)
-        names(total) <- c("Target", "notTarget")
-        data <- data.frame()
-        data <- apply(merged, 1, function(x) {
-                tab <- rbind(x, total)
-                fisher_test(tab)
-                })
-        return(data)
-}
+source("~/Documents/INET-work/virus_network/src/statCal.r")
 
 goOutput <- function(ocg, ocgbp) {
         ocg1 <- statCal(ocg, length(binary_node), length(unique(ocg$nodeclusters$node)))
@@ -134,7 +113,7 @@ write.csv(rbind(ocgRI_bp_viralT, ocgRI_mf_viralT, ocgRI_cc_viralT)[, c(20, 3:13,
 ```
 ## HuRI community viral target enrichment
 ```{r eval = TRUE}
-huri_ocg_enrich <- do.call(rbind.data.frame, statCal(huri_ocg, length(binary_node), length(unique(huri_ocg$nodeclusters$node))))
+huri_ocg_enrich <- do.call(rbind.data.frame, statCal(huri_ocg, binary_node))
 huri_ocg_enrich$cluster <- row.names(huri_ocg_enrich)
 huri_ocg_enrich$size <- table(huri_ocg$nodeclusters$cluster)
 huri_ocg_enrich$"viral_target" <- c()
@@ -147,7 +126,8 @@ huri_ocg_output <- list(
   node = huri_ocg$nodeclusters,
   stats = huri_ocg_enrich[, c(4, 2, 3, 5, 6)]
 )
-write.xlsx(huri_ocg_output, file = "~/Documents/INET-work/virus_network/statistic_results/community/HuRI_communities.xlsx", overwrite = TRUE)
+# 06.10.2021, update fisher test equation, p is different now. The significant communities are not changed.
+write.xlsx(huri_ocg_output, file = "~/Documents/INET-work/virus_network/statistic_results/community/HuRI_communities_p2.xlsx", overwrite = TRUE)
 
 viral_sig_comm <- huri_ocg_enrich[huri_ocg_enrich$p < 0.05 & huri_ocg_enrich$size >= 4, "cluster"]
 

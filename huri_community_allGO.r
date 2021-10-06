@@ -14,7 +14,7 @@ library(linkcomm)
 
 ######
 # functions
-source("~/Documents/INET-work/virus_network/src/statCal.r")
+# source("~/Documents/INET-work/virus_network/src/statCal.r")
 
 funcEnrich <- function(ocg, organism, querylist) {
     go <- list()
