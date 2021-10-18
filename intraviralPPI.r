@@ -29,15 +29,24 @@ intra_graph <- graph_from_data_frame(intra_viral, directed = FALSE)
 
 binary_intra <- gsize(intersection(intra_graph, y2h_graph))
 
+# old sample data frame
 sars2_rep <- function(x) {
-  df <- data.frame(from = sample(x, length(sars2), replace = TRUE), to = sample(x, length(sars2), replace = TRUE))
+  df <- data.frame(from = sample(x, gsize(y2h_graph), replace = TRUE), to = sample(x, gsize(y2h_graph), replace = TRUE))
   sample_g <- simplify(graph_from_data_frame(df, directed = FALSE), remove.loops = FALSE)
   return(gsize(intersection(intra_graph, sample_g)))
 }
 
+# new, rewire IntraSCI
+sars2_rep2 <- function(...) {
+    sample_g <- rewire(y2h_graph, keeping_degseq(niter = gsize(y2h_graph) * 10))
+  return(gsize(intersection(intra_graph, sample_g)))
+}
+
 random_intra <- mcreplicate(10000, sars2_rep(sars2), mc.cores = parallel::detectCores())
+random_intra2 <- mcreplicate(10000, sars2_rep2(), mc.cores = parallel::detectCores())
 
 sign_intra <- round(1 - (abs(sig(as.numeric(random_intra), as.numeric(binary_intra))) / 10000), 4)
+sign_intra2 <- round(1 - (abs(sig(as.numeric(random_intra2), as.numeric(binary_intra))) / 10000), 4)
 
 message(rep("#", 60), "\n", "Total intraSCI PPIs: ", gsize(y2h_graph), "\n", rep("#", 60))
 message("\n", rep("#", 60), "\n", "Observed in intra_viral identified human target within VirHostome:", binary_intra, "\np = ", sign_intra, "\n", rep("#", 60))

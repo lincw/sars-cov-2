@@ -58,9 +58,11 @@ bioid_sama <- read.xlsx(file.path(google, ext_table2), sheet = 9)
 samavarchi_tissue <- unique(hpa_tissue[hpa_tissue$ensemblID %in% bioid_sama$ensemblID, ])
 samavarchi_dorward <- read.xlsx(file.path(google, ext_table5), sheet = "Samavarchi")
 
+######
+# total proteins in individual data
 total_count <- data.frame(
-    HPA = length(unique(hpa$Ensembl)),
     HuSCI = length(unique(binary$Ensembl.gene.ID)),
+    HPA = length(unique(hpa$Ensembl)),
     Gordon = length(unique(gordon$Ensembl_uniprotIDmapping)),
     Stukalov = length(unique(stukalov$ensemblID)),
     Li = length(unique(li$ensemblID)),
@@ -72,8 +74,8 @@ total_count <- data.frame(
 ######
 # proportion of protein tissue specificity
 tissue_tables <- list(
-    HPA = table(hpa_tissue$RNA_tissue_specificity),
     HuSCI = table(husci_tissue$RNA_tissue_specificity),
+    HPA = table(hpa_tissue$RNA_tissue_specificity),
     Gordon = table(gordon_tissue$RNA_tissue_specificity),
     Stukalov = table(stukalov_tissue$RNA_tissue_specificity),
     Li = table(li_tissue$RNA_tissue_specificity),
@@ -84,7 +86,7 @@ tissue_tables <- list(
 )
 
 tissue <- data.frame(
-    interactome = names(tissue_tables)[c(2, 1, 3:9)],
+    interactome = names(tissue_tables)[c(1:9)],
     specific = c(
         sum(tissue_tables[["HuSCI"]][c(1, 4, 5)]),
         sum(tissue_tables[["HPA"]][c(1, 4, 5)]),
@@ -111,6 +113,23 @@ tissue <- data.frame(
 tissue$interactome <- factor(tissue$interactome, levels = c("HuSCI", "HPA", "Gordon", "Stukalov", "Li", "Nabeel", "Laurent", "St_Germain", "Samavarchi"))
 tissue_melt <- melt(tissue)
 
+######
+# p value for tissue specificity, vs HPA
+pvalue_tissue <- c()
+for (i in c(1, 3:9)) {
+    data <- matrix(as.numeric(c(tissue_melt[i, "value"], tissue_melt[2, "value"], tissue_melt[i + 9, "value"], tissue_melt[11, "value"])), ncol = 2)
+    print(data)
+    ftest <- fisher.test(data)
+    message(signif(ftest$p.value, digits = 3))
+    pvalue_tissue <- c(pvalue_tissue, ftest$p.value)
+}
+pvalue_adj_tissue <- p.adjust(pvalue_tissue, method = "bonferroni")
+pvalue_tissue_df <- data.frame(pvalue = signif(pvalue_tissue, 3), pvalue_bonferroni = signif(pvalue_adj_tissue, 3))
+rownames(pvalue_tissue_df) <- c(tissue$interactome[1], tissue$interactome[3:9])
+write.csv(pvalue_tissue_df, file = "~/Documents/INET-work/virus_network/toSummarize/tissue_specificity/data/p-value_statistics.csv")
+
+######
+# p value for organotropism
 table_dorward <- list(
     HPA = table(hpa_dorward$dorwie),
     HuSCI = table(husci_dorward$dorwie),

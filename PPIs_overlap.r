@@ -8,7 +8,7 @@ library(igraph)
 library(dplyr)
 ######
 # data
-husci <- read.csv("/Volumes/GoogleDrive/My Drive/VirHostome_CW/network/data/HuSCI_edge.csv", header = T)
+husci <- read.xlsx("/Volumes/GoogleDrive/My Drive/Paper_VirHostome_CoV2/04_Supplementary Information/Supplementary_Table_1.xlsx", sheet = 3, startRow = 4)
 ppis <- "/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table/Extended_Table_2_PPIs.xlsx"
 gordon <- read.xlsx(ppis, sheet = "Gordon")
 stukalov <- read.xlsx(ppis, sheet = "Stukalov")
@@ -29,7 +29,7 @@ samavarchi <- mutate_all(samavarchi[, c(1, 2)], .funs = toupper)
 
 ######
 # generate network graph
-husci_g <- graph_from_data_frame(husci, directed = F)
+husci_g <- graph_from_data_frame(husci[, c(2, 3)], directed = F)
 gordon_g <- graph_from_data_frame(gordon, directed = F)
 stukalov_g <- graph_from_data_frame(stukalov, directed = F)
 li_g <- graph_from_data_frame(li, directed = F)

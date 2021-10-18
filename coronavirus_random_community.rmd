@@ -84,6 +84,7 @@ cc_cust <- upload_GMT_file(gmtfile = "~/workplace/database/hsapien_HuRI_GOCC_EXP
 # binary <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/binary_node_1126_simple.csv", header = T)
 binary <- read.xlsx('/Volumes/GoogleDrive/My\ Drive/Paper_VirHostome_CoV2/04_Supplementary\ Information/Supplementary_Table_1.xlsx', sheet = '1b - HuSCI', startRow = 4)
 binary_node <- unique(binary[, "Host.protein_symbol"])
+binary_huri <- binary_node[binary_node %in% V(huri_ocg$igraph)$name]
 # binary_node[binary_node == "WDYHV1"] <- "NTAQ1" # rename
 # binary_node <- binary_node[!binary_node %in% "TRAF1"] # exclude TRAF1, it is because NSP14 mutated. TRAF1 is not one of HuSCI proteins. 14.09.2021 11:15
 
@@ -113,7 +114,7 @@ write.csv(rbind(ocgRI_bp_viralT, ocgRI_mf_viralT, ocgRI_cc_viralT)[, c(20, 3:13,
 ```
 ## HuRI community viral target enrichment
 ```{r eval = TRUE}
-huri_ocg_enrich <- do.call(rbind.data.frame, statCal(huri_ocg, binary_node))
+huri_ocg_enrich <- do.call(rbind.data.frame, statCal(huri_ocg, binary_huri))
 huri_ocg_enrich$cluster <- row.names(huri_ocg_enrich)
 huri_ocg_enrich$size <- table(huri_ocg$nodeclusters$cluster)
 huri_ocg_enrich$"viral_target" <- c()
@@ -127,7 +128,9 @@ huri_ocg_output <- list(
   stats = huri_ocg_enrich[, c(4, 2, 3, 5, 6)]
 )
 # 06.10.2021, update fisher test equation, p is different now. The significant communities are not changed.
+# 07.10.2021 minor update, the background should be HuSCI in HuRI, not whole HuSCI set
 write.xlsx(huri_ocg_output, file = "~/Documents/INET-work/virus_network/statistic_results/community/HuRI_communities_p2.xlsx", overwrite = TRUE)
+## "HuRI_communities_withHuSCI.xlsx" is after modified spreadsheet file
 
 viral_sig_comm <- huri_ocg_enrich[huri_ocg_enrich$p < 0.05 & huri_ocg_enrich$size >= 4, "cluster"]
 

@@ -7,35 +7,36 @@ library(openxlsx)
 library(dplyr)
 library(igraph)
 
+google <- "/Volumes/GoogleDrive/My Drive/Paper_VirHostome_CoV2/04_Supplementary Information"
+others <- "/Volumes/GoogleDrive/My Drive/VirHostome_CW/GitHub/data/extended_table"
+
 ######
 # load date
-husci <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/binary_edge_1126.csv", header = T)
-husci <- mutate_all(husci, .funs = toupper)
-others <- "/Users/chung-wen.lin/Documents/INET-work/virus_network/toSummarize/PPIs/Extended_Table_2_PPIs.xlsx"
-gordon <- read.xlsx(others, sheet = "Gordon")
+husci <- read.xlsx(file.path(google, "Supplementary_Table_1.xlsx"), sheet = 3, startRow = 4)
+gordon <- read.xlsx(file.path(others, "Extended_Table_2_PPIs.xlsx"), sheet = "Gordon")
 gordon <- mutate_all(gordon, .funs = toupper)
 
-stukalov <- read.xlsx(others, sheet = "Stukalov")
+stukalov <- read.xlsx(file.path(others, "Extended_Table_2_PPIs.xlsx"), sheet = "Stukalov")
 stukalov <- mutate_all(stukalov, .funs = toupper)
 
-li <- read.xlsx(others, sheet = "Li")
+li <- read.xlsx(file.path(others, "Extended_Table_2_PPIs.xlsx"), sheet = "Li")
 li <- mutate_all(li, .funs = toupper)
 
-nabeel <- read.xlsx(others, sheet = "Nabeel")
+nabeel <- read.xlsx(file.path(others, "Extended_Table_2_PPIs.xlsx"), sheet = "Nabeel")
 nabeel <- mutate_all(nabeel, .funs = toupper)
 
-laurent <- read.xlsx(others, sheet = "Laurent")
+laurent <- read.xlsx(file.path(others, "Extended_Table_2_PPIs.xlsx"), sheet = "Laurent")
 laurent <- mutate_all(laurent, .funs = toupper)
 
-stgermain <- read.xlsx(others, sheet = "St_Germain")
+stgermain <- read.xlsx(file.path(others, "Extended_Table_2_PPIs.xlsx"), sheet = "St_Germain")
 stgermain <- mutate_all(stgermain, .funs = toupper)
 
-samavarchi <- read.xlsx(others, sheet = "Samavarchi")
+samavarchi <- read.xlsx(file.path(others, "Extended_Table_2_PPIs.xlsx"), sheet = "Samavarchi")
 samavarchi <- mutate_all(samavarchi, .funs = toupper)
 
 ######
 # interaction overlap
-husci_g <- graph_from_data_frame(husci[, c(1:2)], direct = F)
+husci_g <- graph_from_data_frame(husci[, c(2, 3)], direct = F)
 gordon_g <- graph_from_data_frame(gordon[, c(2, 4)], direct = F)
 stukalov_g <- graph_from_data_frame(stukalov[, c(1:2)], direct = F)
 li_g <- graph_from_data_frame(li[, c(1:2)], direct = F)
