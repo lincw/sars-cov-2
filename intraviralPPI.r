@@ -65,3 +65,17 @@ mtext(side = 2, line = 2, "Fraction of\nrandom networks")
 arrows(binary_intra + 0.5, 600, binary_intra + 0.5, 0, col = "#922687", lwd = 2, length = 0.05, angle = 15)
 text(binary_intra - 7, 1000, label = paste("observed = ", binary_intra, "\np =", sign_intra), cex = 0.7, pos = 4)
 dev.off()
+
+# plotting, degree preserving
+dens <- hist(random_intra2, breaks = 6, right = FALSE, plot = FALSE)
+ymax <- round(max(dens$count)/1000, 1) * 1000
+pdf(file.path(google, "GitHub/result/graph/random_intraviral_v2.pdf"), width = 3, height = 3)
+par(ps = 8, mgp = c(0, 0.6, -0.1))
+plot(dens, xlim = c(0, 8), col = "#BEBEBE", freq = TRUE, border = NA, las = 1, xlab = "", ylab = "", xaxt = "n", yaxt = "n", main = "IntraSCI PPI")
+axis(side = 1, at = seq(0, 7, by = 1) + 0.5, labels = seq(0, 7, by = 1), las = 1)
+axis(side = 2, at = seq(0, ymax, by = 500), labels = seq(0, ymax/10000, by = 0.05), las = 1)
+mtext(side = 1, line = 1.5, "Number of PPIs in Li, et al.")
+mtext(side = 2, line = 2, "Fraction of\nrandom networks")
+arrows(binary_intra + 0.5, 600, binary_intra + 0.5, 0, col = "#922687", lwd = 2, length = 0.05, angle = 15)
+text(binary_intra, 1000, label = paste("observed = ", binary_intra, "\np =", sign_intra2), cex = 0.7, pos = 4)
+dev.off()

@@ -43,8 +43,8 @@ tot_space <- unique(c(horf, fbfg))
 
 total_sym <- unique(c(horf_sym, fbfg_sym))
 
-binary <- read.csv("~/Documents/INET-work/virus_network/Y2H_screening/20201104_final/binary_node_1126.csv", header = T)
-binary_human <- binary[binary$group == "human", "node"]
+binary <- read.xlsx("/Volumes/GoogleDrive/My Drive/Paper_VirHostome_CoV2/04_Supplementary Information/Supplementary_Table_1.xlsx", sheet = "1b - HuSCI", startRow = 4)
+binary_human <- unique(binary$Host.protein_symbol)
 
 huri <- read.csv("~/Documents/INET-work/references/HuRI_binaryPPI/HuRI_Tong_withSymbol.csv", header = T)
 huri_uniq <- unique(c(huri$symbol_a, huri$symbol_b))
@@ -60,13 +60,28 @@ paste0("classic Y2H (hORF): ", length(horf))
 paste0("common ORF: ", table(horf %in% fbfg)[2])
 paste0("all ORF: ", length(tot_space))
 paste0("fBFG-Y2H viral ORF: ", 28)
-paste0("classic viral ORF: ", 27)
+paste0("classic viral ORF: ", 26)
 paste0("fBFG search space: ", 28 * length(fbfg))
-paste0("classic Y2H (hORF) search space, vPrey (AD), hBait (DB): ", 27 * length(horf))
+paste0("classic Y2H (hORF) search space, vPrey (AD), hBait (DB): ", 26 * 15236)
 paste0("classic Y2H (hORF) search space, vPrey (DB), hBait (AD): ", 26 * length(horf))
 paste0("common search space: ", 25 * table(horf %in% fbfg)[2])
 paste0("total search space: ", 30 * length(tot_space))
-paste0("Fraction of total: ", 100 * round((25 * table(horf %in% fbfg)[2])/(30 * length(tot_space)), 4), "%")
+paste0("Fraction of total: ", 100 * round((24 * table(horf %in% fbfg)[2])/(30 * length(tot_space)), 4), "%")
+```
+
+## viral prey-bait pairs
+```{r}
+viral <- read.xlsx("/Volumes/GoogleDrive/My Drive/Paper_VirHostome_CoV2/04_Supplementary Information/Supplementary_Table_1.xlsx", sheet = "1a - Viral ORFs", startRow = 4)
+virals <- viral$Viral.protein[c(1:30)]
+viral_his3 <- virals[viral$Y2HHIS3[!is.na(viral$Y2HHIS3)] == 1]
+viral_gfp <- virals[viral$Y2HGFP[!is.na(viral$Y2HGFP)] == 1]
+
+viral_overlap <- sum(viral_his3 %in% viral_gfp)^2 / length(unique(c(viral_his3, viral_gfp)))^2
+
+print(paste("Y2HHIS3 viral preys:", length(viral_his3)))
+print(paste("Y2HGFP viral preys:", length(viral_gfp)))
+print(paste("Total pairs:", length(unique(c(viral_his3, viral_gfp))) ^ 2))
+print(paste("Overlap:", (sum(viral_his3 %in% viral_gfp) ^ 2)  / (length(unique(c(viral_his3, viral_gfp))) ^ 2) * 100, "%"))
 ```
 
 ## observed phosphoregulated human targets
