@@ -8,11 +8,11 @@
 library(openxlsx)
 library(linkcomm)
 library(pheatmap)
-library(ComplexHeatmap)
+# library(ComplexHeatmap)
 library(circlize) # color used for ComplexHeatmap
 library(seriation)
 library(dendextend)
-library(ctc) # output hclust data as .cdt for java treeview
+# library(ctc) # output hclust data as .cdt for java treeview
 ######
 # plot heatmap
 pheatmapPlotBasic <- function(data, main) {
@@ -38,13 +38,13 @@ jaccard <- function(a, b) {
 
 ######
 # The communities used in GWAS trait analysis
-community <- c(3682, 2769, 731, 316, 4227, 1353, 4160, 2831, 1833, 2545, 692, 926, 2398, 525, 1882, 1652, 3941, 415, 377, 571, 7)
+community <- c(3682, 2769, 731, 316, 4227, 1353, 4160, 2831, 1833, 2545, 692, 926, 2398, 525, 1882, 1652, 3941, 415, 377, 571, 7, 2563, 3442, 2239, 4215, 479, 1900, 1046, 592, 64, 895)
 
 comm_member <- list()
 for (i in 1:length(community)) {
     comm_member[[i]] <- getNodesIn(huri_ocg, clusterids = community[i])
 }
-write.xlsx(unlist(lapply(comm_member, function(x) paste0(x, collapse = ","))), file = "/tmp/gwas_trait.xlsx")
+write.xlsx(unlist(lapply(comm_member, function(x) paste0(x, collapse = ","))), file = "~/Documents/INET-work/virus_network/statistic_results/community/gwas_trait_members.xlsx")
 
 ######
 # Jaccard similarity calculation
@@ -55,22 +55,24 @@ for (i in 1:length(community)) {
     }
 }
 
-jac_result_df <- matrix(jac_result, ncol = 21)
+jac_result_df <- matrix(jac_result, ncol = 31)
 rownames(jac_result_df) <- community
 colnames(jac_result_df) <- community
 
+write.xlsx(as.data.frame(jac_result_df), file = "~/Documents/INET-work/virus_network/statistic_results/GWAS/GWAS_trait_jaccard.xlsx", row.names = T, overwrite = T)
+
 paletteLength <- 50
-myColor_jac <- colorRampPalette(c("blue", "white", "red"))(paletteLength)
+myColor_jac <- colorRampPalette(c("white", "red"))(paletteLength)
 myBreaks_jac <- c(seq(min(jac_result_df), 0, length.out = ceiling(paletteLength/2) + 1), seq(max(jac_result_df)/paletteLength, max(jac_result_df), length.out = floor(paletteLength/2)))
 
-pdf("~/Documents/INET-work/virus_network/figure_results/gwas_trait_jaccard_20210923.pdf", width = 5, height = 5)
-pheatmap(jac_result_df, cutree_rows = 5, cutree_cols = 5, main = "Jaccard similarity of community membership",
+pheatmap::pheatmap(jac_result_df, cutree_rows = 7, cutree_cols = 7, main = "Jaccard similarity of community membership",
     color = myColor_jac,
-    breaks = myBreaks_jac,
+    # breaks = myBreaks_jac,
     legend_breaks = c(0, 0.2, 0.4, 0.6, 0.8, 1),
     legend_labels = c("0", "0.2", "0.4", "0.6", "0.8", "score\n"),
-    legend = TRUE)
-dev.off()
+    legend = TRUE,
+    filename = "~/Documents/INET-work/virus_network/figure_results/gwas_trait_jaccard_20211028.pdf",
+    width = 5, height = 5)
 
 ######
 # extract heatmap from Matthias
