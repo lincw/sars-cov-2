@@ -84,8 +84,17 @@ col_dend <- rotate(col_dend, order = c("415", "3941", "1652", "377", "571", "254
 # reorder rows
 row_dend <- rotate(row_dend, order = c("IBD_UKBS", "OST_UKBS", "BMIA", "NEUROT_UKB", "T2D_UKBS", "HRET", "RET", "ADPN", "PHF", "HEIGHT", "HIP", "FAT_UKB", "HC_UKBS", "HYPOTHY_UKBS", "SCZ_UKBS"))
 
+# reorder columns, COVID19
+col_dend_covid_v2 <- rotate(col_dend_covid, order = c("2563", "3442", "2239", "731", "1833", "4215", "479", "1900", "1046", "592", "64", "895", "1353", "4160", "2831", "7", "2769", "3682", "316", "4227", "571", "415", "3941", "1652", "377", "2398", "2545", "692", "926", "525", "1882"))
+col_dend_covid_v3 <- rotate(col_dend_covid, order = c("2769", "3682", "7", "2831", "4160", "731", "2239", "2563", "3442", "895", "64", "1900", "1046", "592", "4215", "479", "1833", "1353", "2398", "2545", "692", "926", "525", "1882", "316", "4227", "571", "415", "3941", "1652", "377"))
+col_dend_covid_v4 <- rotate(col_dend_covid, order = c("731", "2239", "2563", "3442", "895", "64", "1900", "1046", "592", "4215", "479", "1833", "2769", "3682", "7", "2831", "4160", "1353", "2398", "2545", "692", "926", "525", "1882", "316", "4227", "571", "415", "3941", "1652", "377"))
+col_dend_covid_v6 <- rotate(col_dend_covid, order = c("2563", "3442", "2239", "731", "1833", "4215", "479", "1900", "1046", "592", "64", "895", "1353", "4160", "2831", "7", "2769", "3682", "316", "4227", "571", "415", "3941", "1652", "377", "2398", "2545", "692", "926", "525", "1882"))
+# col_dend_covid_v6.1 <- rotate(col_dend_covid, order = c("731", "2239", "2563", "3442", "1833", "4215", "479", "1900", "1046", "592", "64", "895", "1353", "4160", "2831", "7", "2769", "3682", "316", "4227", "571", "415", "3941", "1652", "377", "2398", "2545", "692", "926", "525", "1882"))
+# reorder rows, COVID19
+row_dend_covid <- rotate(row_dend_covid, order = c("COVID19", "IBD_UKBS", "OST_UKBS", "BMIA", "NEUROT_UKB", "T2D_UKBS", "HRET", "RET", "ADPN", "PHF", "HEIGHT", "HIP", "FAT_UKB", "HC_UKBS", "HYPOTHY_UKBS", "SCZ_UKBS"))
+
 pheatmap::pheatmap(t(beta005_covid),
-    # cluster_cols = as.hclust(col_dend), cluster_row = as.hclust(row_dend),
+    cluster_cols = as.hclust(col_dend_covid_v3), cluster_row = as.hclust(row_dend_covid),
     color = colorRampPalette(c("blue", "white", "red"))(50), breaks = myBreaks_covid, border_color = "white",
     display_numbers = ifelse(t(fdr005_covid) < 0.05, "*", ""),
     fontsize_number = 10, fontsize_col = 10, fontsize_row = 10, number_color = "black",
@@ -97,7 +106,7 @@ pheatmap::pheatmap(t(beta005_covid),
     legend = TRUE,
     main = "Community GWAS hits (FDR < 0.05)",
     annotation = df, annotation_legend = TRUE,
-    filename = file.path(stats, "GWAS/GWAS_trait_heatmap.pdf"),
+    filename = file.path(stats, "GWAS/GWAS_trait_heatmap_v3.pdf"),
     width = 10, height = 4)
 
 ######
