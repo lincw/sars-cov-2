@@ -12,6 +12,7 @@ library(pheatmap)
 library(circlize)
 library(seriation)
 library(dendextend)
+library(seriation)
 
 ######
 # function
@@ -61,7 +62,7 @@ p005_covid <- data_covid_p[rownames(fdr005_covid), colnames(fdr005_covid)]
 # plotting
 paletteLength <- 50
 myColor <- colorRampPalette(c("red", "white", "blue"))(paletteLength)
-myBreaks <- c(seq(min(beta005), 0, length.out = ceiling(paletteLength/2) + 1), seq(max(beta005)/paletteLength, max(beta005), length.out = floor(paletteLength/2)))
+myBreaks <- c(seq(min(beta005), 0, length.out = ceiling(paletteLength / 2) + 1), seq(max(beta005) / paletteLength, max(beta005), length.out = floor(paletteLength / 2)))
 
 myBreaks_covid <- c(seq(min(beta005_covid), 0, length.out = ceiling(paletteLength / 2) + 1), seq(max(beta005_covid) / paletteLength, max(beta005_covid), length.out = floor(paletteLength / 2)))
 
@@ -71,11 +72,11 @@ col_fun_p10 <- colorRamp2(c(0, 6), c("white", "red"))
 
 ######
 # plotting V1
-phtmap <- pheatmap::pheatmap(t(beta005))
+phtmap <- pheatmap::pheatmap(t(beta005), silent = T)
 col_dend <- phtmap[[2]]
 row_dend <- phtmap[[1]]
 
-phtmap_covid <- pheatmap::pheatmap(t(beta005_covid))
+phtmap_covid <- pheatmap::pheatmap(t(beta005_covid), silent = T)
 col_dend_covid <- phtmap_covid[[2]]
 row_dend_covid <- phtmap_covid[[1]]
 
@@ -89,12 +90,19 @@ col_dend_covid_v2 <- rotate(col_dend_covid, order = c("2563", "3442", "2239", "7
 col_dend_covid_v3 <- rotate(col_dend_covid, order = c("2769", "3682", "7", "2831", "4160", "731", "2239", "2563", "3442", "895", "64", "1900", "1046", "592", "4215", "479", "1833", "1353", "2398", "2545", "692", "926", "525", "1882", "316", "4227", "571", "415", "3941", "1652", "377"))
 col_dend_covid_v4 <- rotate(col_dend_covid, order = c("731", "2239", "2563", "3442", "895", "64", "1900", "1046", "592", "4215", "479", "1833", "2769", "3682", "7", "2831", "4160", "1353", "2398", "2545", "692", "926", "525", "1882", "316", "4227", "571", "415", "3941", "1652", "377"))
 col_dend_covid_v6 <- rotate(col_dend_covid, order = c("2563", "3442", "2239", "731", "1833", "4215", "479", "1900", "1046", "592", "64", "895", "1353", "4160", "2831", "7", "2769", "3682", "316", "4227", "571", "415", "3941", "1652", "377", "2398", "2545", "692", "926", "525", "1882"))
-# col_dend_covid_v6.1 <- rotate(col_dend_covid, order = c("731", "2239", "2563", "3442", "1833", "4215", "479", "1900", "1046", "592", "64", "895", "1353", "4160", "2831", "7", "2769", "3682", "316", "4227", "571", "415", "3941", "1652", "377", "2398", "2545", "692", "926", "525", "1882"))
 # reorder rows, COVID19
 row_dend_covid <- rotate(row_dend_covid, order = c("COVID19", "IBD_UKBS", "OST_UKBS", "BMIA", "NEUROT_UKB", "T2D_UKBS", "HRET", "RET", "ADPN", "PHF", "HEIGHT", "HIP", "FAT_UKB", "HC_UKBS", "HYPOTHY_UKBS", "SCZ_UKBS"))
 
+col_re_d <- dist(beta005_covid)
+col_re_hc <- hclust(col_re_d)
+col_re_GW <- reorder(col_re_hc, col_re_d, method = "GW")
+col_re_olo <- reorder(col_re_hc, col_re_d, method = "olo")
+col_dend_covid_GW <- rotate(col_dend_covid, order = col_re_GW$labels[col_re_GW$order])
+col_dend_covid_olo <- rotate(col_dend_covid, order = col_re_olo$labels[col_re_olo$order])
+col_dend_covid_olo2 <- rotate(col_dend_covid, order = col_re_olo$labels[col_re_olo$order][c(1:18, 25:31, 19:24)])
+
 pheatmap::pheatmap(t(beta005_covid),
-    cluster_cols = as.hclust(col_dend_covid_v3), cluster_row = as.hclust(row_dend_covid),
+    cluster_cols = as.hclust(col_dend_covid_olo2), cluster_row = as.hclust(row_dend_covid),
     color = colorRampPalette(c("blue", "white", "red"))(50), breaks = myBreaks_covid, border_color = "white",
     display_numbers = ifelse(t(fdr005_covid) < 0.05, "*", ""),
     fontsize_number = 10, fontsize_col = 10, fontsize_row = 10, number_color = "black",
@@ -106,8 +114,9 @@ pheatmap::pheatmap(t(beta005_covid),
     legend = TRUE,
     main = "Community GWAS hits (FDR < 0.05)",
     annotation = df, annotation_legend = TRUE,
-    filename = file.path(stats, "GWAS/GWAS_trait_heatmap_v3.pdf"),
-    width = 10, height = 4)
+    filename = file.path(stats, "GWAS/GWAS_trait_heatmap_olo_v2.pdf"),
+    width = 10, height = 4
+)
 
 ######
 # save raw value
