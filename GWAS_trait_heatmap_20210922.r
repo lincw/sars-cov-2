@@ -44,10 +44,13 @@ rownames(data_covid) <- data_covid$VARIABLE
 rownames(data_covid_fdr) <- data_covid_fdr$VARIABLE
 rownames(data_covid_p) <- data_covid_p$VARIABLE
 
-annotation <- read.xlsx(file.path(stats, "community/HuRI_GO_annotation.xlsx"))
+annotation <- read.xlsx(file.path(stats, "community/HuRI_GO_annotation.xlsx"), sheet = "go")
 df <- data.frame(annotation[, c(2, 3)])
 rownames(df) <- annotation$community
 colnames(df) <- c("Shared functional term", "Membership similarity")
+
+id_table <- read.xlsx(file.path(stats, "community/HuRI_GO_annotation.xlsx"), sheet = "id")
+
 ######
 # data process, FDR < 0.05
 fdr005 <- filterFDR(data_fdr, 0.05)
@@ -102,6 +105,7 @@ col_dend_covid_olo <- rotate(col_dend_covid, order = col_re_olo$labels[col_re_ol
 col_dend_covid_olo2 <- rotate(col_dend_covid, order = col_re_olo$labels[col_re_olo$order][c(1:18, 25:31, 19:24)])
 
 pheatmap::pheatmap(t(beta005_covid),
+    labels_col = id_table[match(rownames(beta005_covid), id_table[, 1]), 2],
     cluster_cols = as.hclust(col_dend_covid_olo2), cluster_row = as.hclust(row_dend_covid),
     color = colorRampPalette(c("blue", "white", "red"))(50), breaks = myBreaks_covid, border_color = "white",
     display_numbers = ifelse(t(fdr005_covid) < 0.05, "*", ""),
@@ -114,7 +118,7 @@ pheatmap::pheatmap(t(beta005_covid),
     legend = TRUE,
     main = "Community GWAS hits (FDR < 0.05)",
     annotation = df, annotation_legend = TRUE,
-    filename = file.path(stats, "GWAS/GWAS_trait_heatmap_olo_v2.pdf"),
+    filename = file.path(stats, "GWAS/GWAS_trait_heatmap_olo_v3.pdf"),
     width = 10, height = 4
 )
 

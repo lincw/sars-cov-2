@@ -28,6 +28,9 @@ pheatmapPlotBasic <- function(data, main) {
 # load OCG data
 load("~/Documents/INET-work/virus_network/statistic_results/community/HuRI_ocg.RData")
 
+# id mapping table
+id_table <- read.xlsx("~/Documents/INET-work/virus_network/statistic_results/community/HuRI_GO_annotation.xlsx", sheet = "id")
+
 ######
 # function, define Jaccard Similarity function
 jaccard <- function(a, b) {
@@ -59,19 +62,24 @@ jac_result_df <- matrix(jac_result, ncol = 31)
 rownames(jac_result_df) <- community
 colnames(jac_result_df) <- community
 
-write.xlsx(as.data.frame(jac_result_df), file = "~/Documents/INET-work/virus_network/statistic_results/GWAS/GWAS_trait_jaccard.xlsx", row.names = T, overwrite = T)
+rownames(jac_result_df) <- id_table[match(rownames(jac_result_df), id_table[, 1]), "new_id"]
+colnames(jac_result_df) <- id_table[match(colnames(jac_result_df), id_table[, 1]), "new_id"]
+
+write.xlsx(as.data.frame(jac_result_df), file = "~/Documents/INET-work/virus_network/statistic_results/GWAS/GWAS_trait_jaccard_newID.xlsx", row.names = T, overwrite = T)
 
 paletteLength <- 50
 myColor_jac <- colorRampPalette(c("white", "red"))(paletteLength)
 myBreaks_jac <- c(seq(min(jac_result_df), 0, length.out = ceiling(paletteLength/2) + 1), seq(max(jac_result_df)/paletteLength, max(jac_result_df), length.out = floor(paletteLength/2)))
 
-pheatmap::pheatmap(jac_result_df, cutree_rows = 7, cutree_cols = 7, main = "Jaccard similarity of community membership",
+pheatmap::pheatmap(jac_result_df, 
+    # cutree_rows = 7, cutree_cols = 7, 
+    main = "Jaccard similarity of community membership",
     color = myColor_jac,
     # breaks = myBreaks_jac,
     legend_breaks = c(0, 0.2, 0.4, 0.6, 0.8, 1),
     legend_labels = c("0", "0.2", "0.4", "0.6", "0.8", "score\n"),
     legend = TRUE,
-    filename = "~/Documents/INET-work/virus_network/figure_results/gwas_trait_jaccard_20211028.pdf",
+    filename = "~/Documents/INET-work/virus_network/figure_results/gwas_trait_jaccard_2021110_newID.pdf",
     width = 5, height = 5)
 
 ######
