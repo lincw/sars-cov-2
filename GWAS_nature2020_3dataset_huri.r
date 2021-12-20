@@ -50,7 +50,7 @@ rewire3Dataset <- function(network, node) {
 
 plotHist <- function(value, title, length, xmax, y1, y2) {
     dens_gwas <- hist(value, breaks = c(0:(max(value) + 1)), plot = FALSE, right = F)
-    plot(dens_gwas, xlim = c(0, 25), col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, xaxt = "n", freq = FALSE, xlab = "Number of viral targets", ylab = "Frequency", main = "", cex.sub = 0.5)
+    plot(dens_gwas, xlim = c(0, xmax), col = rgb(0.75, 0.75, 0.75, 1/2), border = NA, las = 1, xaxt = "n", freq = FALSE, xlab = "Number of viral targets", ylab = "Frequency", main = "", cex.sub = 0.5)
     mytitle <- paste0("viral targets in ", title)
     mtext(side = 3, line = 1, cex = 1, mytitle)
     mtext(side = 3, line = 0.2, cex = .8, "subnetwork extracted from HuRI")
@@ -192,7 +192,7 @@ toPlot <- function(value, viral_husci, viral_gordon, viral_stukalov, interaction
 ######
 # plot
 # all
-pdf(file.path(google, "result/graph/Nature2021a_3dataset_HuRI.pdf"), width = 3, height = 3)
+pdf(file.path(google, "result/graph/Nature2021a_3dataset_HuRI.v1220.pdf"), width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 toPlot(permutation_all_df, husci_viral_targets_all, gordon_viral_targets_all, stukalov_viral_targets_all, interactions_all, gwas_protein_shortest_path_all, 4000)
 dev.off()

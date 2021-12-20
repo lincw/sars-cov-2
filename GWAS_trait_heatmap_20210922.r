@@ -47,7 +47,7 @@ rownames(data_covid_p) <- data_covid_p$VARIABLE
 annotation <- read.xlsx(file.path(stats, "community/HuRI_GO_annotation.xlsx"), sheet = "go")
 df <- data.frame(annotation[, c(2, 3)])
 rownames(df) <- annotation$community
-colnames(df) <- c("Shared functional term", "Membership similarity")
+colnames(df) <- c("Shared functional term", "Membership overlap")
 
 id_table <- read.xlsx(file.path(stats, "community/HuRI_GO_annotation.xlsx"), sheet = "id")
 
@@ -103,10 +103,11 @@ col_re_olo <- reorder(col_re_hc, col_re_d, method = "olo")
 col_dend_covid_GW <- rotate(col_dend_covid, order = col_re_GW$labels[col_re_GW$order])
 col_dend_covid_olo <- rotate(col_dend_covid, order = col_re_olo$labels[col_re_olo$order])
 col_dend_covid_olo2 <- rotate(col_dend_covid, order = col_re_olo$labels[col_re_olo$order][c(1:18, 25:31, 19:24)])
+col_dend_covid_olo2_share_fun <- rotate(col_dend_covid, order = col_re_olo$labels[col_re_olo$order][c(1:8, 10, 9, 14, 13, 15:18, 11:12, 25:27, 31, 30, 28:29, 19, 21, 20, 22, 24, 23)])
 
 pheatmap::pheatmap(t(beta005_covid),
     labels_col = id_table[match(rownames(beta005_covid), id_table[, 1]), 2],
-    cluster_cols = as.hclust(col_dend_covid_olo2), cluster_row = as.hclust(row_dend_covid),
+    cluster_cols = as.hclust(col_dend_covid_olo2_share_fun), cluster_row = as.hclust(row_dend_covid),
     color = colorRampPalette(c("blue", "white", "red"))(50), breaks = myBreaks_covid, border_color = "white",
     display_numbers = ifelse(t(fdr005_covid) < 0.05, "*", ""),
     fontsize_number = 10, fontsize_col = 10, fontsize_row = 10, number_color = "black",
@@ -118,7 +119,7 @@ pheatmap::pheatmap(t(beta005_covid),
     legend = TRUE,
     main = "Community GWAS hits (FDR < 0.05)",
     annotation = df, annotation_legend = TRUE,
-    filename = file.path(stats, "GWAS/GWAS_trait_heatmap_olo_v3.pdf"),
+    filename = "/tmp/GWAS_trait_heatmap_olo_v3.pdf",
     width = 10, height = 4
 )
 

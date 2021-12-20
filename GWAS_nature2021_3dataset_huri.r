@@ -64,7 +64,7 @@ plotHist <- function(value, title, length, y1, y2) {
     med <- median(value)
     dens_gwas <- hist(value, breaks = c(0:(max(value) + 1)), plot = FALSE, right = FALSE)
     plot(dens_gwas, col = rgb(0.75, 0.75, 0.75, 1/2), freq = FALSE, border = NA, las = 1, xlim = c(0, 20), xaxt = "n", xlab = "Number of viral targets", ylab = "Frequency", main = "", cex.sub = 0.5)
-    mytitle <- paste0("COVID19 GWAS subnetwork\nviral targets in ", title)
+    mytitle <- paste0("viral targets in ", title)
     mtext(side = 3, line = 1, cex = 1, mytitle)
     mtext(side = 3, line = 0.2, cex = 0.8, "subnetwork extracted from HuRI")
     axis(side = 1, at = seq(0, 20, by = 5) + 0.5, labels = seq(0, 20, by = 5))
@@ -263,7 +263,7 @@ title <- rep(c("HuSCI", "Gordon et al", "Stukalov et al"), 4)
 y1 <- c(0.03, 0.03, 0.03, 0.03, 0.04, 0.03, 0.03, 0.03, 0.03, 0.04, 0.05, 0.05)
 y2 <- c(0.05, 0.05, 0.05, 0.05, 0.06, 0.05, 0.05, 0.05, 0.05, 0.06, 0.07, 0.07)
 # plotting
-pdf(file.path(google, "result/graph/Nature2021b_3dataset_HuRI.pdf"), width = 3, height = 3)
+pdf(file.path(google, "result/graph/Nature2021b_3dataset_HuRI.v1220.pdf"), width = 3, height = 3)
 par(mgp = c(2, 0.7, 0), ps = 8)
 for (i in 1:12) {
     plotHist(
