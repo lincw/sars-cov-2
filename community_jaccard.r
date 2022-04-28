@@ -278,15 +278,23 @@ for (i in 1:length(non_comm)) {
     comm_member_noTar[[i]] <- getNodesIn(huri_ocg, clusterids = non_comm[i])
 }
 
-# pb <- txtProgressBar(min = 0, max = length(comm_member_noTar), style = 3)
-jac_noTar <- foreach(i = 1:length(non_comm)) %dopar% {
-    sapply(comm_member_noTar, function(x) {jaccard(comm_member_noTar, x)})
-    # setTxtProgressBar(txtProgressBar(min = 0, max = length(non_comm), style = 3), i)
+jac_noTar <- foreach(i = 1:length(comm_member_noTar)) %dopar% {
+    sapply(comm_member_noTar, function(x) {jaccard(comm_member_noTar[[i]], x)})
 }
 stopCluster(cl)
 
+jac_noTar_mt <- as.matrix(do.call(rbind, jac_noTar))
+rownames(jac_noTar_mt) <- non_comm
+colnames(jac_noTar_mt) <- non_comm
+
 ## visulization
-pdf(file = "/tmp/husci_pt.pdf", height = 20)
+pdf(file = "/tmp/husci_pt.pdf", height = 20, width = 20)
 husci_pt <- pheatmap(jac_husci_mt, color = colorRampPalette(c("white", "red"))(50))
 dev.off()
-husci_pt2 <- pheatmap(jac_husci2_mt, color = colorRampPalette(c("white", "red"))(50))
+# husci_pt2 <- pheatmap(jac_husci2_mt, color = colorRampPalette(c("white", "red"))(50))
+write.csv(jac_husci_mt[husci_pt$tree_row[["order"]], husci_pt$tree_col[["order"]]], file = "~/Documents/INET-work/virus_network/statistic_results/community/husci_jaccard.csv")
+
+pdf(file = "/tmp/husci_noTAR_pt.pdf", height = 40, width = 40)
+noTar_pt <- pheatmap(jac_noTar_mt, color = colorRampPalette(c("white", "red"))(50))
+dev.off()
+write.csv(jac_noTar_mt[noTar_pt$tree_row[["order"]], noTar_pt$tree_col[["order"]]], file = "~/Documents/INET-work/virus_network/statistic_results/community/noTar_jaccard.csv")
