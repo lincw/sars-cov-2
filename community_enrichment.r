@@ -1,6 +1,7 @@
 # random test of SARS-CoV-2 targeted specific communities.
 # 22.04.2022 **17:03**--
 # 25.04.2022 **09:30**-- show permutation test distribution of HuSCI community size
+# 11.05.2022 **16:17** -- update the supplementary with all communities, instead of significant only.
 # Lin Chung-wen
 
 ######
@@ -10,6 +11,7 @@ library(dplyr)
 library(rethinking)
 library(ggplot2)
 library(ggpubr)
+library(stringr)
 
 cluster <- read.xlsx("~/Documents/INET-work/virus_network/statistic_results/community/HuRI_communities_withHuSCI_20220419.xlsx", sheet = 1)
 comm <- read.xlsx("~/Documents/INET-work/virus_network/statistic_results/community/HuRI_communities_withHuSCI_20220419.xlsx", sheet = 2)
@@ -58,3 +60,12 @@ gp <- ggplot(rand_mean_df, aes(x = rand_mean, y = ..count..)) +
     labs(x = "Random means", y = "Count", title = "Permutation test distribution") +
     theme_pubr()
 ggsave(gp, file = "~/Documents/INET-work/virus_network/figure_results/community/community_size_permutation.pdf", width = 4, height = 4)
+
+######
+# to update the supplementary table 8
+comm_all$viral_target_count <- str_count(comm_all$viral_target, ",") + 1
+comm_all$viral_target_count[is.na(comm_all$viral_target_count)] <- 0
+comm_all$enrichment <- ifelse(comm_all$p < 0.05, "significant targeted", ifelse(comm_all$viral_target_count >= 1 & comm_all$p >= 0.05, "targeted", "non targeted"))
+comm_all$enrichment <- factor(comm_all$enrichment, level = c("significant targeted", "targeted", "non targeted"))
+
+write.csv(comm_all[order(comm_all$enrichment), c(1, 4, 7, 2, 8)], file = "~/Documents/INET-work/virus_network/statistic_results/community/community_all_count.csv", row.names = F)
